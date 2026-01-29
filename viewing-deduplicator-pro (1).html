@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPM Viewing Data Deduplicator Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .format-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .card-header h2 {
+            font-size: 22px;
+            color: #333;
+            flex: 1;
+        }
+        
+        .machine-icon {
+            font-size: 32px;
+        }
+        
+        .badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .format-detector {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .format-detector.active {
+            display: block;
+        }
+
+        .format-icon {
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        .input-label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            transition: border-color 0.3s;
+            line-height: 1.5;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea::placeholder {
+            color: #999;
+            line-height: 1.6;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #555;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 2px dashed #667eea;
+            color: #667eea;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .file-label:hover {
+            background: #f0f4ff;
+            border-color: #764ba2;
+        }
+        
+        .file-name {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .results-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: #666;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            font-size: 14px;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-scheduled {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status-viewed {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .status-signed {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .status-noshow {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        
+        .export-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .duplicate-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .duplicate-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .item-field {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        .item-field strong {
+            color: #666;
+            min-width: 100px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .process-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .process-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .examples {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .examples h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .example-text {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            margin-top: 8px;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 HPM Viewing Data Deduplicator Pro</h1>
+            <p>Compare viewing data from two machines and remove exact duplicates</p>
+            <div style="margin-top: 15px;">
+                <span class="format-badge">📋 Supports Text Format</span>
+                <span class="format-badge">📊 Supports JSON</span>
+                <span class="format-badge">📁 Supports CSV</span>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="main-grid">
+            <!-- Machine A -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="machine-icon">💻</span>
+                    <h2>Machine A (Old Computer)</h2>
+                    <span class="badge" id="countA">0 items</span>
+                </div>
+
+                <div class="format-detector" id="formatDetectorA">
+                    <span class="format-icon">🎯</span>
+                    <strong>Detected Format:</strong> <span id="formatTypeA">Unknown</span>
+                </div>
+                
+                <div class="input-section">
+                    <label class="input-label">Option 1: Upload Data File</label>
+                    <input type="file" id="fileA" class="file-input" accept=".json,.csv,.txt" onchange="handleFileA(event)">
+                    <label for="fileA" class="file-label">
+                        📁 Choose File
+                    </label>
+                    <div id="fileNameA" class="file-name"></div>
+                </div>
+
+                <div class="input-section">
+                    <label class="input-label">Option 2: Paste Data (Any Format)</label>
+                    <textarea id="dataA" placeholder="Paste ANY format here:
+
+📋 TEXT FORMAT (from HPM):
+──────────────────────────────
+1. *11:30* - Thu 22 Jan
+   🏠 100 Bullsmoor Lane
+   👤 Joe
+   📱 07375259937
+
+OR JSON FORMAT:
+[{&quot;id&quot;:1,&quot;clientName&quot;:&quot;Joe&quot;,...}]
+
+OR FULL EXPORT:
+{&quot;hpm_pipeline&quot;:&quot;[...]&quot;}
+
+The tool auto-detects the format!"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="clearA()">🗑️ Clear</button>
+                    <button class="btn btn-secondary" onclick="loadSampleTextA()">📋 Sample Text</button>
+                    <button class="btn btn-secondary" onclick="loadSampleJSONA()">📊 Sample JSON</button>
+                </div>
+
+                <div class="examples">
+                    <h4>Example Text Format:</h4>
+                    <div class="example-text">1. *11:30* - Thu 22 Jan
+   🏠 100 Bullsmoor Lane, EN3 6TL
+   👤 Joe
+   📱 07375259937</div>
+                </div>
+            </div>
+
+            <!-- Machine B -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="machine-icon">🖥️</span>
+                    <h2>Machine B (New Computer)</h2>
+                    <span class="badge" id="countB">0 items</span>
+                </div>
+
+                <div class="format-detector" id="formatDetectorB">
+                    <span class="format-icon">🎯</span>
+                    <strong>Detected Format:</strong> <span id="formatTypeB">Unknown</span>
+                </div>
+                
+                <div class="input-section">
+                    <label class="input-label">Option 1: Upload Data File</label>
+                    <input type="file" id="fileB" class="file-input" accept=".json,.csv,.txt" onchange="handleFileB(event)">
+                    <label for="fileB" class="file-label">
+                        📁 Choose File
+                    </label>
+                    <div id="fileNameB" class="file-name"></div>
+                </div>
+
+                <div class="input-section">
+                    <label class="input-label">Option 2: Paste Data (Any Format)</label>
+                    <textarea id="dataB" placeholder="Paste ANY format here - the tool will figure it out!"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="clearB()">🗑️ Clear</button>
+                    <button class="btn btn-secondary" onclick="loadSampleTextB()">📋 Sample Text</button>
+                    <button class="btn btn-secondary" onclick="loadSampleJSONB()">📊 Sample JSON</button>
+                </div>
+
+                <div class="examples">
+                    <h4>Example JSON Format:</h4>
+                    <div class="example-text">[{
+  "clientName": "Joe",
+  "property": "100 Bullsmoor Lane",
+  "dateTime": "2025-01-22T11:30",
+  "phone": "07375259937"
+}]</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Process Button -->
+        <button class="process-btn" id="processBtn" onclick="processData()" disabled>
+            🔍 Compare & Remove Duplicates
+        </button>
+
+        <!-- Statistics Section -->
+        <div id="statsSection" style="display: none;">
+            <div class="stats-card">
+                <h2 style="margin-bottom: 10px; font-size: 24px;">📊 Deduplication Results</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Machine A Total</div>
+                        <div class="stat-value" id="statMachineA">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Machine B Total</div>
+                        <div class="stat-value" id="statMachineB">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Duplicates Found</div>
+                        <div class="stat-value" id="statDuplicates">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Final Unique</div>
+                        <div class="stat-value" id="statUnique">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection">
+            <div class="alert alert-success">
+                <span style="font-size: 24px;">✅</span>
+                <div>
+                    <strong>Deduplication Complete!</strong>
+                    <div id="resultMessage"></div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('duplicates')">
+                    🔄 Duplicates Found
+                </button>
+                <button class="tab" onclick="switchTab('unique')">
+                    ✨ Final Unique Data
+                </button>
+                <button class="tab" onclick="switchTab('all')">
+                    📋 All Data
+                </button>
+            </div>
+
+            <div id="duplicatesTab" class="tab-content active">
+                <div id="duplicatesList"></div>
+            </div>
+
+            <div id="uniqueTab" class="tab-content">
+                <div id="uniqueList"></div>
+            </div>
+
+            <div id="allTab" class="tab-content">
+                <div id="allList"></div>
+            </div>
+
+            <!-- Export Section -->
+            <div class="export-section">
+                <h3 style="margin-bottom: 15px; color: #333;">💾 Export Options</h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="exportJSON()">
+                        📥 Download as JSON
+                    </button>
+                    <button class="btn btn-primary" onclick="exportCSV()">
+                        📊 Download as CSV
+                    </button>
+                    <button class="btn btn-primary" onclick="exportText()">
+                        📋 Download as Text
+                    </button>
+                    <button class="btn btn-primary" onclick="exportImportScript()">
+                        🔧 Generate Import Script
+                    </button>
+                    <button class="btn btn-secondary" onclick="copyToClipboard()">
+                        📋 Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let machineAData = [];
+        let machineBData = [];
+        let uniqueData = [];
+        let duplicates = [];
+
+        // Enhanced parser that handles TEXT format!
+        function parseViewingData(input) {
+            try {
+                // First, try to detect if it's text format
+                if (typeof input === 'string' && (input.includes('👤') || input.includes('🏠') || input.includes('📱'))) {
+                    return parseTextFormat(input);
+                }
+
+                // Try parsing as JSON
+                let parsed = typeof input === 'string' ? JSON.parse(input) : input;
+                
+                // Check if it's a full localStorage export
+                if (parsed.hpm_pipeline) {
+                    return JSON.parse(parsed.hpm_pipeline);
+                }
+                
+                // Check if it's a stringified array
+                if (typeof parsed === 'string') {
+                    return JSON.parse(parsed);
+                }
+                
+                // Check if it's already an array
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                }
+                
+                // If it's an object with various keys, try to find viewing data
+                for (let key in parsed) {
+                    if (key.toLowerCase().includes('pipeline') || key.toLowerCase().includes('viewing')) {
+                        let val = parsed[key];
+                        if (typeof val === 'string') {
+                            return JSON.parse(val);
+                        }
+                        if (Array.isArray(val)) {
+                            return val;
+                        }
+                    }
+                }
+                
+                return [];
+            } catch (error) {
+                // If JSON parsing fails, try text format
+                if (typeof input === 'string') {
+                    return parseTextFormat(input);
+                }
+                console.error('Parse error:', error);
+                return [];
+            }
+        }
+
+        // NEW: Parse text format like the user showed
+        function parseTextFormat(text) {
+            const viewings = [];
+            
+            // Split by numbered entries (1., 2., 3., etc.)
+            const entries = text.split(/\n\s*\d+\.\s+/).filter(e => e.trim());
+            
+            entries.forEach((entry, index) => {
+                const viewing = {
+                    id: Date.now() + index, // Generate unique ID
+                    clientName: '',
+                    property: '',
+                    dateTime: '',
+                    phone: '',
+                    status: 'scheduled' // Default status
+                };
+                
+                // Extract time and date
+                const timeMatch = entry.match(/\*?(\d{1,2}:\d{2})\*?\s*-\s*\w+\s+(\d{1,2})\s+(\w+)/);
+                if (timeMatch) {
+                    const time = timeMatch[1];
+                    const day = timeMatch[2];
+                    const month = timeMatch[3];
+                    // Create a dateTime (simplified - you might need better date parsing)
+                    const monthNum = getMonthNumber(month);
+                    const year = new Date().getFullYear();
+                    viewing.dateTime = `${year}-${monthNum.toString().padStart(2, '0')}-${day.padStart(2, '0')}T${time}`;
+                }
+                
+                // Extract property (after 🏠)
+                const propertyMatch = entry.match(/🏠\s*([^\n]+)/);
+                if (propertyMatch) {
+                    viewing.property = propertyMatch[1].trim();
+                }
+                
+                // Extract client name (after 👤)
+                const nameMatch = entry.match(/👤\s*([^\n]+)/);
+                if (nameMatch) {
+                    viewing.clientName = nameMatch[1].trim();
+                }
+                
+                // Extract phone (after 📱)
+                const phoneMatch = entry.match(/📱\s*([^\n]+)/);
+                if (phoneMatch) {
+                    viewing.phone = phoneMatch[1].trim();
+                }
+                
+                // Only add if we got at least a name or property
+                if (viewing.clientName || viewing.property) {
+                    viewings.push(viewing);
+                }
+            });
+            
+            return viewings;
+        }
+
+        // Helper to convert month name to number
+        function getMonthNumber(monthName) {
+            const months = {
+                'jan': 1, 'january': 1,
+                'feb': 2, 'february': 2,
+                'mar': 3, 'march': 3,
+                'apr': 4, 'april': 4,
+                'may': 5,
+                'jun': 6, 'june': 6,
+                'jul': 7, 'july': 7,
+                'aug': 8, 'august': 8,
+                'sep': 9, 'september': 9,
+                'oct': 10, 'october': 10,
+                'nov': 11, 'november': 11,
+                'dec': 12, 'december': 12
+            };
+            return months[monthName.toLowerCase()] || 1;
+        }
+
+        // Detect format type
+        function detectFormat(input) {
+            if (!input || input.trim() === '') return 'Empty';
+            
+            const str = typeof input === 'string' ? input : JSON.stringify(input);
+            
+            if (str.includes('👤') || str.includes('🏠') || str.includes('📱')) {
+                return 'Text Format (HPM Output)';
+            }
+            
+            try {
+                const parsed = JSON.parse(str);
+                if (parsed.hpm_pipeline) {
+                    return 'Full localStorage Export';
+                }
+                if (Array.isArray(parsed)) {
+                    return 'JSON Array';
+                }
+                return 'JSON Object';
+            } catch {
+                return 'Text Format';
+            }
+        }
+
+        // File upload handlers
+        function handleFileA(event) {
+            handleFileUpload(event, 'A');
+        }
+
+        function handleFileB(event) {
+            handleFileUpload(event, 'B');
+        }
+
+        function handleFileUpload(event, machine) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileNameElem = document.getElementById(`fileName${machine}`);
+            fileNameElem.textContent = `📄 ${file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const textarea = document.getElementById(`data${machine}`);
+                textarea.value = content;
+                
+                updateDataPreview(machine);
+            };
+            reader.readAsText(file);
+        }
+
+        // Update data preview
+        function updateDataPreview(machine) {
+            const textarea = document.getElementById(`data${machine}`);
+            const input = textarea.value.trim();
+            const data = parseViewingData(input);
+            
+            // Detect and show format
+            const format = detectFormat(input);
+            document.getElementById(`formatType${machine}`).textContent = format;
+            document.getElementById(`formatDetector${machine}`).classList.add('active');
+            
+            if (machine === 'A') {
+                machineAData = data;
+            } else {
+                machineBData = data;
+            }
+            
+            document.getElementById(`count${machine}`).textContent = `${data.length} items`;
+            
+            // Enable process button if both have data
+            document.getElementById('processBtn').disabled = 
+                machineAData.length === 0 || machineBData.length === 0;
+        }
+
+        // Listen to textarea changes
+        document.getElementById('dataA').addEventListener('input', () => updateDataPreview('A'));
+        document.getElementById('dataB').addEventListener('input', () => updateDataPreview('B'));
+
+        // Clear functions
+        function clearA() {
+            document.getElementById('dataA').value = '';
+            document.getElementById('fileA').value = '';
+            document.getElementById('fileNameA').textContent = '';
+            document.getElementById('formatDetectorA').classList.remove('active');
+            machineAData = [];
+            document.getElementById('countA').textContent = '0 items';
+            document.getElementById('processBtn').disabled = true;
+        }
+
+        function clearB() {
+            document.getElementById('dataB').value = '';
+            document.getElementById('fileB').value = '';
+            document.getElementById('fileNameB').textContent = '';
+            document.getElementById('formatDetectorB').classList.remove('active');
+            machineBData = [];
+            document.getElementById('countB').textContent = '0 items';
+            document.getElementById('processBtn').disabled = true;
+        }
+
+        // Load sample data - TEXT FORMAT
+        function loadSampleTextA() {
+            const sample = `📋 *VIEWINGS - TOMORROW*
+──────────────────────────────
+1. *11:30* - Thu 22 Jan
+   🏠 100 Bullsmoor Lane, EN3 6TL
+   👤 Joe
+   📱 07375259937
+2. *11:45* - Thu 22 Jan
+   🏠 Studio 3 80 Darwin Road, W5 4BH
+   👤 Tamas
+   📱 +44 7466 588292
+3. *12:30* - Thu 22 Jan
+   🏠 Studio 3 80 Darwin Road, W5 4BH
+   👤 Abraham
+   📱 +44 7405 664045`;
+            
+            document.getElementById('dataA').value = sample;
+            updateDataPreview('A');
+        }
+
+        function loadSampleTextB() {
+            const sample = `📋 *VIEWINGS*
+──────────────────────────────
+1. *11:45* - Thu 22 Jan
+   🏠 Studio 3 80 Darwin Road, W5 4BH
+   👤 Tamas
+   📱 +44 7466 588292
+2. *13:45* - Thu 22 Jan
+   🏠 Studio 4 29 Bridge Road NW10 9DG
+   👤 Faysal
+   📱 7412220134
+3. *14:00* - Thu 22 Jan
+   🏠 45 Willesden Lane
+   👤 James Wilson
+   📱 07700900123`;
+            
+            document.getElementById('dataB').value = sample;
+            updateDataPreview('B');
+        }
+
+        // Load sample data - JSON FORMAT
+        function loadSampleJSONA() {
+            const sample = [
+                {"id": 1, "clientName": "James Wilson", "property": "45 Willesden Lane", "dateTime": "2025-12-19T10:00", "status": "scheduled", "phone": "07700900123"},
+                {"id": 2, "clientName": "Sarah Ahmed", "property": "12 Kilburn High Road", "dateTime": "2025-12-19T14:00", "status": "scheduled", "phone": "07700900456"},
+                {"id": 3, "clientName": "Emma Johnson", "property": "88 Cricklewood Broadway", "dateTime": "2025-12-18T11:00", "status": "viewed", "phone": "07700900789"}
+            ];
+            document.getElementById('dataA').value = JSON.stringify(sample, null, 2);
+            updateDataPreview('A');
+        }
+
+        function loadSampleJSONB() {
+            const sample = [
+                {"id": 2, "clientName": "Sarah Ahmed", "property": "12 Kilburn High Road", "dateTime": "2025-12-19T14:00", "status": "scheduled", "phone": "07700900456"},
+                {"id": 3, "clientName": "Emma Johnson", "property": "88 Cricklewood Broadway", "dateTime": "2025-12-18T11:00", "status": "viewed", "phone": "07700900789"},
+                {"id": 4, "clientName": "Michael Brown", "property": "23 Brondesbury Park", "dateTime": "2025-12-17T15:00", "status": "signed", "phone": "07700901234"}
+            ];
+            document.getElementById('dataB').value = JSON.stringify(sample, null, 2);
+            updateDataPreview('B');
+        }
+
+        // Main processing function
+        function processData() {
+            duplicates = [];
+            const combined = [...machineAData];
+            const uniqueSet = new Set();
+            
+            // Create signatures for Machine A items
+            machineAData.forEach(item => {
+                uniqueSet.add(createSignature(item));
+            });
+            
+            // Check Machine B items for duplicates
+            machineBData.forEach(item => {
+                const sig = createSignature(item);
+                if (uniqueSet.has(sig)) {
+                    duplicates.push(item);
+                } else {
+                    uniqueSet.add(sig);
+                    combined.push(item);
+                }
+            });
+            
+            uniqueData = combined;
+            
+            // Update stats
+            document.getElementById('statMachineA').textContent = machineAData.length;
+            document.getElementById('statMachineB').textContent = machineBData.length;
+            document.getElementById('statDuplicates').textContent = duplicates.length;
+            document.getElementById('statUnique').textContent = uniqueData.length;
+            
+            // Show results
+            document.getElementById('statsSection').style.display = 'block';
+            document.getElementById('resultsSection').classList.add('active');
+            
+            // Update message
+            let message = `Found ${duplicates.length} duplicate viewing(s). `;
+            message += `Merged ${machineAData.length} + ${machineBData.length} = ${uniqueData.length} unique viewings.`;
+            document.getElementById('resultMessage').textContent = message;
+            
+            // Render results
+            renderDuplicates();
+            renderUnique();
+            renderAll();
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Create a unique signature for comparison
+        function createSignature(item) {
+            const key = `${item.clientName || ''}_${item.property || ''}_${item.dateTime || ''}_${item.phone || ''}`;
+            return key.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+        }
+
+        // Render functions
+        function renderDuplicates() {
+            const container = document.getElementById('duplicatesList');
+            
+            if (duplicates.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🎉</div>
+                        <h3>No Duplicates Found!</h3>
+                        <p>All viewing entries are unique between the two machines.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `<p style="margin-bottom: 20px; color: #666;">These ${duplicates.length} viewing(s) appear in both machines and were removed from the final dataset:</p>`;
+            
+            duplicates.forEach(item => {
+                html += `
+                    <div class="duplicate-item">
+                        <div class="item-field">
+                            <strong>Client:</strong>
+                            <span>${item.clientName || 'N/A'}</span>
+                        </div>
+                        <div class="item-field">
+                            <strong>Property:</strong>
+                            <span>${item.property || 'N/A'}</span>
+                        </div>
+                        <div class="item-field">
+                            <strong>Date/Time:</strong>
+                            <span>${formatDateTime(item.dateTime)}</span>
+                        </div>
+                        <div class="item-field">
+                            <strong>Phone:</strong>
+                            <span>${item.phone || 'N/A'}</span>
+                        </div>
+                        <div class="item-field">
+                            <strong>Status:</strong>
+                            <span class="status-badge status-${item.status}">${item.status || 'N/A'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function renderUnique() {
+            const container = document.getElementById('uniqueList');
+            container.innerHTML = renderDataTable(uniqueData, 'This is your final deduplicated dataset ready to import.');
+        }
+
+        function renderAll() {
+            const container = document.getElementById('allList');
+            
+            let html = '<h3 style="margin-bottom: 15px;">Machine A Data</h3>';
+            html += renderDataTable(machineAData);
+            html += '<h3 style="margin: 30px 0 15px;">Machine B Data</h3>';
+            html += renderDataTable(machineBData);
+            
+            container.innerHTML = html;
+        }
+
+        function renderDataTable(data, description = '') {
+            if (data.length === 0) {
+                return '<p style="color: #999;">No data</p>';
+            }
+            
+            let html = '';
+            if (description) {
+                html += `<p style="margin-bottom: 15px; color: #666;">${description}</p>`;
+            }
+            
+            html += `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Client Name</th>
+                            <th>Property</th>
+                            <th>Date/Time</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            data.forEach(item => {
+                html += `
+                    <tr>
+                        <td>${item.clientName || 'N/A'}</td>
+                        <td>${item.property || 'N/A'}</td>
+                        <td>${formatDateTime(item.dateTime)}</td>
+                        <td>${item.phone || 'N/A'}</td>
+                        <td><span class="status-badge status-${item.status}">${item.status || 'N/A'}</span></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            return html;
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Export functions
+        function exportJSON() {
+            const dataStr = JSON.stringify(uniqueData, null, 2);
+            downloadFile(dataStr, 'hpm-deduplicated-viewings.json', 'application/json');
+        }
+
+        function exportCSV() {
+            if (uniqueData.length === 0) return;
+            
+            const headers = ['clientName', 'property', 'dateTime', 'phone', 'status'];
+            let csv = headers.join(',') + '\n';
+            
+            uniqueData.forEach(item => {
+                const row = headers.map(header => {
+                    let value = item[header] || '';
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                        value = `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value;
+                });
+                csv += row.join(',') + '\n';
+            });
+            
+            downloadFile(csv, 'hpm-deduplicated-viewings.csv', 'text/csv');
+        }
+
+        function exportText() {
+            let text = '📋 DEDUPLICATED VIEWINGS\n';
+            text += '══════════════════════════════\n\n';
+            
+            uniqueData.forEach((item, index) => {
+                text += `${index + 1}. ${formatDateTime(item.dateTime)}\n`;
+                text += `   🏠 ${item.property || 'N/A'}\n`;
+                text += `   👤 ${item.clientName || 'N/A'}\n`;
+                text += `   📱 ${item.phone || 'N/A'}\n`;
+                text += `   ⭐ ${item.status || 'scheduled'}\n\n`;
+            });
+            
+            text += `\nTotal: ${uniqueData.length} viewing(s)`;
+            
+            downloadFile(text, 'hpm-deduplicated-viewings.txt', 'text/plain');
+        }
+
+        function exportImportScript() {
+            const script = `// HPM Deduplicated Viewing Data Import Script
+// Paste this script into your browser console on the HPM page
+
+const deduplicatedData = ${JSON.stringify(uniqueData, null, 2)};
+
+console.log('🔄 Importing deduplicated viewing data...');
+
+// Save to localStorage
+localStorage.setItem('hpm_pipeline', JSON.stringify(deduplicatedData));
+
+console.log(\`✅ Success! Imported \${deduplicatedData.length} unique viewings\`);
+console.log('🔄 Refresh the page to see your data!');
+`;
+            
+            downloadFile(script, 'import-deduplicated-data.js', 'text/javascript');
+        }
+
+        function copyToClipboard() {
+            const dataStr = JSON.stringify(uniqueData, null, 2);
+            navigator.clipboard.writeText(dataStr).then(() => {
+                alert('✅ Unique data copied to clipboard!');
+            }).catch(err => {
+                alert('❌ Failed to copy: ' + err);
+            });
+        }
+
+        // Helper functions
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function formatDateTime(dateTime) {
+            if (!dateTime) return 'N/A';
+            try {
+                const date = new Date(dateTime);
+                return date.toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return dateTime;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPM Data Transfer Tool</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0f1a 0%, #1a1f2e 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 40px;
+        }
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card p {
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        button {
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-export {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        .btn-import {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+        .btn-fix {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .stats {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .stats h3 {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-key { color: rgba(255,255,255,0.7); }
+        .stat-value { color: #60a5fa; font-weight: 600; }
+        .success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #4ade80;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        .warning {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            color: #fbbf24;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        #fileInput { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 HPM Data Transfer</h1>
+        <p class="subtitle">Export data from one device, import to another</p>
+
+        <!-- EXPORT SECTION -->
+        <div class="card">
+            <h2>📤 Export All Data</h2>
+            <p>Download ALL your HPM data including properties, viewings, pipeline, agents, and settings. Use this on your SOURCE device.</p>
+            <button class="btn-export" onclick="exportAllData()">
+                ⬇️ Download Full Backup
+            </button>
+            <div class="stats" id="exportStats"></div>
+            <div class="success" id="exportSuccess">✅ Data exported successfully!</div>
+        </div>
+
+        <!-- IMPORT SECTION -->
+        <div class="card">
+            <h2>📥 Import Data</h2>
+            <p>Upload a backup file to restore data. Use this on your TARGET device (the deployed site).</p>
+            <input type="file" id="fileInput" accept=".json" onchange="importData(event)">
+            <button class="btn-import" onclick="document.getElementById('fileInput').click()">
+                ⬆️ Upload Backup File
+            </button>
+            <div class="success" id="importSuccess">✅ Data imported! Refresh your HPM app.</div>
+        </div>
+
+        <!-- FIX SECTION -->
+        <div class="card">
+            <h2>🔧 Fix Properties Array</h2>
+            <p>If you're seeing "forEach is not a function" errors, your properties data is corrupted. Click to fix it.</p>
+            <button class="btn-fix" onclick="fixPropertiesArray()">
+                🛠️ Fix Properties Data
+            </button>
+            <div class="success" id="fixSuccess">✅ Properties fixed! Refresh your HPM app.</div>
+        </div>
+
+        <!-- CLEAR SYNC NOTIFICATIONS -->
+        <div class="card">
+            <h2>🔕 Clear Sync State</h2>
+            <p>Stop the "Synced from another device" notifications from appearing repeatedly.</p>
+            <button class="btn-fix" onclick="clearSyncState()">
+                🔕 Clear Sync Notifications
+            </button>
+            <div class="success" id="syncSuccess">✅ Sync state cleared! Refresh your HPM app.</div>
+        </div>
+    </div>
+
+    <script>
+        // All localStorage keys used by HPM
+        const ALL_KEYS = [
+            'properties',
+            'propertyViewings', 
+            'pipelineEntries',
+            'pipelineData',
+            'clients',
+            'staffMembers',
+            'viewingOutcomes',
+            'propertyStats',
+            'referralsData',
+            'agentStats',
+            'hpmSettings',
+            'helmCurrentView',
+            'lastSyncTime',
+            'userPreferences'
+        ];
+
+        function getDataStats() {
+            const stats = {};
+            ALL_KEYS.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (Array.isArray(parsed)) {
+                            stats[key] = `${parsed.length} items`;
+                        } else if (typeof parsed === 'object') {
+                            stats[key] = `${Object.keys(parsed).length} keys`;
+                        } else {
+                            stats[key] = 'set';
+                        }
+                    } catch {
+                        stats[key] = 'set';
+                    }
+                }
+            });
+            return stats;
+        }
+
+        function renderStats() {
+            const stats = getDataStats();
+            const container = document.getElementById('exportStats');
+            if (Object.keys(stats).length === 0) {
+                container.innerHTML = '<p style="color: rgba(255,255,255,0.5);">No HPM data found in localStorage</p>';
+                return;
+            }
+            
+            let html = '<h3>Current Data</h3>';
+            for (const [key, value] of Object.entries(stats)) {
+                html += `<div class="stat-row"><span class="stat-key">${key}</span><span class="stat-value">${value}</span></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function exportAllData() {
+            const exportData = {
+                _exportedAt: new Date().toISOString(),
+                _version: 'HPM v65.4',
+                _device: navigator.userAgent.substring(0, 50)
+            };
+
+            // Get ALL localStorage (not just known keys)
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                try {
+                    exportData[key] = JSON.parse(value);
+                } catch {
+                    exportData[key] = value;
+                }
+            }
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `HPM_FULL_BACKUP_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            document.getElementById('exportSuccess').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('exportSuccess').style.display = 'none';
+            }, 3000);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let imported = 0;
+
+                    for (const [key, value] of Object.entries(data)) {
+                        // Skip metadata
+                        if (key.startsWith('_')) continue;
+                        
+                        // Store as JSON string
+                        if (typeof value === 'object') {
+                            localStorage.setItem(key, JSON.stringify(value));
+                        } else {
+                            localStorage.setItem(key, value);
+                        }
+                        imported++;
+                    }
+
+                    document.getElementById('importSuccess').style.display = 'block';
+                    document.getElementById('importSuccess').textContent = `✅ Imported ${imported} items! Refresh your HPM app.`;
+                    
+                    renderStats();
+                } catch (err) {
+                    alert('Error importing: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function fixPropertiesArray() {
+            const propsRaw = localStorage.getItem('properties');
+            if (!propsRaw) {
+                alert('No properties data found');
+                return;
+            }
+
+            try {
+                let props = JSON.parse(propsRaw);
+                
+                // If it's an object with numeric keys or property data, convert to array
+                if (!Array.isArray(props)) {
+                    if (typeof props === 'object') {
+                        // Try to convert object to array
+                        const arr = Object.values(props);
+                        if (arr.length > 0) {
+                            localStorage.setItem('properties', JSON.stringify(arr));
+                            document.getElementById('fixSuccess').style.display = 'block';
+                            document.getElementById('fixSuccess').textContent = `✅ Converted ${arr.length} properties to array! Refresh HPM.`;
+                        } else {
+                            // Empty object, set as empty array
+                            localStorage.setItem('properties', '[]');
+                            document.getElementById('fixSuccess').style.display = 'block';
+                            document.getElementById('fixSuccess').textContent = '✅ Reset properties to empty array. Refresh HPM.';
+                        }
+                    }
+                } else {
+                    alert('Properties is already an array with ' + props.length + ' items');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function clearSyncState() {
+            // Clear sync-related keys
+            localStorage.removeItem('lastSyncTime');
+            localStorage.removeItem('lastSyncHash');
+            localStorage.removeItem('syncState');
+            localStorage.removeItem('hpm_last_sync');
+            
+            document.getElementById('syncSuccess').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('syncSuccess').style.display = 'none';
+            }, 3000);
+        }
+
+        // Initialize
+        renderStats();
+    </script>
+</body>
+</html>
