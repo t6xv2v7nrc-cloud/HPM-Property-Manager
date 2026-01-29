@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HELM Data Sync Repair Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #070a12;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 24px;
+        }
+        
+        .card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .stat-card .label {
+            color: #64748b;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .stat-card .values {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stat-card .local {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        
+        .stat-card .cloud {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #3b82f6;
+        }
+        
+        .stat-card .sync-status {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        
+        .stat-card .sync-status.match { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .stat-card .sync-status.mismatch { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .stat-card .sync-status.loading { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        
+        button {
+            font-family: inherit;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button.primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        
+        button.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        
+        button.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .log {
+            background: #0a0f1a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-entry.success { color: #22c55e; }
+        .log-entry.error { color: #ef4444; }
+        .log-entry.warning { color: #fbbf24; }
+        .log-entry.info { color: #3b82f6; }
+        
+        .config-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .form-group label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        
+        .form-group input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .connected { color: #22c55e; }
+        .disconnected { color: #ef4444; }
+        
+        .table-preview {
+            background: #0a0f1a;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        
+        .table-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        
+        .table-preview th {
+            background: rgba(59, 130, 246, 0.2);
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .table-preview td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .table-preview tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 HELM Data Sync Repair Tool</h1>
+        <p class="subtitle">Diagnose and fix Supabase sync issues</p>
+        
+        <!-- Config Card -->
+        <div class="card">
+            <h2>⚙️ Supabase Configuration</h2>
+            <div class="config-form">
+                <div class="form-group">
+                    <label>Supabase URL</label>
+                    <input type="text" id="supabase-url" placeholder="https://xxxxx.supabase.co" />
+                </div>
+                <div class="form-group">
+                    <label>Anon Key</label>
+                    <input type="text" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIs..." />
+                </div>
+            </div>
+            <div class="actions">
+                <button class="primary" onclick="connectSupabase()">🔌 Connect</button>
+                <span id="connection-status" class="disconnected" style="margin-left: 12px;">Not connected</span>
+            </div>
+        </div>
+        
+        <!-- Comparison Card -->
+        <div class="card">
+            <h2>📊 Data Comparison: Local vs Cloud</h2>
+            <div class="grid" id="comparison-grid">
+                <div class="stat-card">
+                    <div class="label">Viewings</div>
+                    <div class="values">
+                        <span class="local" id="local-viewings">--</span>
+                        <span style="color: #64748b">vs</span>
+                        <span class="cloud" id="cloud-viewings">--</span>
+                    </div>
+                    <span class="sync-status loading" id="status-viewings">Checking...</span>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Properties</div>
+                    <div class="values">
+                        <span class="local" id="local-properties">--</span>
+                        <span style="color: #64748b">vs</span>
+                        <span class="cloud" id="cloud-properties">--</span>
+                    </div>
+                    <span class="sync-status loading" id="status-properties">Checking...</span>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Clients</div>
+                    <div class="values">
+                        <span class="local" id="local-clients">--</span>
+                        <span style="color: #64748b">vs</span>
+                        <span class="cloud" id="cloud-clients">--</span>
+                    </div>
+                    <span class="sync-status loading" id="status-clients">Checking...</span>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Agents</div>
+                    <div class="values">
+                        <span class="local" id="local-agents">--</span>
+                        <span style="color: #64748b">vs</span>
+                        <span class="cloud" id="cloud-agents">--</span>
+                    </div>
+                    <span class="sync-status loading" id="status-agents">Checking...</span>
+                </div>
+                <div class="stat-card">
+                    <div class="label">User Stats / XP</div>
+                    <div class="values">
+                        <span class="local" id="local-stats">--</span>
+                        <span style="color: #64748b">vs</span>
+                        <span class="cloud" id="cloud-stats">--</span>
+                    </div>
+                    <span class="sync-status loading" id="status-stats">Checking...</span>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Profiles</div>
+                    <div class="values">
+                        <span class="local" id="local-profiles">--</span>
+                        <span style="color: #64748b">vs</span>
+                        <span class="cloud" id="cloud-profiles">--</span>
+                    </div>
+                    <span class="sync-status loading" id="status-profiles">Checking...</span>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="primary" onclick="runDiagnostics()">🔍 Run Diagnostics</button>
+                <button class="success" onclick="uploadAllToCloud()">⬆️ Upload ALL to Cloud</button>
+                <button class="warning" onclick="downloadAllFromCloud()">⬇️ Download ALL from Cloud</button>
+                <button class="danger" onclick="nukeSyncFlags()">🗑️ Reset Sync Flags</button>
+            </div>
+        </div>
+        
+        <!-- Actions Card -->
+        <div class="card">
+            <h2>🛠️ Repair Actions</h2>
+            <div class="actions">
+                <button class="success" onclick="syncViewings()">📅 Sync Viewings</button>
+                <button class="success" onclick="syncProperties()">🏠 Sync Properties</button>
+                <button class="success" onclick="syncClients()">👥 Sync Clients</button>
+                <button class="success" onclick="syncAgents()">🧑‍💼 Sync Agents</button>
+                <button class="success" onclick="syncStats()">📈 Sync XP/Stats</button>
+            </div>
+            <div class="actions" style="margin-top: 12px;">
+                <button class="warning" onclick="exportBackup()">💾 Export Full Backup</button>
+                <button class="warning" onclick="importBackup()">📥 Import Backup</button>
+                <button class="danger" onclick="clearLocalStorage()">⚠️ Clear LocalStorage</button>
+            </div>
+        </div>
+        
+        <!-- Log Card -->
+        <div class="card">
+            <h2>📋 Activity Log</h2>
+            <div class="log" id="log"></div>
+        </div>
+        
+        <!-- Data Preview Card -->
+        <div class="card">
+            <h2>👁️ Data Preview</h2>
+            <div class="actions">
+                <button class="primary" onclick="previewTable('viewings')">Viewings</button>
+                <button class="primary" onclick="previewTable('properties')">Properties</button>
+                <button class="primary" onclick="previewTable('clients')">Clients</button>
+                <button class="primary" onclick="previewTable('agents')">Agents</button>
+                <button class="primary" onclick="previewTable('profiles')">Profiles</button>
+            </div>
+            <div class="table-preview" id="data-preview" style="display: none;">
+                <table id="preview-table">
+                    <thead id="preview-header"></thead>
+                    <tbody id="preview-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ═══════════════════════════════════════════════════════════════════════
+        // CONFIGURATION
+        // ═══════════════════════════════════════════════════════════════════════
+        let supabase = null;
+        
+        // LocalStorage key mappings - the app uses various keys
+        const LOCAL_KEYS = {
+            viewings: ['propertyViewings', 'helm_viewings', 'viewings'],
+            properties: ['elevate_properties', 'helm_properties', 'properties'],
+            clients: ['elevate_clients', 'helm_clients', 'clients', 'pipeline_clients'],
+            agents: ['helm_agents', 'agents', 'elevate_agents'],
+            stats: ['helm_user_stats', 'user_stats', 'xp_points', 'helmXP'],
+            profiles: ['helm_profile', 'user_profile']
+        };
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // LOGGING
+        // ═══════════════════════════════════════════════════════════════════════
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // SUPABASE CONNECTION
+        // ═══════════════════════════════════════════════════════════════════════
+        async function connectSupabase() {
+            const url = document.getElementById('supabase-url').value.trim();
+            const key = document.getElementById('supabase-key').value.trim();
+            
+            if (!url || !key) {
+                log('Please enter Supabase URL and Key', 'error');
+                return;
+            }
+            
+            try {
+                supabase = window.supabase.createClient(url, key);
+                
+                // Test connection
+                const { data, error } = await supabase.from('viewings').select('count', { count: 'exact', head: true });
+                
+                if (error && error.code === '42P01') {
+                    log('Connected but tables not found - run the SQL schema first!', 'warning');
+                    document.getElementById('connection-status').textContent = 'Connected (no tables)';
+                    document.getElementById('connection-status').className = 'warning';
+                } else if (error) {
+                    throw error;
+                } else {
+                    log('Connected to Supabase successfully!', 'success');
+                    document.getElementById('connection-status').textContent = 'Connected ✓';
+                    document.getElementById('connection-status').className = 'connected';
+                    
+                    // Save config
+                    localStorage.setItem('helm_repair_url', url);
+                    localStorage.setItem('helm_repair_key', key);
+                    
+                    runDiagnostics();
+                }
+            } catch (err) {
+                log(`Connection failed: ${err.message}`, 'error');
+                document.getElementById('connection-status').textContent = 'Failed ✗';
+                document.getElementById('connection-status').className = 'disconnected';
+            }
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // DIAGNOSTICS
+        // ═══════════════════════════════════════════════════════════════════════
+        function getLocalData(keys) {
+            for (const key of keys) {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (Array.isArray(parsed)) return parsed;
+                        if (typeof parsed === 'object') return Object.values(parsed);
+                    } catch (e) {
+                        continue;
+                    }
+                }
+            }
+            return [];
+        }
+        
+        async function runDiagnostics() {
+            if (!supabase) {
+                log('Connect to Supabase first', 'error');
+                return;
+            }
+            
+            log('Running diagnostics...', 'info');
+            
+            // Check each data type
+            const checks = [
+                { name: 'viewings', table: 'viewings', keys: LOCAL_KEYS.viewings },
+                { name: 'properties', table: 'properties', keys: LOCAL_KEYS.properties },
+                { name: 'clients', table: 'clients', keys: LOCAL_KEYS.clients },
+                { name: 'agents', table: 'agents', keys: LOCAL_KEYS.agents },
+                { name: 'stats', table: 'user_stats', keys: LOCAL_KEYS.stats },
+                { name: 'profiles', table: 'profiles', keys: LOCAL_KEYS.profiles }
+            ];
+            
+            for (const check of checks) {
+                const localData = getLocalData(check.keys);
+                const localCount = localData.length;
+                
+                document.getElementById(`local-${check.name}`).textContent = localCount;
+                
+                try {
+                    const { count, error } = await supabase.from(check.table).select('*', { count: 'exact', head: true });
+                    
+                    if (error) {
+                        if (error.code === '42P01') {
+                            document.getElementById(`cloud-${check.name}`).textContent = 'NO TABLE';
+                            document.getElementById(`status-${check.name}`).textContent = 'Table missing!';
+                            document.getElementById(`status-${check.name}`).className = 'sync-status mismatch';
+                            log(`${check.name}: Table does not exist in Supabase`, 'error');
+                        } else {
+                            throw error;
+                        }
+                    } else {
+                        const cloudCount = count || 0;
+                        document.getElementById(`cloud-${check.name}`).textContent = cloudCount;
+                        
+                        if (localCount === cloudCount) {
+                            document.getElementById(`status-${check.name}`).textContent = 'Match ✓';
+                            document.getElementById(`status-${check.name}`).className = 'sync-status match';
+                        } else {
+                            document.getElementById(`status-${check.name}`).textContent = `Mismatch (${localCount - cloudCount})`;
+                            document.getElementById(`status-${check.name}`).className = 'sync-status mismatch';
+                        }
+                        
+                        log(`${check.name}: Local=${localCount}, Cloud=${cloudCount}`, localCount === cloudCount ? 'success' : 'warning');
+                    }
+                } catch (err) {
+                    document.getElementById(`cloud-${check.name}`).textContent = 'ERR';
+                    document.getElementById(`status-${check.name}`).textContent = 'Error';
+                    document.getElementById(`status-${check.name}`).className = 'sync-status mismatch';
+                    log(`${check.name}: Error - ${err.message}`, 'error');
+                }
+            }
+            
+            log('Diagnostics complete', 'success');
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // SYNC FUNCTIONS
+        // ═══════════════════════════════════════════════════════════════════════
+        async function syncViewings() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            const viewings = getLocalData(LOCAL_KEYS.viewings);
+            log(`Uploading ${viewings.length} viewings...`, 'info');
+            
+            let success = 0, failed = 0;
+            
+            for (const v of viewings) {
+                const { error } = await supabase.from('viewings').upsert({
+                    id: String(v.id || Date.now()),
+                    client_name: v.clientName || v.name || v.visitor || '',
+                    client_phone: v.phone || v.clientPhone || v.visitorPhone || '',
+                    client_email: v.email || v.clientEmail || '',
+                    property_id: String(v.propertyId || ''),
+                    property_name: v.propertyName || v.property || '',
+                    property_address: v.propertyAddress || v.address || '',
+                    viewing_date: v.date || v.viewing_date,
+                    viewing_time: v.time || v.viewing_time || '',
+                    status: v.status || 'scheduled',
+                    outcome: v.outcome || '',
+                    agent_id: v.agentId || v.agent_id || '',
+                    notes: v.notes || '',
+                    confirmed: v.confirmed || false,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+                
+                if (error) { failed++; log(`Failed: ${v.clientName || v.name} - ${error.message}`, 'error'); }
+                else { success++; }
+            }
+            
+            log(`Viewings sync complete: ${success} success, ${failed} failed`, success > 0 ? 'success' : 'warning');
+            runDiagnostics();
+        }
+        
+        async function syncProperties() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            const properties = getLocalData(LOCAL_KEYS.properties);
+            log(`Uploading ${properties.length} properties...`, 'info');
+            
+            let success = 0, failed = 0;
+            
+            for (const p of properties) {
+                const { error } = await supabase.from('properties').upsert({
+                    id: String(p.id || Date.now()),
+                    name: p.name || '',
+                    address: p.address || '',
+                    postcode: p.postcode || '',
+                    borough: p.borough || '',
+                    rent: parseFloat(p.rent) || 0,
+                    lha_rate: parseFloat(p.lhaRate || p.lha_rate) || 0,
+                    bedrooms: parseInt(p.bedrooms) || 0,
+                    property_type: p.propertyType || p.property_type || 'studio',
+                    status: p.status || 'available',
+                    lat: parseFloat(p.lat) || null,
+                    lng: parseFloat(p.lng) || null,
+                    landlord: p.landlord || '',
+                    landlord_phone: p.landlordPhone || p.landlord_phone || '',
+                    notes: p.notes || '',
+                    assigned_to: p.assignedTo || p.assigned_to || '',
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+                
+                if (error) { failed++; log(`Failed: ${p.name || p.address} - ${error.message}`, 'error'); }
+                else { success++; }
+            }
+            
+            log(`Properties sync complete: ${success} success, ${failed} failed`, success > 0 ? 'success' : 'warning');
+            runDiagnostics();
+        }
+        
+        async function syncClients() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            const clients = getLocalData(LOCAL_KEYS.clients);
+            log(`Uploading ${clients.length} clients...`, 'info');
+            
+            let success = 0, failed = 0;
+            
+            for (const c of clients) {
+                const { error } = await supabase.from('clients').upsert({
+                    id: String(c.id || Date.now()),
+                    name: c.name || '',
+                    phone: c.phone || '',
+                    email: c.email || '',
+                    stage: c.stage || 'new',
+                    property_interest: c.propertyInterest || c.property_interest || '',
+                    max_rent: parseFloat(c.maxRent || c.max_rent) || 0,
+                    borough_preference: c.boroughPreference || c.borough_preference || '',
+                    referral_source: c.referralSource || c.referral_source || '',
+                    benefit_type: c.benefitType || c.benefit_type || '',
+                    housing_officer: c.housingOfficer || c.housing_officer || '',
+                    council: c.council || '',
+                    notes: c.notes || '',
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+                
+                if (error) { failed++; log(`Failed: ${c.name} - ${error.message}`, 'error'); }
+                else { success++; }
+            }
+            
+            log(`Clients sync complete: ${success} success, ${failed} failed`, success > 0 ? 'success' : 'warning');
+            runDiagnostics();
+        }
+        
+        async function syncAgents() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            const agents = getLocalData(LOCAL_KEYS.agents);
+            log(`Uploading ${agents.length} agents...`, 'info');
+            
+            let success = 0, failed = 0;
+            
+            for (const a of agents) {
+                const { error } = await supabase.from('agents').upsert({
+                    id: String(a.id || Date.now()),
+                    name: a.name || '',
+                    initials: a.initials || '',
+                    color: a.color || '#3b82f6',
+                    phone: a.phone || '',
+                    email: a.email || '',
+                    role: a.role || 'agent',
+                    active: a.active !== false,
+                    xp_points: parseInt(a.xp_points || a.xp) || 0,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+                
+                if (error) { failed++; log(`Failed: ${a.name} - ${error.message}`, 'error'); }
+                else { success++; }
+            }
+            
+            log(`Agents sync complete: ${success} success, ${failed} failed`, success > 0 ? 'success' : 'warning');
+            runDiagnostics();
+        }
+        
+        async function syncStats() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            // Try to get XP from various sources
+            let xp = 0;
+            let stats = {};
+            
+            // Check helmXP
+            const helmXP = localStorage.getItem('helmXP');
+            if (helmXP) xp = parseInt(helmXP) || 0;
+            
+            // Check user_stats object
+            const userStats = getLocalData(LOCAL_KEYS.stats);
+            if (userStats.length > 0) {
+                stats = userStats[0];
+                xp = stats.xp_points || stats.xp || xp;
+            }
+            
+            // Get current user email
+            const session = await supabase.auth.getSession();
+            const userEmail = session?.data?.session?.user?.email || 'unknown';
+            
+            log(`Uploading stats: XP=${xp}...`, 'info');
+            
+            const { error } = await supabase.from('user_stats').upsert({
+                id: userEmail,
+                user_email: userEmail,
+                xp_points: xp,
+                total_viewings: stats.total_viewings || 0,
+                completed_viewings: stats.completed_viewings || 0,
+                properties_let: stats.properties_let || 0,
+                streak_days: stats.streak_days || 0,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+            
+            if (error) {
+                log(`Stats sync failed: ${error.message}`, 'error');
+            } else {
+                log('Stats sync complete', 'success');
+            }
+            
+            runDiagnostics();
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // BULK OPERATIONS
+        // ═══════════════════════════════════════════════════════════════════════
+        async function uploadAllToCloud() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            log('=== UPLOADING ALL DATA TO CLOUD ===', 'info');
+            await syncViewings();
+            await syncProperties();
+            await syncClients();
+            await syncAgents();
+            await syncStats();
+            log('=== ALL DATA UPLOADED ===', 'success');
+        }
+        
+        async function downloadAllFromCloud() {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            log('=== DOWNLOADING ALL DATA FROM CLOUD ===', 'info');
+            
+            // Download viewings
+            const { data: viewings } = await supabase.from('viewings').select('*');
+            if (viewings && viewings.length > 0) {
+                const formatted = viewings.map(v => ({
+                    id: v.id,
+                    name: v.client_name,
+                    clientName: v.client_name,
+                    phone: v.client_phone,
+                    email: v.client_email,
+                    propertyId: v.property_id,
+                    propertyName: v.property_name,
+                    property: v.property_name,
+                    propertyAddress: v.property_address,
+                    address: v.property_address,
+                    date: v.viewing_date,
+                    time: v.viewing_time,
+                    status: v.status,
+                    outcome: v.outcome,
+                    notes: v.notes,
+                    confirmed: v.confirmed
+                }));
+                localStorage.setItem('propertyViewings', JSON.stringify(formatted));
+                log(`Downloaded ${viewings.length} viewings`, 'success');
+            }
+            
+            // Download properties
+            const { data: properties } = await supabase.from('properties').select('*');
+            if (properties && properties.length > 0) {
+                const formatted = properties.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    address: p.address,
+                    postcode: p.postcode,
+                    borough: p.borough,
+                    rent: p.rent,
+                    lhaRate: p.lha_rate,
+                    bedrooms: p.bedrooms,
+                    propertyType: p.property_type,
+                    status: p.status,
+                    lat: p.lat,
+                    lng: p.lng,
+                    landlord: p.landlord,
+                    notes: p.notes
+                }));
+                localStorage.setItem('elevate_properties', JSON.stringify(formatted));
+                log(`Downloaded ${properties.length} properties`, 'success');
+            }
+            
+            // Download clients
+            const { data: clients } = await supabase.from('clients').select('*');
+            if (clients && clients.length > 0) {
+                const formatted = clients.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    phone: c.phone,
+                    email: c.email,
+                    stage: c.stage,
+                    propertyInterest: c.property_interest,
+                    maxRent: c.max_rent,
+                    boroughPreference: c.borough_preference,
+                    referralSource: c.referral_source,
+                    notes: c.notes
+                }));
+                localStorage.setItem('elevate_clients', JSON.stringify(formatted));
+                log(`Downloaded ${clients.length} clients`, 'success');
+            }
+            
+            // Download agents
+            const { data: agents } = await supabase.from('agents').select('*');
+            if (agents && agents.length > 0) {
+                localStorage.setItem('helm_agents', JSON.stringify(agents));
+                log(`Downloaded ${agents.length} agents`, 'success');
+            }
+            
+            log('=== ALL DATA DOWNLOADED ===', 'success');
+            runDiagnostics();
+        }
+        
+        function nukeSyncFlags() {
+            const flags = [
+                'hpm_supabase_first_sync_done',
+                'hpm_sync_action',
+                'helm_sync_complete',
+                'hpm_first_sync_done'
+            ];
+            
+            flags.forEach(f => localStorage.removeItem(f));
+            log('Sync flags cleared - HELM will show first-time sync modal on next load', 'success');
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // BACKUP/RESTORE
+        // ═══════════════════════════════════════════════════════════════════════
+        function exportBackup() {
+            const backup = {};
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                backup[key] = localStorage.getItem(key);
+            }
+            
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `helm-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            
+            log(`Exported ${Object.keys(backup).length} localStorage items`, 'success');
+        }
+        
+        function importBackup() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const backup = JSON.parse(evt.target.result);
+                        Object.keys(backup).forEach(key => {
+                            localStorage.setItem(key, backup[key]);
+                        });
+                        log(`Imported ${Object.keys(backup).length} items to localStorage`, 'success');
+                        runDiagnostics();
+                    } catch (err) {
+                        log(`Import failed: ${err.message}`, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+        
+        function clearLocalStorage() {
+            if (!confirm('This will clear ALL localStorage data. Are you sure?')) return;
+            localStorage.clear();
+            log('LocalStorage cleared', 'warning');
+            runDiagnostics();
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // DATA PREVIEW
+        // ═══════════════════════════════════════════════════════════════════════
+        async function previewTable(tableName) {
+            if (!supabase) { log('Connect first', 'error'); return; }
+            
+            const { data, error } = await supabase.from(tableName).select('*').limit(20);
+            
+            if (error) {
+                log(`Preview failed: ${error.message}`, 'error');
+                return;
+            }
+            
+            if (!data || data.length === 0) {
+                log(`No data in ${tableName}`, 'warning');
+                return;
+            }
+            
+            const preview = document.getElementById('data-preview');
+            const header = document.getElementById('preview-header');
+            const body = document.getElementById('preview-body');
+            
+            // Get columns (max 6)
+            const columns = Object.keys(data[0]).slice(0, 6);
+            
+            // Build header
+            header.innerHTML = `<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
+            
+            // Build body
+            body.innerHTML = data.map(row => 
+                `<tr>${columns.map(c => `<td>${String(row[c] || '').substring(0, 30)}</td>`).join('')}</tr>`
+            ).join('');
+            
+            preview.style.display = 'block';
+            log(`Loaded ${data.length} rows from ${tableName}`, 'info');
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load saved config
+            const savedUrl = localStorage.getItem('helm_repair_url');
+            const savedKey = localStorage.getItem('helm_repair_key');
+            
+            if (savedUrl) document.getElementById('supabase-url').value = savedUrl;
+            if (savedKey) document.getElementById('supabase-key').value = savedKey;
+            
+            // Auto-connect if we have credentials
+            if (savedUrl && savedKey) {
+                connectSupabase();
+            }
+            
+            log('HELM Repair Tool ready', 'info');
+        });
+    </script>
+</body>
+</html>
