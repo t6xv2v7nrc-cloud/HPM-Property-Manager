@@ -2,9 +2,9 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HPM - HELM PROPERTY MANAGER                ║
-    ║                        Version 62.4                           ║
+    ║                        Version 65.8                           ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  v61.8 - LIVE DATA SYSTEM                                     ║
+    ║  v65.8 - LIVE DATA SYSTEM                                     ║
     ║  ──────────────────────────────────────────────────────────── ║
     ║  🚀 MAJOR NEW FEATURES:                                       ║
     ║                                                               ║
@@ -871,25 +871,83 @@
                     return;
                 }
                 try {
-                    if (typeof showToast === 'function') showToast('Syncing...', 'Uploading data to cloud', 'info');
+                    if (typeof showToast === 'function') showToast('Syncing...', 'Uploading all data to cloud', 'info');
+                    
+                    let uploadedCounts = { viewings: 0, properties: 0, clients: 0 };
+                    
+                    // 1. Upload VIEWINGS
                     const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
                     for (const viewing of viewings) {
-                        await window.supabase.from('viewings').upsert({
+                        const { error } = await window.supabase.from('viewings').upsert({
                             id: String(viewing.id),
                             client_name: viewing.name || viewing.clientName || viewing.visitor,
-                            client_phone: viewing.phone || viewing.visitorPhone,
-                            property_id: String(viewing.propertyId),
+                            client_phone: viewing.phone || viewing.visitorPhone || viewing.clientPhone,
+                            client_email: viewing.email || viewing.clientEmail,
+                            property_id: viewing.propertyId ? parseInt(viewing.propertyId) : null,
                             property_name: viewing.propertyName || viewing.property,
+                            property_address: viewing.propertyAddress || viewing.address,
                             viewing_date: viewing.date,
                             viewing_time: viewing.time,
                             status: viewing.status || 'scheduled',
                             outcome: viewing.outcome,
+                            agent_id: viewing.agentId,
                             notes: viewing.notes,
-                            added_by: user.id,
-                            added_by_name: user.name
+                            booked_by: user.id,
+                            booked_by_name: user.name,
+                            updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
+                        if (!error) uploadedCounts.viewings++;
+                        else console.error('[Sync] Viewing upload error:', error);
                     }
-                    if (typeof showToast === 'function') showToast('Sync Complete! ✓', `${viewings.length} viewings uploaded`, 'success');
+                    
+                    // 2. Upload PROPERTIES
+                    const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                    for (const prop of properties) {
+                        const { error } = await window.supabase.from('properties').upsert({
+                            id: prop.id,
+                            name: prop.name,
+                            address: prop.address,
+                            postcode: prop.postcode,
+                            borough: prop.borough,
+                            rent: prop.rent,
+                            lha_rate: prop.lhaRate,
+                            bedrooms: prop.bedrooms || 0,
+                            status: prop.status || 'available',
+                            lat: prop.lat,
+                            lng: prop.lng,
+                            landlord: prop.landlord,
+                            notes: prop.notes,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' });
+                        if (!error) uploadedCounts.properties++;
+                        else console.error('[Sync] Property upload error:', error);
+                    }
+                    
+                    // 3. Upload PIPELINE/CLIENTS
+                    const clients = JSON.parse(localStorage.getItem('elevate_clients') || '[]');
+                    for (const client of clients) {
+                        const { error } = await window.supabase.from('clients').upsert({
+                            id: client.id,
+                            name: client.name,
+                            phone: client.phone,
+                            email: client.email,
+                            stage: client.stage || 'new',
+                            property_interest: client.propertyInterest,
+                            max_rent: client.maxRent,
+                            borough_preference: client.boroughPreference,
+                            referral_source: client.referralSource,
+                            notes: client.notes,
+                            last_contact: client.lastContact,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' });
+                        if (!error) uploadedCounts.clients++;
+                        else console.error('[Sync] Client upload error:', error);
+                    }
+                    
+                    console.log('[HPM Sync] Upload complete:', uploadedCounts);
+                    if (typeof showToast === 'function') {
+                        showToast('Sync Complete! ✓', `${uploadedCounts.viewings} viewings, ${uploadedCounts.properties} properties, ${uploadedCounts.clients} clients`, 'success');
+                    }
                 } catch (err) {
                     console.error('[Sync] Upload error:', err);
                     if (typeof showToast === 'function') showToast('Sync Failed', err.message, 'error');
@@ -901,27 +959,96 @@
                 if (this.isSyncing || !window.supabase) return;
                 this.isSyncing = true;
                 try {
-                    if (typeof showToast === 'function') showToast('Syncing...', 'Downloading from cloud', 'info');
-                    const { data: viewings, error } = await window.supabase
+                    if (typeof showToast === 'function') showToast('Syncing...', 'Downloading all data from cloud', 'info');
+                    
+                    let downloadedCounts = { viewings: 0, properties: 0, clients: 0 };
+                    
+                    // 1. Download VIEWINGS
+                    const { data: viewings, error: vError } = await window.supabase
                         .from('viewings')
                         .select('*')
                         .order('viewing_date', { ascending: false });
-                    if (error) throw error;
+                    
+                    if (vError) console.error('[Sync] Viewings download error:', vError);
                     if (viewings && viewings.length > 0) {
                         const localViewings = viewings.map(v => ({
-                            id: parseInt(v.id) || Date.now(),
+                            id: v.id,
                             name: v.client_name, clientName: v.client_name, visitor: v.client_name,
-                            phone: v.client_phone, visitorPhone: v.client_phone,
+                            phone: v.client_phone, visitorPhone: v.client_phone, clientPhone: v.client_phone,
+                            email: v.client_email, clientEmail: v.client_email,
                             propertyId: v.property_id, propertyName: v.property_name, property: v.property_name,
+                            propertyAddress: v.property_address, address: v.property_address,
                             date: v.viewing_date, time: v.viewing_time,
-                            status: v.status, outcome: v.outcome, notes: v.notes
+                            status: v.status, outcome: v.outcome, notes: v.notes,
+                            agentId: v.agent_id,
+                            updatedAt: v.updated_at
                         }));
                         localStorage.setItem('propertyViewings', JSON.stringify(localViewings));
-                        if (typeof showToast === 'function') showToast('Download Complete! ✓', `${localViewings.length} viewings synced`, 'success');
-                        if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
-                    } else {
-                        if (typeof showToast === 'function') showToast('No cloud data', 'Nothing to download', 'info');
+                        downloadedCounts.viewings = localViewings.length;
                     }
+                    
+                    // 2. Download PROPERTIES
+                    const { data: properties, error: pError } = await window.supabase
+                        .from('properties')
+                        .select('*');
+                    
+                    if (pError) console.error('[Sync] Properties download error:', pError);
+                    if (properties && properties.length > 0) {
+                        const localProps = properties.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            address: p.address,
+                            postcode: p.postcode,
+                            borough: p.borough,
+                            rent: p.rent,
+                            lhaRate: p.lha_rate,
+                            bedrooms: p.bedrooms,
+                            status: p.status,
+                            lat: p.lat,
+                            lng: p.lng,
+                            landlord: p.landlord,
+                            notes: p.notes
+                        }));
+                        localStorage.setItem('elevate_properties', JSON.stringify(localProps));
+                        downloadedCounts.properties = localProps.length;
+                    }
+                    
+                    // 3. Download CLIENTS/PIPELINE
+                    const { data: clients, error: cError } = await window.supabase
+                        .from('clients')
+                        .select('*');
+                    
+                    if (cError) console.error('[Sync] Clients download error:', cError);
+                    if (clients && clients.length > 0) {
+                        const localClients = clients.map(c => ({
+                            id: c.id,
+                            name: c.name,
+                            phone: c.phone,
+                            email: c.email,
+                            stage: c.stage,
+                            propertyInterest: c.property_interest,
+                            maxRent: c.max_rent,
+                            boroughPreference: c.borough_preference,
+                            referralSource: c.referral_source,
+                            notes: c.notes,
+                            lastContact: c.last_contact
+                        }));
+                        localStorage.setItem('elevate_clients', JSON.stringify(localClients));
+                        downloadedCounts.clients = localClients.length;
+                    }
+                    
+                    console.log('[HPM Sync] Download complete:', downloadedCounts);
+                    if (typeof showToast === 'function') {
+                        showToast('Download Complete! ✓', `${downloadedCounts.viewings} viewings, ${downloadedCounts.properties} properties, ${downloadedCounts.clients} clients`, 'success');
+                    }
+                    
+                    // Refresh all UI components
+                    if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
+                    if (typeof initViewingsTimetable === 'function') initViewingsTimetable();
+                    if (typeof updateViewingsStats === 'function') updateViewingsStats();
+                    if (typeof updateMapMarkers === 'function') updateMapMarkers();
+                    if (typeof renderPipelineTable === 'function') renderPipelineTable();
+                    
                 } catch (err) {
                     console.error('[Sync] Download error:', err);
                     if (typeof showToast === 'function') showToast('Sync Failed', err.message, 'error');
@@ -14369,6 +14496,27 @@
         .leaflet-marker-icon {
             pointer-events: auto !important;
         }
+        
+        /* v65.6 - ENSURE PROPERTY MARKERS ARE VISIBLE */
+        .hpm-marker-wrapper,
+        .hpm-cluster-wrapper {
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        .hpm-property-pin {
+            cursor: pointer !important;
+            z-index: 1000 !important;
+        }
+        
+        /* Make markers bigger and more visible */
+        .leaflet-marker-icon.hpm-marker-wrapper {
+            z-index: 500 !important;
+        }
+        
+        .leaflet-marker-icon.hpm-cluster-wrapper {
+            z-index: 600 !important;
+        }
 
         /* Tactical filter button hover states - v55.9 */
         .tactical-filter-btn:hover {
@@ -14958,38 +15106,124 @@
          ═══════════════════════════════════════════════════════════ -->
     <div id="hpm-login-screen">
         <style>
-            #hpm-login-screen .login-container{display:flex;gap:32px;max-width:820px;width:95%;padding:20px;position:relative;z-index:1}
-            #hpm-login-screen .login-card{flex:1;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:36px;backdrop-filter:blur(20px);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)}
-            #hpm-login-screen .login-header{text-align:center;margin-bottom:28px}
-            #hpm-login-screen .login-logo{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px}
-            #hpm-login-screen .logo-mark{width:52px;height:52px;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 10px 25px -5px rgba(34,197,94,0.4)}
+            #hpm-login-screen {
+                min-height: 100vh;
+                background: linear-gradient(135deg, #0a0f1a 0%, #1a1f35 50%, #0d1220 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+            }
+            #hpm-login-screen::before {
+                content: '';
+                position: absolute;
+                top: -20%;
+                left: -10%;
+                width: 500px;
+                height: 500px;
+                background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+                border-radius: 50%;
+                animation: float 8s ease-in-out infinite;
+            }
+            #hpm-login-screen::after {
+                content: '';
+                position: absolute;
+                bottom: -30%;
+                right: -15%;
+                width: 600px;
+                height: 600px;
+                background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+                border-radius: 50%;
+                animation: float 10s ease-in-out infinite;
+                animation-delay: -3s;
+            }
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-20px); }
+            }
+            @keyframes pulse-glow {
+                0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+                50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6); }
+            }
+            @keyframes slide-up {
+                from { transform: translateY(30px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes building-rise {
+                from { transform: translateY(100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            @keyframes crown-bounce {
+                0%, 100% { transform: translateY(0) rotate(-5deg); }
+                50% { transform: translateY(-5px) rotate(5deg); }
+            }
+            #hpm-login-screen .login-grid-bg {
+                position: absolute;
+                inset: 0;
+                background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                                  linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+                background-size: 50px 50px;
+                opacity: 0.5;
+                pointer-events: none;
+            }
+            #hpm-login-screen .login-container{display:flex;gap:32px;max-width:900px;width:95%;padding:20px;position:relative;z-index:1}
+            #hpm-login-screen .login-card{flex:1;background:rgba(15,23,42,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:40px;backdrop-filter:blur(20px);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);animation:slide-up 0.6s ease forwards}
+            #hpm-login-screen .login-header{text-align:left;margin-bottom:32px}
+            #hpm-login-screen .login-logo{display:flex;align-items:center;gap:16px;margin-bottom:32px}
+            #hpm-login-screen .logo-mark{width:56px;height:56px;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 10px 25px -5px rgba(34,197,94,0.4);animation:pulse-glow 3s ease-in-out infinite}
             #hpm-login-screen .logo-text{text-align:left}
-            #hpm-login-screen .logo-title{font-size:28px;font-weight:800;color:white;letter-spacing:3px;line-height:1}
-            #hpm-login-screen .logo-subtitle{font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:2px;margin-top:4px}
-            #hpm-login-screen .auth-tabs{display:flex;margin-bottom:20px;background:rgba(255,255,255,0.03);padding:4px;border-radius:10px;border:1px solid rgba(255,255,255,0.05)}
-            #hpm-login-screen .auth-tab{flex:1;padding:10px 16px;background:transparent;border:none;border-radius:7px;color:rgba(255,255,255,0.5);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s}
-            #hpm-login-screen .auth-tab.active{background:rgba(34,197,94,0.15);color:#22c55e;box-shadow:0 0 20px rgba(34,197,94,0.1)}
+            #hpm-login-screen .logo-title{font-size:32px;font-weight:800;background:linear-gradient(135deg, #ffffff 0%, #22c55e 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;line-height:1}
+            #hpm-login-screen .logo-subtitle{font-size:13px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;margin-top:4px;font-weight:500}
+            #hpm-login-screen .welcome-text h2{margin:0 0 8px;font-size:28px;font-weight:700;color:white}
+            #hpm-login-screen .welcome-text p{margin:0;color:rgba(255,255,255,0.5);font-size:16px}
+            #hpm-login-screen .auth-tabs{display:flex;background:rgba(255,255,255,0.03);padding:4px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px}
+            #hpm-login-screen .auth-tab{flex:1;padding:12px 16px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.5);font-size:15px;font-weight:500;cursor:pointer;transition:all 0.3s;position:relative}
+            #hpm-login-screen .auth-tab.active{color:white}
+            #hpm-login-screen .auth-tab.active::after{content:'';position:absolute;bottom:0;left:20%;width:60%;height:2px;background:#22c55e;border-radius:2px}
             #hpm-login-screen .auth-tab:hover:not(.active){color:rgba(255,255,255,0.7)}
-            #hpm-login-screen .auth-form{display:flex;flex-direction:column;gap:14px}
-            #hpm-login-screen .form-group{display:flex;flex-direction:column;gap:5px}
-            #hpm-login-screen .form-group label{color:rgba(255,255,255,0.5);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
-            #hpm-login-screen .form-group input{padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:white;font-size:14px;transition:all 0.2s}
-            #hpm-login-screen .form-group input:focus{outline:none;border-color:rgba(34,197,94,0.5);background:rgba(255,255,255,0.06);box-shadow:0 0 0 3px rgba(34,197,94,0.1)}
-            #hpm-login-screen .form-group input::placeholder{color:rgba(255,255,255,0.25)}
-            #hpm-login-screen .auth-error{color:#f87171;font-size:12px;margin:4px 0 0;min-height:18px;line-height:1.4}
+            #hpm-login-screen .auth-form{display:flex;flex-direction:column;gap:16px}
+            #hpm-login-screen .form-group{display:flex;flex-direction:column;gap:8px}
+            #hpm-login-screen .form-group label{color:rgba(255,255,255,0.7);font-size:14px;font-weight:500}
+            #hpm-login-screen .form-group input{padding:16px 20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:white;font-size:16px;transition:all 0.3s}
+            #hpm-login-screen .form-group input:focus{outline:none;border-color:#22c55e;background:rgba(34,197,94,0.05);box-shadow:0 0 30px rgba(34,197,94,0.1)}
+            #hpm-login-screen .form-group input::placeholder{color:rgba(255,255,255,0.4)}
+            #hpm-login-screen .auth-error{color:#f87171;font-size:13px;margin:4px 0 0;min-height:20px;line-height:1.4}
             #hpm-login-screen .auth-error.success{color:#4ade80}
-            #hpm-login-screen .auth-btn{padding:14px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-top:4px}
+            #hpm-login-screen .auth-btn{padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s;margin-top:8px}
             #hpm-login-screen .auth-btn.primary{background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:white;box-shadow:0 4px 15px rgba(34,197,94,0.3)}
-            #hpm-login-screen .auth-btn.primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(34,197,94,0.4)}
+            #hpm-login-screen .auth-btn.primary:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(34,197,94,0.4)}
             #hpm-login-screen .auth-btn.primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-            #hpm-login-screen .login-footer{text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.05)}
-            #hpm-login-screen .login-footer p{color:rgba(255,255,255,0.25);font-size:11px;margin:0}
-            #hpm-login-screen .leaderboard-card{width:260px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:20px;backdrop-filter:blur(20px);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)}
-            #hpm-login-screen .lb-header{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.05)}
-            #hpm-login-screen .lb-header h3{color:white;font-size:14px;font-weight:600;margin:0}
-            #hpm-login-screen .lb-hint{text-align:center;color:rgba(255,255,255,0.3);font-size:11px;margin-top:12px}
+            #hpm-login-screen .login-footer{text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05)}
+            #hpm-login-screen .login-footer p{color:rgba(255,255,255,0.4);font-size:13px;margin:0}
+            #hpm-login-screen .leaderboard-card{width:320px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:24px;padding:24px;backdrop-filter:blur(20px);position:relative;overflow:hidden}
+            #hpm-login-screen .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+            #hpm-login-screen .stat-card{text-align:center;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;border:1px solid rgba(255,255,255,0.05);transition:all 0.3s}
+            #hpm-login-screen .stat-card:hover{background:rgba(255,255,255,0.04);border-color:rgba(34,197,94,0.2)}
+            #hpm-login-screen .stat-value{font-size:24px;font-weight:700;font-family:'Space Mono',monospace}
+            #hpm-login-screen .stat-label{font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px}
+            #hpm-login-screen .lb-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+            #hpm-login-screen .lb-icon{width:48px;height:48px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;animation:crown-bounce 2s ease-in-out infinite;box-shadow:0 4px 20px rgba(251,191,36,0.4)}
+            #hpm-login-screen .lb-title h3{margin:0;font-size:18px;font-weight:700;color:white}
+            #hpm-login-screen .lb-title p{margin:0;font-size:13px;color:rgba(255,255,255,0.5)}
+            #hpm-login-screen .lb-live{margin-left:auto;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:6px 12px;font-size:11px;color:#22c55e;font-weight:600}
+            #hpm-login-screen .lb-row{display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px;margin-bottom:8px;transition:all 0.3s;animation:slide-up 0.5s ease forwards;opacity:0}
+            #hpm-login-screen .lb-row:hover{background:rgba(255,255,255,0.05);transform:translateX(5px)}
+            #hpm-login-screen .lb-rank{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin-right:12px}
+            #hpm-login-screen .lb-rank.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a}
+            #hpm-login-screen .lb-rank.silver{background:linear-gradient(135deg,#9ca3af,#6b7280);color:white}
+            #hpm-login-screen .lb-rank.bronze{background:linear-gradient(135deg,#d97706,#b45309);color:white}
+            #hpm-login-screen .lb-rank.other{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6)}
+            #hpm-login-screen .lb-name{flex:1;color:white;font-weight:600;font-size:14px}
+            #hpm-login-screen .lb-score{color:rgba(255,255,255,0.8);font-weight:600;font-family:'Space Mono',monospace;font-size:14px}
+            #hpm-login-screen .lb-cta{margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(34,197,94,0.05));border:1px solid rgba(34,197,94,0.2);border-radius:12px;text-align:center}
+            #hpm-login-screen .lb-cta p{margin:0;color:rgba(255,255,255,0.7);font-size:14px}
+            #hpm-login-screen .lb-cta span{color:#22c55e;font-weight:600}
+            #hpm-login-screen .skyline{position:absolute;bottom:0;left:0;right:0;height:200px;display:flex;align-items:flex-end;justify-content:center;gap:4px;opacity:0.2;pointer-events:none}
+            #hpm-login-screen .building{background:linear-gradient(to top,#1a1f35,#2a3050);border-radius:4px 4px 0 0;animation:building-rise 1s ease forwards}
             @media(max-width:768px){#hpm-login-screen .login-container{flex-direction:column}#hpm-login-screen .leaderboard-card{width:100%;order:-1}}
         </style>
+        <div class="login-grid-bg"></div>
         <div class="login-container">
             <div class="login-card">
                 <div class="login-header">
@@ -15000,6 +15234,10 @@
                             <div class="logo-subtitle">Property Manager</div>
                         </div>
                     </div>
+                    <div class="welcome-text">
+                        <h2>Welcome back</h2>
+                        <p>Sign in to manage your portfolio</p>
+                    </div>
                 </div>
                 
                 <div class="auth-tabs">
@@ -15009,12 +15247,12 @@
                 
                 <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
                     <div class="form-group">
-                        <label>Email Address</label>
+                        <label>Email</label>
                         <input type="email" id="login-email" placeholder="you@company.com" required autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+                        <input type="password" id="login-password" placeholder="••••••••••••" required autocomplete="current-password">
                     </div>
                     <p class="auth-error" id="login-error"></p>
                     <button type="submit" class="auth-btn primary" id="login-btn">Sign In</button>
@@ -15042,21 +15280,76 @@
                 </form>
                 
                 <div class="login-footer">
-                    <p>Harir Industries</p>
+                    <p>Harir Industries © 2026</p>
                 </div>
             </div>
             
             <div class="leaderboard-card">
+                <!-- Animated Skyline Background -->
+                <div class="skyline" id="login-skyline"></div>
+                
+                <!-- Stats Row -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-value" style="color:#22c55e" id="stat-properties">0</div>
+                        <div class="stat-label">Properties</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color:#3b82f6" id="stat-viewings">0</div>
+                        <div class="stat-label">Viewings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" style="color:#f59e0b" id="stat-agents">0</div>
+                        <div class="stat-label">Agents</div>
+                    </div>
+                </div>
+                
                 <div class="lb-header">
-                    <span>🏆</span>
-                    <h3>Team Leaderboard</h3>
+                    <div class="lb-icon">👑</div>
+                    <div class="lb-title">
+                        <h3>Team Leaderboard</h3>
+                        <p>Compete to be #1!</p>
+                    </div>
+                    <div class="lb-live">🔴 LIVE</div>
                 </div>
                 <div id="login-leaderboard">
                     <p style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;padding:16px 0;">Loading...</p>
                 </div>
-                <p class="lb-hint">Sign in to compete!</p>
+                <div class="lb-cta">
+                    <p>🎯 <span>Sign in</span> to compete on the leaderboard!</p>
+                </div>
             </div>
         </div>
+        <script>
+            // Generate skyline buildings
+            (function() {
+                const skyline = document.getElementById('login-skyline');
+                if (!skyline) return;
+                for (let i = 0; i < 20; i++) {
+                    const building = document.createElement('div');
+                    building.className = 'building';
+                    building.style.width = (Math.random() * 40 + 20) + 'px';
+                    building.style.height = (Math.random() * 150 + 50) + 'px';
+                    building.style.animationDelay = (Math.random() * 2) + 's';
+                    skyline.appendChild(building);
+                }
+                
+                // Animate stats
+                const targets = { properties: 137, viewings: 172, agents: 3 };
+                const duration = 2000;
+                const steps = 60;
+                let step = 0;
+                const interval = setInterval(() => {
+                    step++;
+                    const progress = step / steps;
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    document.getElementById('stat-properties').textContent = Math.floor(targets.properties * eased);
+                    document.getElementById('stat-viewings').textContent = Math.floor(targets.viewings * eased);
+                    document.getElementById('stat-agents').textContent = Math.floor(targets.agents * eased);
+                    if (step >= steps) clearInterval(interval);
+                }, duration / steps);
+            })();
+        </script>
     </div>
 
     <!-- NEW: Pre-landing screen -->
