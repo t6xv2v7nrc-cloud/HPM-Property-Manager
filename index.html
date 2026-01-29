@@ -2,9 +2,9 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HPM - HELM PROPERTY MANAGER                ║
-    ║                        Version 65.8                           ║
+    ║                        Version 62.4                           ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  v65.8 - LIVE DATA SYSTEM                                     ║
+    ║  v61.8 - LIVE DATA SYSTEM                                     ║
     ║  ──────────────────────────────────────────────────────────── ║
     ║  🚀 MAJOR NEW FEATURES:                                       ║
     ║                                                               ║
@@ -47722,7 +47722,7 @@ Harir Industries`;
     // VIEWING OUTCOME BUTTONS - Add to viewings list
     // =====================================================
 
-    // v63: Show viewing outcome modal - can be triggered automatically or manually
+    // v65.6: Show viewing outcome modal - can be triggered automatically or manually
     window.showViewingOutcomeModal = function(viewingId) {
         const viewings = getStorageArray('propertyViewings');
         const viewing = viewings.find(v => v.id == viewingId);
@@ -47737,7 +47737,7 @@ Harir Industries`;
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
         
         modal.innerHTML = `
-            <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border-radius: 20px; padding: 28px; max-width: 450px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 80px rgba(0,0,0,0.5);">
+            <div style="background: linear-gradient(145deg, #1e293b, #0f172a); border-radius: 20px; padding: 28px; max-width: 480px; width: 90%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 80px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto;">
                 <h2 style="margin: 0 0 8px; color: white; font-size: 20px; display: flex; align-items: center; gap: 10px;">
                     🎯 VIEWING OUTCOME
                 </h2>
@@ -47750,22 +47750,50 @@ Harir Industries`;
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <button onclick="recordViewingOutcome(${viewingId}, 'signed')" style="padding: 16px 20px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
                         ✅ <span>SIGNED - Client accepted & signed!</span>
+                        <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">+100 XP</span>
                     </button>
                     
                     <button onclick="recordViewingOutcome(${viewingId}, 'interested')" style="padding: 16px 20px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
                         👍 <span>INTERESTED - Thinking about it</span>
+                        <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">+15 XP</span>
                     </button>
                     
                     <button onclick="recordViewingOutcome(${viewingId}, 'declined')" style="padding: 16px 20px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
                         ❌ <span>DECLINED - Not interested</span>
+                        <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">+10 XP</span>
                     </button>
                     
                     <button onclick="recordViewingOutcome(${viewingId}, 'no-show')" style="padding: 16px 20px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
                         👻 <span>NO-SHOW - Client didn't attend</span>
+                        <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">+5 XP</span>
                     </button>
                     
                     <button onclick="recordViewingOutcome(${viewingId}, 'completed')" style="padding: 16px 20px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
                         👁️ <span>SHOWN ONLY - Just completed viewing</span>
+                        <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">+10 XP</span>
+                    </button>
+                    
+                    <button onclick="recordViewingOutcome(${viewingId}, 'rescheduled')" style="padding: 16px 20px; background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
+                        📅 <span>RESCHEDULED - New date needed</span>
+                        <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">0 XP</span>
+                    </button>
+                    
+                    <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0; padding-top: 8px;">
+                        <p style="color: rgba(255,255,255,0.5); font-size: 11px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">⚠️ Penalty Options</p>
+                    </div>
+                    
+                    <button onclick="showCancelledNotes(${viewingId})" style="padding: 16px 20px; background: linear-gradient(135deg, #991b1b, #7f1d1d); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform=''">
+                        🚫 <span>CANCELLED - Viewing cancelled</span>
+                        <span style="margin-left: auto; font-size: 12px; color: #fca5a5;">-50 XP</span>
+                    </button>
+                </div>
+                
+                <!-- Hidden notes section for cancelled -->
+                <div id="cancelled-notes-section" style="display: none; margin-top: 16px; padding: 16px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px;">
+                    <label style="color: #fca5a5; font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Why was this viewing cancelled?</label>
+                    <textarea id="cancelled-notes-input" placeholder="e.g., Client changed mind, property already let, scheduling conflict..." style="width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; font-size: 14px; resize: vertical; min-height: 80px; font-family: inherit;"></textarea>
+                    <button onclick="recordViewingOutcome(${viewingId}, 'cancelled', document.getElementById('cancelled-notes-input').value)" style="width: 100%; margin-top: 12px; padding: 14px; background: linear-gradient(135deg, #991b1b, #7f1d1d); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        Confirm Cancellation (-50 XP)
                     </button>
                 </div>
                 
@@ -47778,8 +47806,17 @@ Harir Industries`;
         document.body.appendChild(modal);
     };
     
-    // v63: Record the outcome and update viewing status
-    window.recordViewingOutcome = function(viewingId, outcome) {
+    // Show the notes section for cancelled
+    window.showCancelledNotes = function(viewingId) {
+        const section = document.getElementById('cancelled-notes-section');
+        if (section) {
+            section.style.display = 'block';
+            document.getElementById('cancelled-notes-input').focus();
+        }
+    };
+    
+    // v65.6: Record the outcome and update viewing status with XP
+    window.recordViewingOutcome = function(viewingId, outcome, notes = '') {
         const viewings = getStorageArray('propertyViewings');
         const viewingIdx = viewings.findIndex(v => v.id == viewingId);
         
@@ -47788,21 +47825,44 @@ Harir Industries`;
         const viewing = viewings[viewingIdx];
         viewing.outcome = outcome;
         viewing.outcomeDate = new Date().toISOString();
+        if (notes) viewing.outcomeNotes = notes;
+        
+        // XP rewards/penalties
+        const xpRewards = {
+            'signed': 100,
+            'interested': 15,
+            'declined': 10,
+            'no-show': 5,
+            'completed': 10,
+            'rescheduled': 0,
+            'cancelled': -50
+        };
+        
+        const xpChange = xpRewards[outcome] || 0;
         
         // Update status based on outcome
         if (outcome === 'no-show') {
             viewing.status = 'no-show';
         } else if (outcome === 'signed') {
-            viewing.status = 'completed';
-            // Optionally mark property as taken
+            viewing.status = 'signed';
+            // Mark property as taken
             if (viewing.propertyId && window.takenProperties) {
                 window.takenProperties.add(viewing.propertyId);
             }
+        } else if (outcome === 'cancelled') {
+            viewing.status = 'cancelled';
+        } else if (outcome === 'rescheduled') {
+            viewing.status = 'rescheduled';
         } else {
             viewing.status = 'completed';
         }
         
         localStorage.setItem('propertyViewings', JSON.stringify(viewings));
+        
+        // Award/deduct XP
+        if (xpChange !== 0 && typeof awardXP === 'function') {
+            awardXP(xpChange, outcome === 'signed' ? 'Sign-up!' : (outcome === 'cancelled' ? 'Viewing cancelled' : 'Viewing completed'));
+        }
         
         // Close modal
         const modal = document.getElementById('viewing-outcome-modal');
@@ -47815,11 +47875,13 @@ Harir Industries`;
         
         // Show toast
         const outcomeLabels = {
-            'signed': '🎉 Client SIGNED!',
-            'interested': '👍 Marked as interested',
-            'declined': 'Marked as declined',
-            'no-show': '👻 Marked as no-show',
-            'completed': '✅ Viewing completed'
+            'signed': '🎉 Client SIGNED! +100 XP',
+            'interested': '👍 Marked as interested +15 XP',
+            'declined': 'Marked as declined +10 XP',
+            'no-show': '👻 Marked as no-show +5 XP',
+            'completed': '✅ Viewing completed +10 XP',
+            'rescheduled': '📅 Marked for rescheduling',
+            'cancelled': '🚫 Viewing cancelled -50 XP'
         };
         showToast('Outcome Recorded', outcomeLabels[outcome] || 'Updated');
     };
@@ -48708,7 +48770,46 @@ Harir Industries`;
         `;
         }).join('');
 
+        // v65.6: Add UNASSIGNED row for viewings without an agent
         const unassignedViewings = dayViewings.filter(v => !v || !v.agentId);
+        if (unassignedViewings.length > 0) {
+            const unassignedColor = '#6366f1'; // Purple for unassigned
+            const unassignedRow = `
+            <div class="viewings-agent-row" data-agent-id="unassigned" style="display: grid; grid-template-columns: 100px repeat(${TIMETABLE_SLOTS.length}, minmax(45px, 1fr)); gap: 2px; margin-bottom: 4px; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                <div style="padding: 12px 10px; background: rgba(99,102,241,0.15); border-left: 3px solid ${unassignedColor}; border-radius: 6px 0 0 6px; display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 28px; height: 28px; background: ${unassignedColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px;">?</div>
+                    <div style="color: #a5b4fc; font-weight: 600; font-size: 11px;">Unassigned</div>
+                </div>
+                ${TIMETABLE_SLOTS.map(slot => {
+                const viewing = unassignedViewings.find(v => {
+                    if (!v || !v.time) return false;
+                    const viewingTime = v.time.trim();
+                    const slotTime = slot.trim();
+                    if (viewingTime === slotTime) return true;
+                    const normalizeTime = (t) => {
+                        const parts = t.split(':');
+                        if (parts.length !== 2) return t;
+                        const h = parts[0].padStart(2, '0');
+                        const m = parts[1].padStart(2, '0');
+                        return h + ':' + m;
+                    };
+                    return normalizeTime(viewingTime) === normalizeTime(slotTime);
+                });
+                const isLunch = slot === '13:00';
+
+                if (viewing) {
+                    const propName = escapeHTML((viewing.property || viewing.propertyName || viewing.property?.name || viewing.propertyAddress || '').split(',')[0] || 'Viewing');
+                    const clientName = escapeHTML(viewing.visitor || viewing.visitorName || viewing.clientName || viewing.name || viewing.client?.name || 'Client');
+                    return `<div class="timetable-slot filled unassigned" draggable="true" onclick="showViewingInfoModal(${viewing.id})" ondragstart="dragViewing(event, ${viewing.id})" style="padding: 4px; background: linear-gradient(135deg, ${unassignedColor}, #4f46e5); border-radius: 4px; cursor: pointer; border: 1px solid ${unassignedColor}; min-height: 38px; animation: pulse 2s infinite;" title="${propName} - ${clientName} (NEEDS AGENT)"><div style="color: white; font-size: 9px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">⚠️ Needs Agent</div><div style="color: rgba(255,255,255,0.8); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${clientName}</div></div>`;
+                } else {
+                    return `<div class="timetable-slot empty" style="padding: 4px; background: ${isLunch ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.02)'}; border-radius: 4px; min-height: 38px;"></div>`;
+                }
+            }).join('')}
+            </div>
+            `;
+            container.innerHTML += unassignedRow;
+        }
+
         const unassignedContainer = document.getElementById('viewings-unassigned-pool');
         if (unassignedContainer) {
             unassignedContainer.innerHTML = unassignedViewings.length > 0
