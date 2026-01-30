@@ -425,8 +425,10 @@
 
         // XP Values
         const XP_VALUES = {
-            VIEWING_BOOKED: 5, VIEWING_CONDUCTED: 10, SIGNUP_CLOSED: 50,
-            NO_SHOW_RECORDED: 2, PROPERTY_ADDED: 3, CLIENT_ADDED: 3, DATA_SYNCED: 1
+            VIEWING_BOOKED: 5, VIEWING_CONDUCTED: 10, SIGNUP_CLOSED: 100,
+            NO_SHOW_RECORDED: 5, PROPERTY_ADDED: 3, CLIENT_ADDED: 3, DATA_SYNCED: 1,
+            VIEWING_SIGNED: 100, VIEWING_INTERESTED: 15, VIEWING_DECLINED: 10,
+            VIEWING_COMPLETED: 10, VIEWING_RESCHEDULED: 0, VIEWING_CANCELLED: -50
         };
 
         // ═══════════════════════════════════════════════════════════
@@ -439,16 +441,51 @@
             getCurrentUser: function() { return this.currentUser; },
             getUserProfile: function() { return this.userProfile; },
             
-            awardXP: async function(reason, referenceId = null) {
-                if (!this.currentUser || !window.supabase) return;
-                const amount = XP_VALUES[reason] || 0;
+            // v65.8: Enhanced XP system - writes to xp_transactions AND updates profile
+            awardXP: async function(amountOrReason, reasonText = null) {
+                if (!this.currentUser || !window.supabase) {
+                    console.log('[XP] Cannot award - no user or supabase');
+                    return;
+                }
+                
+                // Support both old format (reason string) and new format (amount, reason)
+                let amount, reason;
+                if (typeof amountOrReason === 'number') {
+                    amount = amountOrReason;
+                    reason = reasonText || 'XP Award';
+                } else {
+                    amount = XP_VALUES[amountOrReason] || 0;
+                    reason = amountOrReason;
+                }
+                
                 if (amount === 0) return;
                 
+                const currentXP = this.userProfile?.xp_points || 0;
+                const newXP = Math.max(0, currentXP + amount); // Don't go below 0
+                
                 try {
+                    // 1. Record transaction in xp_transactions table
+                    const { error: txError } = await window.supabase
+                        .from('xp_transactions')
+                        .insert({
+                            user_id: this.currentUser.id,
+                            amount: amount,
+                            reason: reason,
+                            reference_id: null,
+                            created_at: new Date().toISOString()
+                        });
+                    
+                    if (txError) {
+                        console.error('[XP] Transaction insert error:', txError);
+                    } else {
+                        console.log(`[XP] Transaction recorded: ${amount > 0 ? '+' : ''}${amount} XP for ${reason}`);
+                    }
+                    
+                    // 2. Update profile xp_points
                     const { data, error } = await window.supabase
                         .from('profiles')
                         .update({ 
-                            xp_points: (this.userProfile?.xp_points || 0) + amount,
+                            xp_points: newXP,
                             last_active: new Date().toISOString()
                         })
                         .eq('id', this.currentUser.id)
@@ -457,16 +494,19 @@
                     
                     if (!error && data) {
                         this.userProfile = data;
+                        console.log(`[XP] Profile updated: ${currentXP} → ${newXP} XP`);
+                        
+                        // Show toast notification
                         if (typeof showToast === 'function') {
-                            const reasons = {
-                                'VIEWING_BOOKED': 'Viewing booked!', 'VIEWING_CONDUCTED': 'Viewing completed!',
-                                'SIGNUP_CLOSED': '🎉 Signup closed!', 'NO_SHOW_RECORDED': 'No-show recorded',
-                                'PROPERTY_ADDED': 'Property added', 'CLIENT_ADDED': 'Client added'
-                            };
-                            showToast(`+${amount} XP`, reasons[reason] || reason, 'success');
+                            const sign = amount > 0 ? '+' : '';
+                            const type = amount > 0 ? 'success' : 'warning';
+                            showToast(`${sign}${amount} XP`, reason, type);
                         }
+                        
                         this.updateUserUI();
                         if (typeof loadTeamLeaderboard === 'function') loadTeamLeaderboard();
+                    } else if (error) {
+                        console.error('[XP] Profile update error:', error);
                     }
                 } catch (err) {
                     console.error('[XP] Award error:', err);
@@ -21000,7 +21040,7 @@
                     return { current: xpIntoLevel, needed: xpNeededForNext };
                 }
 
-                // Award XP with notification
+                // Award XP with notification - v65.8: Also syncs to Supabase
                 window.awardXP = function (amount, title, emoji = '⭐') {
                     const data = getXPData();
 
@@ -21045,6 +21085,11 @@
                     if (newLevel > oldLevel) {
                         setTimeout(() => showLevelUp(newLevel), 800);
                         celebrateWithEmojis(['🎉', '🔥', '⭐', '✨', '🏆'], 15);
+                    }
+                    
+                    // v65.8: ALSO sync to Supabase via HPMAuth
+                    if (window.HPMAuth && typeof window.HPMAuth.awardXP === 'function') {
+                        window.HPMAuth.awardXP(amount, title);
                     }
                 };
 
@@ -55397,24 +55442,29 @@ Write the email now:`;
         }
         console.log(`[HPM Sync] Uploaded ${properties.length} properties`);
         
-        // Upload clients
-        const clients = JSON.parse(localStorage.getItem('elevate_clients') || '[]');
-        for (const c of clients) {
-            await window.supabase.from('clients').upsert({
+        // Upload clients/pipeline - v65.8: Use pipelineData and correct field mapping
+        // The app stores pipeline in 'pipelineData', NOT 'elevate_clients'
+        const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+        console.log(`[HPM Sync] Found ${pipelineData.length} pipeline entries to upload`);
+        
+        for (const c of pipelineData) {
+            const { error } = await window.supabase.from('clients').upsert({
                 id: c.id,
-                name: c.name,
+                client_name: c.name || c.clientName || c.client_name, // DB uses client_name!
                 phone: c.phone,
                 email: c.email,
                 stage: c.stage || 'new',
-                property_interest: c.propertyInterest,
-                max_rent: c.maxRent,
-                borough_preference: c.boroughPreference,
-                referral_source: c.referralSource,
+                property_interest: c.propertyInterest || c.property_interest,
+                max_rent: c.maxRent || c.max_rent,
+                borough_preference: c.boroughPreference || c.borough_preference,
+                referral_source: c.referralSource || c.referral_source || c.source,
                 notes: c.notes,
-                last_contact: c.lastContact
+                last_contact: c.lastContact || c.last_contact || new Date().toISOString()
             }, { onConflict: 'id' });
+            
+            if (error) console.error('[HPM Sync] Client upload error:', error);
         }
-        console.log(`[HPM Sync] Uploaded ${clients.length} clients`);
+        console.log(`[HPM Sync] Uploaded ${pipelineData.length} clients/pipeline entries`);
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -55472,12 +55522,13 @@ Write the email now:`;
             console.log(`[HPM Sync] Downloaded ${localProps.length} properties`);
         }
         
-        // Download clients
+        // Download clients/pipeline - v65.8: Save to pipelineData, use client_name
         const { data: clients } = await window.supabase.from('clients').select('*');
-        if (clients) {
+        if (clients && clients.length > 0) {
             const localClients = clients.map(c => ({
                 id: c.id,
-                name: c.name,
+                name: c.client_name, // DB uses client_name!
+                clientName: c.client_name,
                 phone: c.phone,
                 email: c.email,
                 stage: c.stage,
@@ -55485,11 +55536,15 @@ Write the email now:`;
                 maxRent: c.max_rent,
                 boroughPreference: c.borough_preference,
                 referralSource: c.referral_source,
+                source: c.referral_source,
                 notes: c.notes,
-                lastContact: c.last_contact
+                lastContact: c.last_contact,
+                createdAt: c.created_at
             }));
+            // Save to BOTH keys for compatibility
+            localStorage.setItem('pipelineData', JSON.stringify(localClients));
             localStorage.setItem('elevate_clients', JSON.stringify(localClients));
-            console.log(`[HPM Sync] Downloaded ${localClients.length} clients`);
+            console.log(`[HPM Sync] Downloaded ${localClients.length} clients/pipeline`);
         }
     }
     
@@ -55673,7 +55728,326 @@ Write the email now:`;
                 syncViewingsToSupabase();
             }, 2000); // Wait 2 seconds after last change
         }
+        
+        // v65.7: Also auto-sync properties
+        if (key === 'elevate_properties' && localStorage.getItem(FIRST_SYNC_KEY) === 'true') {
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => {
+                syncPropertiesToSupabase();
+            }, 2000);
+        }
+        
+        // v65.8: Auto-sync pipeline/clients
+        if (key === 'pipelineData' && localStorage.getItem(FIRST_SYNC_KEY) === 'true') {
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => {
+                syncPipelineToSupabase();
+            }, 2000);
+        }
     };
+    
+    // v65.8: Sync pipeline to clients table in Supabase
+    async function syncPipelineToSupabase() {
+        if (!window.supabase) return;
+        if (localStorage.getItem('hpm_sync_action') === 'skip') return;
+        
+        const pipeline = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+        console.log(`[HPM Sync] Syncing ${pipeline.length} pipeline entries to cloud...`);
+        
+        for (const c of pipeline) {
+            const { error } = await window.supabase.from('clients').upsert({
+                id: c.id,
+                client_name: c.name || c.clientName || c.client_name, // DB uses client_name!
+                phone: c.phone,
+                email: c.email,
+                stage: c.stage || 'new',
+                property_interest: c.propertyInterest || c.property_interest,
+                max_rent: c.maxRent || c.max_rent,
+                borough_preference: c.boroughPreference || c.borough_preference,
+                referral_source: c.referralSource || c.referral_source || c.source,
+                notes: c.notes,
+                last_contact: c.lastContact || c.last_contact || new Date().toISOString()
+            }, { onConflict: 'id' });
+            
+            if (error) console.error('[HPM Sync] Pipeline sync error:', error);
+        }
+        console.log(`[HPM Sync] ✅ Synced ${pipeline.length} pipeline entries to cloud`);
+    }
+    
+    // v65.7: Sync properties to Supabase
+    async function syncPropertiesToSupabase() {
+        if (!window.supabase) return;
+        if (localStorage.getItem('hpm_sync_action') === 'skip') return;
+        
+        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        
+        for (const p of properties) {
+            const { error } = await window.supabase.from('properties').upsert({
+                id: p.id,
+                name: p.name,
+                address: p.address,
+                postcode: p.postcode,
+                borough: p.borough,
+                rent: p.rent,
+                lha_rate: p.lhaRate,
+                bedrooms: p.bedrooms || 0,
+                status: p.status || 'available',
+                lat: p.lat,
+                lng: p.lng,
+                landlord: p.landlord,
+                notes: p.notes,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+            
+            if (error) console.error('[HPM Sync] Property error:', error);
+        }
+        console.log(`[HPM Sync] Synced ${properties.length} properties to cloud`);
+    }
+    
+    // ═══════════════════════════════════════════════════════════
+    // v65.7: AUTO-SYNC ON PAGE LOAD - Critical for multi-device use
+    // ═══════════════════════════════════════════════════════════
+    async function autoSyncOnLoad() {
+        if (!window.supabase) {
+            console.log('[HPM Sync] Supabase not available for auto-sync');
+            return;
+        }
+        
+        console.log('[HPM Sync] 🔄 Auto-syncing from cloud...');
+        showSyncIndicator('Syncing data...');
+        
+        try {
+            // 1. Download PROPERTIES from Supabase
+            showSyncIndicator('Loading properties...');
+            const { data: cloudProps, error: propError } = await window.supabase
+                .from('properties')
+                .select('*');
+            
+            if (propError) {
+                console.error('[HPM Sync] Properties download error:', propError);
+            } else if (cloudProps && cloudProps.length > 0) {
+                const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                const localPropsMap = new Map(localProps.map(p => [p.id, p]));
+                
+                // Merge: cloud wins for existing, add new from both
+                cloudProps.forEach(cp => {
+                    localPropsMap.set(cp.id, {
+                        id: cp.id,
+                        name: cp.name,
+                        address: cp.address,
+                        postcode: cp.postcode,
+                        borough: cp.borough,
+                        rent: cp.rent,
+                        lhaRate: cp.lha_rate,
+                        bedrooms: cp.bedrooms,
+                        status: cp.status,
+                        lat: cp.lat,
+                        lng: cp.lng,
+                        landlord: cp.landlord,
+                        notes: cp.notes,
+                        dateAdded: cp.date_added || cp.created_at
+                    });
+                });
+                
+                const mergedProps = Array.from(localPropsMap.values());
+                localStorage.setItem('elevate_properties', JSON.stringify(mergedProps));
+                
+                // Also set window.properties for immediate use
+                window.properties = mergedProps;
+                
+                console.log(`[HPM Sync] ✅ Properties: ${mergedProps.length} (cloud: ${cloudProps.length})`);
+            }
+            
+            // 2. Download VIEWINGS from Supabase
+            showSyncIndicator('Loading viewings...');
+            const { data: cloudViewings, error: viewError } = await window.supabase
+                .from('viewings')
+                .select('*');
+            
+            if (viewError) {
+                console.error('[HPM Sync] Viewings download error:', viewError);
+            } else if (cloudViewings && cloudViewings.length > 0) {
+                const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                const viewingsMap = new Map();
+                
+                // Add local viewings first
+                localViewings.forEach(v => {
+                    if (v && v.id) viewingsMap.set(String(v.id), v);
+                });
+                
+                // Merge with cloud (cloud wins for same ID based on updated_at)
+                cloudViewings.forEach(cv => {
+                    const existing = viewingsMap.get(String(cv.id));
+                    const cloudItem = {
+                        id: cv.id,
+                        name: cv.client_name,
+                        clientName: cv.client_name,
+                        visitor: cv.client_name,
+                        phone: cv.client_phone,
+                        clientPhone: cv.client_phone,
+                        email: cv.client_email,
+                        propertyId: cv.property_id,
+                        propertyName: cv.property_name,
+                        property: cv.property_name,
+                        propertyAddress: cv.property_address,
+                        address: cv.property_address,
+                        date: cv.viewing_date,
+                        time: cv.viewing_time,
+                        status: cv.status,
+                        outcome: cv.outcome,
+                        outcomeNotes: cv.outcome_notes,
+                        agentId: cv.agent_id,
+                        notes: cv.notes,
+                        updatedAt: cv.updated_at
+                    };
+                    
+                    if (!existing) {
+                        viewingsMap.set(String(cv.id), cloudItem);
+                    } else {
+                        // Compare timestamps - cloud wins if newer or if local has no timestamp
+                        const localTime = new Date(existing.updatedAt || 0).getTime();
+                        const cloudTime = new Date(cv.updated_at || 0).getTime();
+                        if (cloudTime >= localTime || !existing.updatedAt) {
+                            viewingsMap.set(String(cv.id), cloudItem);
+                        }
+                    }
+                });
+                
+                const mergedViewings = Array.from(viewingsMap.values());
+                localStorage.setItem('propertyViewings', JSON.stringify(mergedViewings));
+                
+                // Also set window.viewings for immediate use
+                window.viewings = mergedViewings;
+                
+                console.log(`[HPM Sync] ✅ Viewings: ${mergedViewings.length} (cloud: ${cloudViewings.length})`);
+            }
+            
+            // 3. Download CLIENTS/PIPELINE from Supabase - v65.8: Use pipelineData + client_name
+            const { data: cloudClients, error: clientError } = await window.supabase
+                .from('clients')
+                .select('*');
+            
+            if (clientError) {
+                console.error('[HPM Sync] Clients download error:', clientError);
+            } else if (cloudClients && cloudClients.length > 0) {
+                // Load from pipelineData (the actual key used by the app)
+                const localPipeline = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+                const clientsMap = new Map(localPipeline.map(c => [c.id, c]));
+                
+                cloudClients.forEach(cc => {
+                    clientsMap.set(cc.id, {
+                        id: cc.id,
+                        name: cc.client_name, // DB uses client_name!
+                        clientName: cc.client_name,
+                        phone: cc.phone,
+                        email: cc.email,
+                        stage: cc.stage,
+                        propertyInterest: cc.property_interest,
+                        maxRent: cc.max_rent,
+                        boroughPreference: cc.borough_preference,
+                        referralSource: cc.referral_source,
+                        source: cc.referral_source,
+                        notes: cc.notes,
+                        lastContact: cc.last_contact,
+                        createdAt: cc.created_at
+                    });
+                });
+                
+                const mergedClients = Array.from(clientsMap.values());
+                // Save to BOTH keys for compatibility
+                localStorage.setItem('pipelineData', JSON.stringify(mergedClients));
+                localStorage.setItem('elevate_clients', JSON.stringify(mergedClients));
+                
+                console.log(`[HPM Sync] ✅ Pipeline/Clients: ${mergedClients.length} (cloud: ${cloudClients.length})`);
+            }
+            
+            // 4. Upload any local-only data back to cloud (in case there's new stuff)
+            showSyncIndicator('Uploading local changes...');
+            setTimeout(() => {
+                uploadLocalOnlyData();
+            }, 3000); // Wait 3 seconds to avoid race conditions
+            
+            console.log('[HPM Sync] ✅ Auto-sync complete');
+            hideSyncIndicator();
+            
+            // Refresh UI components
+            setTimeout(() => {
+                if (typeof updateMarkers === 'function') updateMarkers();
+                if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
+                if (typeof initViewingsTimetable === 'function') initViewingsTimetable();
+                if (typeof renderPipelineTable === 'function') renderPipelineTable();
+                if (typeof updateViewingsStats === 'function') updateViewingsStats();
+            }, 500);
+            
+        } catch (err) {
+            console.error('[HPM Sync] Auto-sync error:', err);
+            hideSyncIndicator();
+        }
+    }
+    
+    // Upload data that only exists locally (not in cloud)
+    async function uploadLocalOnlyData() {
+        if (!window.supabase) return;
+        
+        // Check for local viewings not in cloud
+        const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const { data: cloudViewings } = await window.supabase.from('viewings').select('id');
+        const cloudIds = new Set((cloudViewings || []).map(v => String(v.id)));
+        
+        const localOnly = localViewings.filter(v => !cloudIds.has(String(v.id)));
+        
+        if (localOnly.length > 0) {
+            console.log(`[HPM Sync] ⬆️ Uploading ${localOnly.length} local-only viewings...`);
+            for (const v of localOnly) {
+                await window.supabase.from('viewings').upsert({
+                    id: String(v.id),
+                    client_name: v.clientName || v.name || v.visitor,
+                    client_phone: v.phone || v.clientPhone,
+                    client_email: v.email,
+                    property_id: v.propertyId,
+                    property_name: v.propertyName || v.property,
+                    property_address: v.propertyAddress || v.address,
+                    viewing_date: v.date,
+                    viewing_time: v.time,
+                    status: v.status || 'scheduled',
+                    outcome: v.outcome,
+                    agent_id: v.agentId,
+                    notes: v.notes,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+            }
+            console.log(`[HPM Sync] ✅ Uploaded ${localOnly.length} local-only viewings`);
+        }
+        
+        // Check for local properties not in cloud
+        const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        const { data: cloudProps } = await window.supabase.from('properties').select('id');
+        const cloudPropIds = new Set((cloudProps || []).map(p => p.id));
+        
+        const localOnlyProps = localProps.filter(p => !cloudPropIds.has(p.id));
+        
+        if (localOnlyProps.length > 0) {
+            console.log(`[HPM Sync] ⬆️ Uploading ${localOnlyProps.length} local-only properties...`);
+            for (const p of localOnlyProps) {
+                await window.supabase.from('properties').upsert({
+                    id: p.id,
+                    name: p.name,
+                    address: p.address,
+                    postcode: p.postcode,
+                    borough: p.borough,
+                    rent: p.rent,
+                    lha_rate: p.lhaRate,
+                    bedrooms: p.bedrooms || 0,
+                    status: p.status || 'available',
+                    lat: p.lat,
+                    lng: p.lng,
+                    landlord: p.landlord,
+                    notes: p.notes
+                }, { onConflict: 'id' });
+            }
+            console.log(`[HPM Sync] ✅ Uploaded ${localOnlyProps.length} local-only properties`);
+        }
+    }
     
     // ═══════════════════════════════════════════════════════════
     // INITIALIZE
@@ -55692,9 +56066,18 @@ Write the email now:`;
                 showFirstTimeSyncModal();
             }, 1000); // Wait for UI to load
         } else if (localStorage.getItem('hpm_sync_action') !== 'skip') {
-            // Already synced before - start real-time sync
-            subscribeToViewings();
-            console.log('[HPM v65.5.7] Cloud sync active');
+            // v65.7: AUTO-SYNC ON EVERY PAGE LOAD
+            // This ensures data consistency across devices
+            console.log('[HPM v65.7] Starting auto-sync on page load...');
+            
+            // Small delay to let UI initialize first
+            setTimeout(async () => {
+                await autoSyncOnLoad();
+                
+                // Then start real-time subscription
+                subscribeToViewings();
+                console.log('[HPM v65.7] Cloud sync active with auto-sync');
+            }, 1500);
         }
     });
     
@@ -55704,15 +56087,75 @@ Write the email now:`;
         download: downloadAllCloudData,
         merge: smartMergeData,
         sync: syncViewingsToSupabase,
+        syncProperties: syncPropertiesToSupabase,
         load: loadViewingsFromSupabase,
+        autoSync: autoSyncOnLoad,
+        uploadLocalOnly: uploadLocalOnlyData,
         resetFirstSync: () => {
             localStorage.removeItem(FIRST_SYNC_KEY);
             localStorage.removeItem('hpm_sync_action');
             location.reload();
+        },
+        forceFullSync: async () => {
+            console.log('[HPM Sync] 🔄 Force full sync starting...');
+            showSyncIndicator('Syncing...');
+            await autoSyncOnLoad();
+            hideSyncIndicator();
+            showToast('Sync Complete', 'Data synchronized with cloud', 'success');
         }
     };
     
-    console.log('[HPM v65.5.7] Supabase sync module loaded');
+    // v65.7: Visual sync indicator
+    function showSyncIndicator(message = 'Syncing...') {
+        let indicator = document.getElementById('hpm-sync-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'hpm-sync-indicator';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: linear-gradient(135deg, #3b82f6, #2563eb);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 600;
+                z-index: 99999;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+                animation: slideIn 0.3s ease;
+            `;
+            indicator.innerHTML = `
+                <div style="width: 16px; height: 16px; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span id="sync-indicator-text">${message}</span>
+            `;
+            
+            // Add keyframes
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(indicator);
+        } else {
+            document.getElementById('sync-indicator-text').textContent = message;
+            indicator.style.display = 'flex';
+        }
+    }
+    
+    function hideSyncIndicator() {
+        const indicator = document.getElementById('hpm-sync-indicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+    
+    console.log('[HPM v65.7] Supabase sync module loaded with auto-sync');
     
 })();
 </script>
