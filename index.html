@@ -16654,26 +16654,35 @@
                                         <option value="">Select...</option>
                                         <option value="Barking and Dagenham">Barking and Dagenham</option>
                                         <option value="Barnet">Barnet</option>
+                                        <option value="Bexley">Bexley</option>
                                         <option value="Brent">Brent</option>
                                         <option value="Bromley">Bromley</option>
+                                        <option value="Camden">Camden</option>
+                                        <option value="City of London">City of London</option>
                                         <option value="Croydon">Croydon</option>
                                         <option value="Ealing">Ealing</option>
                                         <option value="Enfield">Enfield</option>
                                         <option value="Greenwich">Greenwich</option>
                                         <option value="Hackney">Hackney</option>
-                                        <option value="Hammersmith">Hammersmith</option>
+                                        <option value="Hammersmith and Fulham">Hammersmith and Fulham</option>
                                         <option value="Haringey">Haringey</option>
                                         <option value="Harrow">Harrow</option>
                                         <option value="Havering">Havering</option>
+                                        <option value="Hertfordshire">Hertfordshire</option>
                                         <option value="Hertsmere">Hertsmere</option>
                                         <option value="Hillingdon">Hillingdon</option>
                                         <option value="Hounslow">Hounslow</option>
                                         <option value="Islington">Islington</option>
+                                        <option value="Kensington and Chelsea">Kensington and Chelsea</option>
+                                        <option value="Kingston upon Thames">Kingston upon Thames</option>
                                         <option value="Lambeth">Lambeth</option>
                                         <option value="Lewisham">Lewisham</option>
+                                        <option value="Merton">Merton</option>
                                         <option value="Newham">Newham</option>
                                         <option value="Redbridge">Redbridge</option>
+                                        <option value="Richmond upon Thames">Richmond upon Thames</option>
                                         <option value="Southwark">Southwark</option>
+                                        <option value="Sutton">Sutton</option>
                                         <option value="Thurrock">Thurrock</option>
                                         <option value="Tower Hamlets">Tower Hamlets</option>
                                         <option value="Waltham Forest">Waltham Forest</option>
@@ -22423,24 +22432,7 @@
                     }
                 };
 
-                // Close all panels function
-                window.closeAllPanels = function () {
-                    const menuPanel = document.getElementById('menu-panel');
-                    const clientsPanel = document.getElementById('clients-panel');
-                    const floatingMenu = document.getElementById('floatingMenu');
-                    const viewingsTracker = document.getElementById('viewings-tracker-panel');
-
-                    if (menuPanel) menuPanel.classList.remove('active');
-                    if (clientsPanel) clientsPanel.classList.remove('active');
-                    if (floatingMenu) floatingMenu.classList.remove('active');
-                    if (viewingsTracker) {
-                        viewingsTracker.style.display = 'none';
-                        viewingsTracker.classList.remove('visible');
-                    }
-
-                    // Close any open dropdowns
-                    document.querySelectorAll('.toolbar-dropdown.active').forEach(d => d.classList.remove('active'));
-                };
+                // v66.1: Removed duplicate closeAllPanels - consolidated version below
 
                 // Function to change map style
                 window.changeMapStyle = function (style) {
@@ -28514,17 +28506,42 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                                 <div>
                                     <label style="display: block; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 6px;">Borough</label>
                                     <select id="editBuildingBorough" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 14px; color: white;">
+                                        <option value="Barking and Dagenham" ${firstProp.borough === 'Barking and Dagenham' ? 'selected' : ''}>Barking and Dagenham</option>
+                                        <option value="Barnet" ${firstProp.borough === 'Barnet' ? 'selected' : ''}>Barnet</option>
+                                        <option value="Bexley" ${firstProp.borough === 'Bexley' ? 'selected' : ''}>Bexley</option>
                                         <option value="Brent" ${firstProp.borough === 'Brent' ? 'selected' : ''}>Brent</option>
                                         <option value="Bromley" ${firstProp.borough === 'Bromley' ? 'selected' : ''}>Bromley</option>
+                                        <option value="Camden" ${firstProp.borough === 'Camden' ? 'selected' : ''}>Camden</option>
+                                        <option value="City of London" ${firstProp.borough === 'City of London' ? 'selected' : ''}>City of London</option>
+                                        <option value="Croydon" ${firstProp.borough === 'Croydon' ? 'selected' : ''}>Croydon</option>
                                         <option value="Ealing" ${firstProp.borough === 'Ealing' ? 'selected' : ''}>Ealing</option>
+                                        <option value="Enfield" ${firstProp.borough === 'Enfield' ? 'selected' : ''}>Enfield</option>
+                                        <option value="Greenwich" ${firstProp.borough === 'Greenwich' ? 'selected' : ''}>Greenwich</option>
+                                        <option value="Hackney" ${firstProp.borough === 'Hackney' ? 'selected' : ''}>Hackney</option>
+                                        <option value="Hammersmith and Fulham" ${firstProp.borough === 'Hammersmith and Fulham' ? 'selected' : ''}>Hammersmith and Fulham</option>
+                                        <option value="Haringey" ${firstProp.borough === 'Haringey' ? 'selected' : ''}>Haringey</option>
                                         <option value="Harrow" ${firstProp.borough === 'Harrow' ? 'selected' : ''}>Harrow</option>
+                                        <option value="Havering" ${firstProp.borough === 'Havering' ? 'selected' : ''}>Havering</option>
                                         <option value="Hertfordshire" ${firstProp.borough === 'Hertfordshire' ? 'selected' : ''}>Hertfordshire</option>
                                         <option value="Hertsmere" ${firstProp.borough === 'Hertsmere' ? 'selected' : ''}>Hertsmere</option>
                                         <option value="Hillingdon" ${firstProp.borough === 'Hillingdon' ? 'selected' : ''}>Hillingdon</option>
+                                        <option value="Hounslow" ${firstProp.borough === 'Hounslow' ? 'selected' : ''}>Hounslow</option>
+                                        <option value="Islington" ${firstProp.borough === 'Islington' ? 'selected' : ''}>Islington</option>
+                                        <option value="Kensington and Chelsea" ${firstProp.borough === 'Kensington and Chelsea' ? 'selected' : ''}>Kensington and Chelsea</option>
                                         <option value="Kingston upon Thames" ${firstProp.borough === 'Kingston upon Thames' ? 'selected' : ''}>Kingston upon Thames</option>
                                         <option value="Lambeth" ${firstProp.borough === 'Lambeth' ? 'selected' : ''}>Lambeth</option>
                                         <option value="Lewisham" ${firstProp.borough === 'Lewisham' ? 'selected' : ''}>Lewisham</option>
+                                        <option value="Merton" ${firstProp.borough === 'Merton' ? 'selected' : ''}>Merton</option>
+                                        <option value="Newham" ${firstProp.borough === 'Newham' ? 'selected' : ''}>Newham</option>
+                                        <option value="Redbridge" ${firstProp.borough === 'Redbridge' ? 'selected' : ''}>Redbridge</option>
+                                        <option value="Richmond upon Thames" ${firstProp.borough === 'Richmond upon Thames' ? 'selected' : ''}>Richmond upon Thames</option>
+                                        <option value="Southwark" ${firstProp.borough === 'Southwark' ? 'selected' : ''}>Southwark</option>
+                                        <option value="Sutton" ${firstProp.borough === 'Sutton' ? 'selected' : ''}>Sutton</option>
                                         <option value="Thurrock" ${firstProp.borough === 'Thurrock' ? 'selected' : ''}>Thurrock</option>
+                                        <option value="Tower Hamlets" ${firstProp.borough === 'Tower Hamlets' ? 'selected' : ''}>Tower Hamlets</option>
+                                        <option value="Waltham Forest" ${firstProp.borough === 'Waltham Forest' ? 'selected' : ''}>Waltham Forest</option>
+                                        <option value="Wandsworth" ${firstProp.borough === 'Wandsworth' ? 'selected' : ''}>Wandsworth</option>
+                                        <option value="Westminster" ${firstProp.borough === 'Westminster' ? 'selected' : ''}>Westminster</option>
                                     </select>
                                 </div>
                                 
@@ -35751,15 +35768,7 @@ window.addPipelineRow = function() {
     spawnFloatingEmoji('📝', window.innerWidth / 2, window.innerHeight / 2);
 };
 
-// Delete pipeline row
-window.deletePipelineRow = function(index) {
-    if (confirm('🗑️ PERMANENTLY DELETE this entry from localStorage?\n\nThis cannot be undone!')) {
-        pipelineData.splice(index, 1);
-        savePipelineData();
-        renderPipelineTable();
-        showToast('Deleted', 'Entry permanently removed from storage');
-    }
-};
+// v66.1: Removed index-based deletePipelineRow - consolidated id-based version above
 
 // ==================== V24 PIPELINE SELECTION & WHATSAPP BLAST ====================
 
@@ -37559,62 +37568,7 @@ Harir Industries`;
         let blastPeopleData = [];
         let blastSelectedPeople = new Set();
 
-        // Open WhatsApp Blast Modal
-        window.openWhatsAppBlastModal = function () {
-            // Combine data from referrals and pipeline
-            blastPeopleData = [];
-            blastSelectedPeople.clear();
-
-            // Add referrals
-            const refs = loadReferralsData();
-            refs.forEach((ref, i) => {
-                if (ref.phone) {
-                    blastPeopleData.push({
-                        id: 'ref-' + i,
-                        name: ref.name || 'Unknown',
-                        phone: ref.phone,
-                        property: ref.propertiesViewed || ref.interestedIn || '',
-                        source: 'referrals',
-                        status: ref.status,
-                        originalIndex: i,
-                        originalSource: 'referrals'
-                    });
-                }
-            });
-
-            // Add pipeline
-            const pipe = loadPipelineData();
-            pipe.forEach((row, i) => {
-                if (row.phone) {
-                    // Check if already in list (by phone)
-                    const exists = blastPeopleData.some(p => p.phone.replace(/\D/g, '') === row.phone.replace(/\D/g, ''));
-                    if (!exists) {
-                        blastPeopleData.push({
-                            id: 'pipe-' + i,
-                            name: row.visitor || 'Unknown',
-                            phone: row.phone,
-                            property: row.property || '',
-                            source: 'pipeline',
-                            status: row.status,
-                            originalIndex: i,
-                            originalSource: 'pipeline'
-                        });
-                    }
-                }
-            });
-
-            // Remove duplicates by phone number
-            const seen = new Set();
-            blastPeopleData = blastPeopleData.filter(p => {
-                const cleanPhone = p.phone.replace(/\D/g, '');
-                if (seen.has(cleanPhone)) return false;
-                seen.add(cleanPhone);
-                return true;
-            });
-
-            renderBlastList();
-            document.getElementById('whatsapp-blast-modal').style.display = 'block';
-        };
+        // v66.1: Removed basic openWhatsAppBlastModal - consolidated enhanced version below
 
         // Close modal
         window.closeWhatsAppBlastModal = function () {
@@ -40186,9 +40140,8 @@ Harir Industries`
                 const messageArea = document.getElementById('helm-blast-message');
                 if (messageArea) messageArea.addEventListener('input', helmUpdateCharCount);
             }
-            if (viewName === 'viewings') {
-                helmRenderViewingsList();
-            }
+            // v66.1: Removed helmRenderViewingsList() - ancient code that showed "No upcoming viewings" popup
+            // The proper renderHelmViewingsList() is called via switchViewingsTab() instead
             if (viewName === 'agents') {
                 initAgentView();
                 showAgentOnMap();
@@ -40203,102 +40156,7 @@ Harir Industries`
         // ========================================
         // HELM VIEWINGS FUNCTIONS
         // ========================================
-
-        window.helmRenderViewingsList = function () {
-            const container = document.getElementById('helm-viewings-list');
-            if (!container) return;
-
-            // Use the correct propertyViewings storage key
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-            const properties = window.properties || [];
-            const now = new Date();
-            const today = now.toISOString().split('T')[0];
-            const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-            // Calculate stats
-            let todayCount = 0, weekCount = 0, pendingCount = 0, completedCount = 0;
-
-            viewings.forEach(v => {
-                const vDate = v.date || '';
-                const vStatus = v.status || 'confirmed';
-                if (vDate === today) todayCount++;
-                if (vDate >= today && vDate <= weekEnd) weekCount++;
-                if (vStatus === 'pending' || vStatus === 'confirmed' || !v.status) pendingCount++;
-                if (vStatus === 'completed' || vStatus === 'shown') completedCount++;
-            });
-
-            // Update stats
-            const statsToday = document.getElementById('helm-viewings-today');
-            const statsWeek = document.getElementById('helm-viewings-week');
-            const statsPending = document.getElementById('helm-viewings-pending');
-            const statsCompleted = document.getElementById('helm-viewings-completed');
-
-            if (statsToday) statsToday.textContent = todayCount;
-            if (statsWeek) statsWeek.textContent = weekCount;
-            if (statsPending) statsPending.textContent = pendingCount;
-            if (statsCompleted) statsCompleted.textContent = completedCount;
-
-            // Sort by date (upcoming first)
-            const upcoming = viewings.filter(v => (v.date || '') >= today).sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
-
-            if (upcoming.length === 0) {
-                container.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: rgba(255,255,255,0.5);">
-                <i class="fas fa-calendar-alt" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
-                <p>No upcoming viewings</p>
-                <button onclick="helmSwitchView('booking')" class="helm-quick-book-btn" style="width: auto; margin-top: 16px; background: linear-gradient(135deg, #3b82f6, #2563eb);">
-                    📅 Go to Booking
-                </button>
-            </div>
-        `;
-                return;
-            }
-
-            container.innerHTML = upcoming.map(v => {
-                // Handle both booking format (name) and direct format (clientName)
-                const clientName = v.clientName || v.name || 'Client';
-                const clientPhone = v.clientPhone || v.phone || '';
-                const status = v.status || 'confirmed';
-
-                // Get property info
-                const prop = properties.find(p => p.id == v.propertyId);
-                const propName = prop ? (prop.name || prop.address) : (v.propertyName || v.address || 'Property');
-
-                const statusColors = {
-                    'pending': 'rgba(245, 158, 11, 0.2)',
-                    'confirmed': 'rgba(34, 197, 94, 0.2)',
-                    'completed': 'rgba(139, 92, 246, 0.2)',
-                    'shown': 'rgba(139, 92, 246, 0.2)',
-                    'cancelled': 'rgba(239, 68, 68, 0.2)'
-                };
-                const statusIcons = { 'pending': '⏳', 'confirmed': '✅', 'completed': '🎉', 'shown': '🎉', 'cancelled': '❌' };
-
-                // Format date nicely
-                const viewDate = v.date ? new Date(v.date + 'T12:00:00') : new Date();
-                const dateDisplay = viewDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-
-                return `
-            <div style="background: ${statusColors[status] || statusColors.confirmed}; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 700; color: white; font-size: 16px; margin-bottom: 6px;">${clientName}</div>
-                        ${clientPhone ? `<div style="font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">📱 ${clientPhone}</div>` : ''}
-                        <div style="font-size: 13px; color: rgba(255,255,255,0.7);">📍 ${propName}</div>
-                        <div style="font-size: 14px; color: #60a5fa; margin-top: 8px; font-weight: 600;">
-                            📅 ${dateDisplay} at ${v.time || '10:00'} ${statusIcons[status] || '✅'}
-                        </div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button onclick="shareViewingWhatsApp(${v.id})" style="padding: 10px 14px; border: none; border-radius: 8px; background: linear-gradient(135deg, #25D366, #128C7E); color: white; cursor: pointer; font-size: 12px; font-weight: 600;">📤 Share</button>
-                        <button onclick="editViewing(${v.id})" style="padding: 10px 14px; border: none; border-radius: 8px; background: rgba(59, 130, 246, 0.3); color: #93c5fd; cursor: pointer; font-size: 12px; font-weight: 600;">✏️ Edit</button>
-                        <button onclick="helmCompleteViewing(${v.id})" style="padding: 10px 14px; border: none; border-radius: 8px; background: rgba(34, 197, 94, 0.3); color: #86efac; cursor: pointer; font-size: 12px; font-weight: 600;">✓ Done</button>
-                        <button onclick="helmCancelViewing(${v.id})" style="padding: 10px 14px; border: none; border-radius: 8px; background: rgba(239, 68, 68, 0.3); color: #fca5a5; cursor: pointer; font-size: 12px; font-weight: 600;">✕ Cancel</button>
-                    </div>
-                </div>
-            </div>
-        `;
-            }).join('');
-        };
+        // v66.1: Removed helmRenderViewingsList() - ancient code replaced by renderHelmViewingsList()
 
         window.helmCompleteViewing = function (id) {
             const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
@@ -42238,6 +42096,7 @@ Harir Industries`
             'Brent': [51.5673, -0.2711],
             'Bromley': [51.4039, 0.0198],
             'Camden': [51.5290, -0.1255],
+            'City of London': [51.5155, -0.0922],
             'Croydon': [51.3762, -0.0982],
             'Ealing': [51.5130, -0.3089],
             'Enfield': [51.6538, -0.0799],
@@ -42247,6 +42106,8 @@ Harir Industries`
             'Haringey': [51.5906, -0.1110],
             'Harrow': [51.5898, -0.3346],
             'Havering': [51.5812, 0.1837],
+            'Hertfordshire': [51.8097, -0.2376],
+            'Hertsmere': [51.6900, -0.2700],
             'Hillingdon': [51.5441, -0.4760],
             'Hounslow': [51.4746, -0.3680],
             'Islington': [51.5416, -0.1022],
@@ -42260,6 +42121,7 @@ Harir Industries`
             'Richmond upon Thames': [51.4479, -0.3260],
             'Southwark': [51.5035, -0.0804],
             'Sutton': [51.3618, -0.1945],
+            'Thurrock': [51.4935, 0.3529],
             'Tower Hamlets': [51.5099, -0.0059],
             'Waltham Forest': [51.5908, -0.0134],
             'Wandsworth': [51.4567, -0.1910],
@@ -42641,7 +42503,7 @@ Harir Industries`
             viewings = viewings.filter(v => v.id != id);
             localStorage.setItem('propertyViewings', JSON.stringify(viewings));
             window.viewings = viewings;
-            helmRenderViewingsList();
+            if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
             if (typeof showHelmNotification === 'function') showHelmNotification('Viewing cancelled', 'info');
             if (typeof showToast === 'function') showToast('Cancelled', 'Viewing removed');
         };
@@ -42984,7 +42846,6 @@ Harir Industries`;
 
             // Refresh UI
             if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
-            if (typeof helmRenderViewingsList === 'function') helmRenderViewingsList();
             if (typeof initViewingsTimetable === 'function') initViewingsTimetable();
 
             showToast('Saved', 'Viewing updated successfully');
@@ -43272,7 +43133,7 @@ Harir Industries`;
             window.viewings.push(viewing);
 
             cancelQuickAdd();
-            helmRenderViewingsList();
+            if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
             showHelmNotification('✅ Viewing scheduled!', 'success');
 
             if (typeof awardXP === 'function') awardXP(10, 'Scheduled viewing');
@@ -48806,7 +48667,7 @@ Harir Industries`;
                     const clientName = escapeHTML(viewing.visitor || viewing.visitorName || viewing.clientName || viewing.name || viewing.client?.name || 'Client');
                     return `<div class="timetable-slot filled" draggable="true" onclick="showViewingInfoModal(${viewing.id})" ondragstart="dragViewing(event, ${viewing.id})" style="padding: 4px; background: linear-gradient(135deg, ${agentColor}, ${agentColor}dd); border-radius: 4px; cursor: pointer; border: 1px solid ${agentColor}; min-height: 38px;" title="${propName} - ${clientName}"><div style="color: white; font-size: 9px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Viewing</div><div style="color: rgba(255,255,255,0.8); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${clientName}</div></div>`;
                 } else {
-                    return `<div class="timetable-slot empty" ondragover="allowDrop(event)" ondrop="dropViewing(event, ${agent.id}, '${slot}')" style="padding: 4px; background: ${isLunch ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.03)'}; border-radius: 4px; border: 1px dashed rgba(255,255,255,0.1); min-height: 38px;"></div>`;
+                    return `<div class="timetable-slot empty" ondragover="allowViewingDrop(event)" ondrop="dropViewing(event, ${agent.id}, '${slot}')" style="padding: 4px; background: ${isLunch ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.03)'}; border-radius: 4px; border: 1px dashed rgba(255,255,255,0.1); min-height: 38px;"></div>`;
                 }
             }).join('')}
             </div>
@@ -48992,7 +48853,7 @@ Harir Industries`;
     }
 
     window.dragViewing = function (e, viewingId) { e.dataTransfer.setData('viewingId', viewingId); };
-    window.allowDrop = function (e) { e.preventDefault(); e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'; };
+    window.allowViewingDrop = function (e) { e.preventDefault(); e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'; };
 
     // Store pending drop data for modal confirmation
     window.pendingViewingDrop = null;
@@ -50564,44 +50425,7 @@ Harir Industries`;
         }
     };
 
-    // Navigation Badge Updates
-    window.updateNavBadges = function () {
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-        const pipelineData = getStorageArray('pipelineData');
-        // v65.5: Ensure properties is array
-        let properties = window.properties || [];
-        if (!Array.isArray(properties)) properties = Object.values(properties);
-        const today = new Date().toISOString().split('T')[0];
-
-        // Viewings badge - today's count
-        const todayViewings = viewings.filter(v => v.date === today).length;
-        updateBadge('nav-badge-viewings', todayViewings);
-
-        // Pipeline badge - pending clients
-        const pendingClients = pipelineData.filter(p => p.status !== 'Signed Up' && p.status !== 'Lost').length;
-        updateBadge('nav-badge-pipeline', pendingClients);
-
-        // Properties badge - new properties (less than 3 days old)
-        const threeDaysAgo = Date.now() - (3 * 86400000);
-        const newProperties = properties.filter(p => p.dateAdded && new Date(p.dateAdded) > threeDaysAgo).length;
-        updateBadge('nav-badge-properties', newProperties);
-
-        // Booking badge - unconfirmed bookings
-        const unconfirmed = viewings.filter(v => !v.confirmed && new Date(v.date) >= new Date(today)).length;
-        updateBadge('nav-badge-booking', unconfirmed);
-    };
-
-    function updateBadge(id, count) {
-        const badge = document.getElementById(id);
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-    }
+    // v66.1: Removed duplicate updateNavBadges - consolidated version below at V54.1 NOTIFICATION BADGE SYSTEM
 
     // Share Property Modal (Integrated into Properties)
     window.openSharePropertyModal = function (propertyId) {
