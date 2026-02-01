@@ -2165,7 +2165,7 @@
                             email: v.client_email, clientEmail: v.client_email,
                             propertyId: v.property_id, propertyName: v.property_name, property: v.property_name,
                             propertyAddress: v.property_address, address: v.property_address,
-                            date: v.viewing_date, time: v.viewing_time,
+                            date: v.viewing_date || v.date, time: v.viewing_time || v.time,  // v67.7: Fallback
                             status: v.status, outcome: v.outcome, notes: v.notes,
                             agentId: v.agent_id,
                             updatedAt: v.updated_at
@@ -34621,8 +34621,8 @@ Total: ${referrals.length}
                             propertyId: v.property_id,
                             propertyName: v.property_name,
                             address: v.property_address,
-                            date: v.viewing_date,
-                            time: v.viewing_time,
+                            date: v.viewing_date || v.date,  // v67.7: Fallback
+                            time: v.viewing_time || v.time,  // v67.7: Fallback
                             status: v.status,
                             notes: v.notes
                         }));
@@ -57594,8 +57594,8 @@ Write the email now:`;
                 property: v.property_name,
                 propertyAddress: v.property_address,
                 address: v.property_address,
-                date: v.viewing_date,
-                time: v.viewing_time,
+                date: v.viewing_date || v.date,  // v67.7: Fallback
+                time: v.viewing_time || v.time,  // v67.7: Fallback
                 status: v.status,
                 outcome: v.outcome,
                 agentId: v.agent_id,
@@ -57682,8 +57682,8 @@ Write the email now:`;
                     property: cv.property_name,
                     propertyAddress: cv.property_address,
                     address: cv.property_address,
-                    date: cv.viewing_date,
-                    time: cv.viewing_time,
+                    date: cv.viewing_date || cv.date,  // v67.7: Fallback
+                    time: cv.viewing_time || cv.time,  // v67.7: Fallback
                     status: cv.status,
                     outcome: cv.outcome,
                     agentId: cv.agent_id,
@@ -57771,6 +57771,7 @@ Write the email now:`;
             return;
         }
         
+        // v67.7: Use fallbacks - Supabase may have data in different columns
         const viewings = data.map(v => ({
             id: v.id,
             name: v.client_name,
@@ -57783,8 +57784,8 @@ Write the email now:`;
             property: v.property_name,
             propertyAddress: v.property_address,
             address: v.property_address,
-            date: v.viewing_date,
-            time: v.viewing_time,
+            date: v.viewing_date || v.date,  // Fallback to date column
+            time: v.viewing_time || v.time,  // Fallback to time column
             status: v.status,
             outcome: v.outcome,
             agentId: v.agent_id,
@@ -58010,8 +58011,8 @@ Write the email now:`;
                         property: cv.property_name,
                         propertyAddress: cv.property_address,
                         address: cv.property_address,
-                        date: cv.viewing_date,
-                        time: cv.viewing_time,
+                        date: cv.viewing_date || cv.date,  // v67.7: Fallback
+                        time: cv.viewing_time || cv.time,  // v67.7: Fallback
                         status: cv.status,
                         outcome: cv.outcome,
                         outcomeNotes: cv.outcome_notes,
