@@ -226,7 +226,7 @@
     ║  • Quick actions: book, search, navigate, filter              ║
     ║                                                               ║
     ║  KEYBOARD SHORTCUTS:                                          ║
-    ║  • B = Booking, P = Pipeline, V = Viewings, E = Eligibility   ║
+    ║  • 0 = Booking, P = Pipeline, V = Viewings, E = Eligibility   ║
     ║  • M = Map, D = Dashboard, / = Search, ? = Help               ║
     ║  • Esc = Close modals, Cmd+Shift+N = Quick capture            ║
     ║                                                               ║
@@ -1585,7 +1585,10 @@
             document.getElementById('signup-error').textContent = '';
         }
         
-        async function handleLogin(e) {
+        // Expose auth functions globally so forms can call them
+        window.switchAuthTab = switchAuthTab;
+        
+        window.handleLogin = async function(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
@@ -1618,9 +1621,9 @@
                 btn.disabled = false;
                 btn.textContent = 'Sign In';
             }
-        }
+        };
         
-        async function handleSignup(e) {
+        window.handleSignup = async function(e) {
             e.preventDefault();
             const name = document.getElementById('signup-name').value.trim();
             const email = document.getElementById('signup-email').value.trim();
@@ -1667,7 +1670,7 @@
                 btn.disabled = false;
                 btn.textContent = 'Create Account';
             }
-        }
+        };
         
         async function loadLoginLeaderboard() {
             if (!window.supabase) return;
@@ -2085,8 +2088,7 @@
                         else console.error('[Sync] Viewing upload error:', error);
                     }
                     
-                    // 2. Upload PROPERTIES
-                    const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                    // 2. Upload PROPERTIES (reuse properties array from above)
                     for (const prop of properties) {
                         const { error } = await window.supabase.from('properties').upsert({
                             id: prop.id,
@@ -54983,7 +54985,7 @@ Write the email now:`;
             { id: 'nav-viewings', title: 'Go to Viewings', subtitle: 'Manage viewings calendar', icon: 'visibility', iconClass: 'purple', shortcut: 'V', action: () => helmSwitchView('viewings') },
             { id: 'nav-pipeline', title: 'Go to Pipeline', subtitle: 'Client pipeline tracker', icon: 'filter_alt', iconClass: 'amber', shortcut: 'P', action: () => helmSwitchView('pipeline') },
             { id: 'nav-eligibility', title: 'Go to Eligibility', subtitle: 'Check client eligibility', icon: 'task_alt', iconClass: 'green', shortcut: 'E', action: () => helmSwitchView('eligibility') },
-            { id: 'nav-booking', title: 'Go to Booking', subtitle: 'Book a viewing', icon: 'event_available', iconClass: 'blue', shortcut: 'B', action: () => helmSwitchView('booking') },
+            { id: 'nav-booking', title: 'Go to Booking', subtitle: 'Book a viewing', icon: 'event_available', iconClass: 'blue', shortcut: '0', action: () => helmSwitchView('booking') },
             { id: 'action-capture', title: 'Quick Capture', subtitle: 'Log a client quickly', icon: 'bolt', iconClass: 'green', shortcut: '⌘⇧N', action: () => { window.closeCommandPalette(); window.openQuickCapture(); } },
             { id: 'action-intel', title: 'Intelligence Panel', subtitle: 'View insights & alerts', icon: 'psychology', iconClass: 'purple', shortcut: 'I', action: () => { window.closeCommandPalette(); window.toggleIntelPanel(); } },
             { id: 'action-export', title: 'Export Data', subtitle: 'Download backup JSON', icon: 'download', iconClass: 'blue', action: () => { window.closeCommandPalette(); if (typeof exportAllData === 'function') exportAllData(); } },
@@ -55459,7 +55461,7 @@ Write the email now:`;
                 'v': () => helmSwitchView('viewings'),
                 'p': () => helmSwitchView('pipeline'),
                 'e': () => helmSwitchView('eligibility'),
-                'b': () => helmSwitchView('booking'),
+                '0': () => helmSwitchView('booking'),
                 'i': () => window.toggleIntelPanel(),
                 '/': () => window.openCommandPalette(),
                 '?': () => document.getElementById('hpm-shortcuts-help').classList.add('active')
@@ -55518,7 +55520,7 @@ Write the email now:`;
         };
 
         console.log('[HPM v61] Intelligence System ready');
-        console.log('[HPM v61] Shortcuts: ⌘K = Command, ⌘⇧N = Quick Capture, D/M/V/P/E/B = Nav, I = Intel, ? = Help');
+        console.log('[HPM v61] Shortcuts: ⌘K = Command, ⌘⇧N = Quick Capture, D/M/V/P/E/0 = Nav, I = Intel, ? = Help');
 
         // Remove floating button - now in MORE menu
         const cmdTriggerToRemove = document.querySelector('.command-trigger-btn');
@@ -57526,8 +57528,7 @@ Write the email now:`;
         }
         console.log(`[HPM Sync] Uploaded ${viewings.length} viewings`);
         
-        // Upload properties
-        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        // Upload properties (reuse properties array from above)
         for (const p of properties) {
             await window.supabase.from('properties').upsert({
                 id: p.id,
