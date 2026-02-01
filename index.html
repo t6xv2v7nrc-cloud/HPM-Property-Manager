@@ -34367,6 +34367,18 @@ Total: ${referrals.length}
             const seen = new Map();
             const result = [];
             
+            // Helper to score record completeness
+            const scoreRecord = (r) => {
+                let score = 0;
+                if (r.visitor || r.name || r.clientName) score += 10;
+                if (r.property || r.propertyName) score += 10;
+                if (r.date || r.viewing_date) score += 5;
+                if (r.time || r.viewing_time) score += 5;
+                if (r.email) score += 3;
+                if (r.status && r.status !== 'Pending') score += 2;
+                return score;
+            };
+            
             records.forEach(record => {
                 // Get phone number from various possible fields
                 const phone = (record.phone || record.client_phone || record.visitorPhone || record.clientPhone || '').replace(/\D/g, '');
@@ -34379,22 +34391,31 @@ Total: ${referrals.length}
                     seen.set(key, record);
                     result.push(record);
                 } else {
-                    // Merge: keep newer data, preserve important fields
+                    // v67.8: Merge - prefer record with MORE DATA
                     const existing = seen.get(key);
-                    const existingDate = new Date(existing.dateAdded || existing.date || existing.createdAt || 0);
-                    const newDate = new Date(record.dateAdded || record.date || record.createdAt || 0);
+                    const existingScore = scoreRecord(existing);
+                    const newScore = scoreRecord(record);
                     
-                    if (newDate > existingDate) {
-                        // Update with newer record but preserve ID
-                        const mergedRecord = { ...existing, ...record, id: existing.id || record.id };
-                        const idx = result.indexOf(existing);
-                        if (idx >= 0) result[idx] = mergedRecord;
-                        seen.set(key, mergedRecord);
-                    }
+                    // Merge fields - keep the best of both
+                    const mergedRecord = {
+                        ...existing,
+                        ...record,
+                        id: existing.id || record.id,
+                        // Prefer non-empty values
+                        visitor: record.visitor || record.name || existing.visitor || existing.name || '',
+                        property: record.property || record.propertyName || existing.property || existing.propertyName || '',
+                        date: record.date || record.viewing_date || existing.date || existing.viewing_date || '',
+                        time: record.time || record.viewing_time || existing.time || existing.viewing_time || '',
+                        status: (record.status && record.status !== 'Pending') ? record.status : existing.status || 'Pending'
+                    };
+                    
+                    const idx = result.indexOf(existing);
+                    if (idx >= 0) result[idx] = mergedRecord;
+                    seen.set(key, mergedRecord);
                 }
             });
             
-            console.log(`[v67.7 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
+            console.log(`[v67.8 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
             return result;
         };
         
@@ -34555,12 +34576,40 @@ Total: ${referrals.length}
                 if (stored2.length > 0) allData = allData.concat(stored2);
             } catch(e) {}
             
-            // DEDUPLICATE before returning
+            // v67.8: Source 5: propertyViewings (WHERE SUPABASE DATA GOES!)
+            // Convert viewings to pipeline format
+            try {
+                const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                if (viewings.length > 0) {
+                    const viewingsPipeline = viewings.map(v => ({
+                        id: v.id,
+                        viewingId: v.id,
+                        date: v.date || v.viewing_date,
+                        time: v.time || v.viewing_time,
+                        property: v.property || v.propertyName || v.property_name || '',
+                        visitor: v.visitor || v.name || v.clientName || v.client_name || '',
+                        phone: v.phone || v.clientPhone || v.client_phone || '',
+                        email: v.email || v.clientEmail || '',
+                        type: v.viewingType === 'virtual' ? 'Virtual' : 'In-Person',
+                        status: v.status || v.outcome || 'Pending',
+                        notes: v.notes || '',
+                        agentId: v.agentId || v.agent_id,
+                        propertyId: v.propertyId || v.property_id
+                    }));
+                    allData = allData.concat(viewingsPipeline);
+                }
+            } catch(e) {
+                console.error('[loadPipelineData] Error loading viewings:', e);
+            }
+            
+            // DEDUPLICATE before returning - use phone as key
             const deduped = window.deduplicateByPhone ? window.deduplicateByPhone(allData) : allData;
             
             // Update cache with deduplicated data
             pipelineData = deduped;
             window._dataCache.pipeline = deduped;
+            
+            console.log('[v67.8 Pipeline] Loaded', deduped.length, 'entries from all sources');
             
             return deduped;
         };
@@ -35863,14 +35912,20 @@ Total: ${referrals.length}
 
             tbody.innerHTML = data.map((row, idx) => {
                 const status = statusColors[row.status] || statusColors['Pending'];
-                // v61.8: Clean date/time display - no more ugly "-"
-                const hasDate = row.date && row.date !== '-' && row.date !== '';
-                const hasTime = row.time && row.time !== '-' && row.time !== '';
-                const formattedDate = hasDate ? new Date(row.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '';
-                const formattedTime = hasTime ? row.time : '';
+                // v67.8: Handle ALL possible field names for date/time
+                const rowDate = row.date || row.viewing_date || '';
+                const rowTime = row.time || row.viewing_time || '';
+                const hasDate = rowDate && rowDate !== '-' && rowDate !== '';
+                const hasTime = rowTime && rowTime !== '-' && rowTime !== '';
+                const formattedDate = hasDate ? new Date(rowDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '';
+                const formattedTime = hasTime ? rowTime : '';
                 const dateTimeDisplay = hasDate ? '<span style="color:white;font-weight:600;">' + formattedDate + '</span>' : '<span style="color:rgba(255,255,255,0.4);font-style:italic;font-size:11px;">TBC</span>';
                 const timeDisplay = hasTime ? '<span style="color:white;font-weight:500;">' + formattedTime + '</span>' : '<span style="color:rgba(255,255,255,0.3);">—</span>';
                 const whatsappPhone = typeof formatPhoneForWhatsApp === 'function' ? formatPhoneForWhatsApp(row.phone) : (row.phone || '').replace(/\D/g, '');
+                
+                // v67.8: Handle ALL possible field names for property and visitor
+                const propertyName = row.property || row.propertyName || row.property_name || '';
+                const visitorName = row.visitor || row.name || row.clientName || row.client_name || '';
 
                 return '<tr data-row-id="' + row.id + '" onclick="openPipelineDetailModal(\'' + row.id + '\')" style="border-bottom: 1px solid rgba(255,255,255,0.08); transition: background 0.2s; cursor: pointer; background: rgba(15,23,42,0.5);" onmouseover="this.style.background=\'rgba(30,41,59,0.8)\'" onmouseout="this.style.background=\'rgba(15,23,42,0.5)\'">' +
                     '<td style="padding: 12px 8px; text-align: center;" onclick="event.stopPropagation()">' +
@@ -35878,8 +35933,8 @@ Total: ${referrals.length}
                     '</td>' +
                     '<td style="padding: 12px; font-size: 13px;">' + dateTimeDisplay + '</td>' +
                     '<td style="padding: 12px; font-size: 13px;">' + timeDisplay + '</td>' +
-                    '<td style="padding: 12px; color: white; font-size: 13px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + escapeHTML(row.property || '') + '</td>' +
-                    '<td style="padding: 12px; color: white; font-weight: 700; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + escapeHTML(row.visitor || '') + '</td>' +
+                    '<td style="padding: 12px; color: white; font-size: 13px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + escapeHTML(propertyName) + '</td>' +
+                    '<td style="padding: 12px; color: white; font-weight: 700; font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + escapeHTML(visitorName) + '</td>' +
                     '<td style="padding: 12px; color: rgba(255,255,255,0.85); font-size: 12px; font-family: monospace;">' + (row.phone || '') + '</td>' +
                     '<td style="padding: 12px; font-size: 12px;">' +
                         '<span style="padding: 4px 8px; background: ' + (row.type === 'Virtual' ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') + '; color: ' + (row.type === 'Virtual' ? '#c4b5fd' : '#93c5fd') + '; border-radius: 6px; font-size: 10px; font-weight: 600;">' + (row.type || 'In-Person') + '</span>' +
@@ -36076,13 +36131,45 @@ Total: ${referrals.length}
 // v59.7: Update pipeline row status
 window.updatePipelineRowStatus = function(id, newStatus) {
     let data = loadPipelineData();
-    const idx = data.findIndex(r => r.id === id);
+    const idx = data.findIndex(r => r.id === id || String(r.id) === String(id));
     if (idx !== -1) {
         const oldStatus = data[idx].status;
         const row = data[idx];
         data[idx].status = newStatus;
         pipelineData = data;
         localStorage.setItem('pipelineData', JSON.stringify(data));
+        
+        // v67.8: Also update in propertyViewings
+        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewingIdx = viewings.findIndex(v => v.id === id || String(v.id) === String(id));
+        if (viewingIdx !== -1) {
+            viewings[viewingIdx].status = newStatus;
+            viewings[viewingIdx].outcome = newStatus;
+            localStorage.setItem('propertyViewings', JSON.stringify(viewings));
+        }
+        
+        // v67.8: SYNC TO SUPABASE IMMEDIATELY
+        if (window.supabase) {
+            window.supabase.from('viewings').update({
+                status: newStatus,
+                outcome: newStatus,
+                updated_at: new Date().toISOString()
+            }).eq('id', id).then(({ error }) => {
+                if (error) console.error('[Pipeline→Supabase] Status update error:', error);
+                else console.log('[Pipeline→Supabase] ✓ Status synced:', newStatus);
+            });
+            
+            // Also update clients table if we have phone
+            if (row.phone) {
+                window.supabase.from('clients').update({
+                    stage: newStatus,
+                    last_contact: new Date().toISOString()
+                }).eq('phone', row.phone).then(({ error }) => {
+                    if (error) console.log('[Pipeline→Supabase] Client update skipped');
+                });
+            }
+        }
+        
         renderPipelineTrackerTable();
         
         // v61.9: Trigger celebration and XP for Signed Up
@@ -36090,8 +36177,8 @@ window.updatePipelineRowStatus = function(id, newStatus) {
             // 👁️ THE WATCHER: Log sign-up
             if (window.TheWatcher) {
                 window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_SIGNED_UP, {
-                    clientName: row.visitor || 'Client',
-                    property: row.property || 'Property',
+                    clientName: row.visitor || row.name || 'Client',
+                    property: row.property || row.propertyName || 'Property',
                     propertyId: row.propertyId,
                     date: new Date().toISOString()
                 });
@@ -36099,10 +36186,12 @@ window.updatePipelineRowStatus = function(id, newStatus) {
 
             // Show celebration
             if (typeof showSignUpCelebration === 'function') {
-                showSignUpCelebration(row.visitor || 'Client', row.property || 'Property');
+                showSignUpCelebration(row.visitor || row.name || 'Client', row.property || row.propertyName || 'Property');
             }
             // Award XP
-            if (typeof addXP === 'function') {
+            if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
+                HPMAuth.awardXP(200, 'Deal Closed!');
+            } else if (typeof addXP === 'function') {
                 addXP(200);
             }
             showHelmNotification('Deal Closed! +200 XP', 'success');
@@ -36114,12 +36203,21 @@ window.updatePipelineRowStatus = function(id, newStatus) {
                 const property = window.properties?.find(p => p.id == row.propertyId);
                 if (property) {
                     property.status = 'taken';
-                    property.clientName = row.visitor;
+                    property.clientName = row.visitor || row.name;
                     property.takenDate = new Date().toISOString();
                     try {
                         localStorage.setItem('propertySystemProperties', JSON.stringify(window.properties));
                         localStorage.setItem('takenPropertiesSet', JSON.stringify([...window.takenProperties]));
                     } catch(e) {}
+                    
+                    // v67.8: Sync property status to Supabase
+                    if (window.supabase) {
+                        window.supabase.from('properties').update({
+                            status: 'taken',
+                            client_name: row.visitor || row.name,
+                            taken_date: new Date().toISOString()
+                        }).eq('id', row.propertyId);
+                    }
                 }
             }
             
@@ -36129,11 +36227,15 @@ window.updatePipelineRowStatus = function(id, newStatus) {
             // 👁️ THE WATCHER: Log no-show
             if (window.TheWatcher) {
                 window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_NO_SHOW, {
-                    clientName: row.visitor || 'Client',
-                    property: row.property || 'Property',
+                    clientName: row.visitor || row.name || 'Client',
+                    property: row.property || row.propertyName || 'Property',
                     propertyId: row.propertyId,
                     date: new Date().toISOString()
                 });
+            }
+            // Award XP for recording no-show
+            if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
+                HPMAuth.awardXP(5, 'No Show Recorded');
             }
             showToast('No Show', 'Client marked as no-show');
         } else {
@@ -36887,7 +36989,7 @@ window.renderPipelineTable = function() {
                 email: clientEmail,
                 budget: v.budget || v.monthlyBudget || 0,
                 lastProperty: propertyName,
-                lastDate: v.date,
+                lastDate: v.date || v.viewing_date,  // v67.8: Fallback to viewing_date
                 viewingCount: 0,
                 status: v.status || 'scheduled',
                 history: []
@@ -36895,8 +36997,9 @@ window.renderPipelineTable = function() {
         }
         
         // Update with latest info
-        if (v.date && (!clients[key].lastDate || new Date(v.date) > new Date(clients[key].lastDate))) {
-            clients[key].lastDate = v.date;
+        const viewingDate = v.date || v.viewing_date;  // v67.8: Fallback
+        if (viewingDate && (!clients[key].lastDate || new Date(viewingDate) > new Date(clients[key].lastDate))) {
+            clients[key].lastDate = viewingDate;
             clients[key].lastProperty = propertyName;
             clients[key].status = v.status || clients[key].status;
         }
@@ -42432,10 +42535,87 @@ Harir Industries`
             localStorage.setItem('helmAgents', JSON.stringify(DEFAULT_AGENTS));
             return DEFAULT_AGENTS;
         };
+        
+        // v67.8: Load agents from Supabase and merge with local
+        window.loadAgentsFromSupabase = async function() {
+            if (!window.supabase) return loadAgents();
+            
+            try {
+                const { data, error } = await window.supabase
+                    .from('agents')
+                    .select('*')
+                    .order('id', { ascending: true });
+                
+                if (error) {
+                    console.error('[Agents] Supabase load error:', error);
+                    return loadAgents();
+                }
+                
+                if (data && data.length > 0) {
+                    // Map Supabase data to local format
+                    const agents = data.map(a => ({
+                        id: a.id,
+                        name: a.name,
+                        initials: a.initials || a.name?.substring(0,2).toUpperCase() || 'AG',
+                        color: a.color || '#3b82f6',
+                        phone: a.phone || '',
+                        email: a.email || '',
+                        status: a.active ? 'active' : 'inactive',
+                        lunchStart: '13:00',
+                        lunchEnd: '14:00',
+                        xp: a.xp || 0,
+                        auth_id: a.auth_id
+                    }));
+                    
+                    localStorage.setItem('helmAgents', JSON.stringify(agents));
+                    console.log('[Agents] ✓ Loaded', agents.length, 'agents from Supabase');
+                    return agents;
+                }
+            } catch (err) {
+                console.error('[Agents] Load error:', err);
+            }
+            
+            return loadAgents();
+        };
+        
+        // v67.8: Save agent to Supabase
+        window.saveAgentToSupabase = async function(agent) {
+            if (!window.supabase) return;
+            
+            try {
+                const { error } = await window.supabase.from('agents').upsert({
+                    id: agent.id,
+                    name: agent.name,
+                    initials: agent.initials,
+                    color: agent.color,
+                    phone: agent.phone,
+                    email: agent.email,
+                    active: agent.status !== 'inactive',
+                    auth_id: agent.auth_id
+                }, { onConflict: 'id' });
+                
+                if (error) console.error('[Agents] Save error:', error);
+                else console.log('[Agents] ✓ Saved agent:', agent.name);
+            } catch (err) {
+                console.error('[Agents] Save error:', err);
+            }
+        };
+        
+        // Initialize agents from Supabase on load
+        (async () => {
+            await window.loadAgentsFromSupabase();
+        })();
 
         // Save agents
         window.saveAgents = function (agents) {
             localStorage.setItem('helmAgents', JSON.stringify(agents));
+            
+            // v67.8: Also sync each agent to Supabase
+            if (window.supabase) {
+                agents.forEach(agent => {
+                    window.saveAgentToSupabase(agent);
+                });
+            }
         };
 
         // Load agent tasks
@@ -51737,7 +51917,20 @@ Harir Industries`;
         });
 
         viewing.status = newStatus;
+        viewing.outcome = newStatus; // v67.8: Also set outcome
         setStorageItem('propertyViewings', viewings);
+
+        // v67.8: IMMEDIATE SUPABASE SYNC
+        if (window.supabase) {
+            window.supabase.from('viewings').update({
+                status: newStatus,
+                outcome: newStatus,
+                updated_at: new Date().toISOString()
+            }).eq('id', viewingId).then(({ error }) => {
+                if (error) console.error('[Sync] updateViewingOutcome error:', error);
+                else console.log('[Sync] ✓ Status updated in Supabase:', newStatus);
+            });
+        }
 
         // Refresh displays
         closeViewingInfoModal();
@@ -52002,6 +52195,46 @@ Harir Industries`;
         if (typeof renderCombinedLeaderboard === 'function') renderCombinedLeaderboard();
         if (typeof helmRenderPropertiesList === 'function') helmRenderPropertiesList();
         if (typeof updatePropertyStats === 'function') updatePropertyStats();
+        
+        // v67.8: IMMEDIATE SUPABASE SYNC for outcome changes
+        if (window.supabase) {
+            (async () => {
+                try {
+                    const { error } = await window.supabase.from('viewings').update({
+                        status: outcome,
+                        outcome: outcome,
+                        updated_at: new Date().toISOString()
+                    }).eq('id', viewingId);
+                    
+                    if (error) {
+                        console.error('[Sync] Failed to sync outcome to Supabase:', error);
+                    } else {
+                        console.log('[Sync] ✓ Outcome synced to Supabase:', outcome);
+                    }
+                    
+                    // Also sync the full viewing data
+                    const v = viewing;
+                    await window.supabase.from('viewings').upsert({
+                        id: v.id,
+                        client_name: v.visitor || v.clientName || v.name,
+                        client_phone: v.phone || v.visitorPhone || v.clientPhone,
+                        property_id: v.propertyId ? parseInt(v.propertyId) : null,
+                        property_name: v.property || v.propertyName,
+                        property_address: v.propertyAddress || v.address,
+                        viewing_date: v.date,
+                        viewing_time: v.time,
+                        status: outcome,
+                        outcome: outcome,
+                        agent_id: v.agentId ? parseInt(v.agentId) : null,
+                        notes: v.notes,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
+                    
+                } catch (err) {
+                    console.error('[Sync] Supabase sync error:', err);
+                }
+            })();
+        }
     };
 
     // v60.25: Sign Up celebration animation
