@@ -1,9 +1,56 @@
 <!DOCTYPE html>
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
-    ║                    HPM - HELM PROPERTY MANAGER                ║
-    ║                        Version 67.3                           ║
+    ║                    HELM - Property Manager                    ║
+    ║                        Version 67.7                           ║
     ╠═══════════════════════════════════════════════════════════════╣
+    ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
+    ║  ──────────────────────────────────────────────────────────── ║
+    ║  CRITICAL FIXES:                                              ║
+    ║  • DEDUPLICATION SYSTEM                                       ║
+    ║    - deduplicateByPhone() for pipeline clients                ║
+    ║    - deduplicateViewings() for viewing records                ║
+    ║    - Auto-applied on every data load                          ║
+    ║    - Uses phone number as primary unique key                  ║
+    ║                                                               ║
+    ║  • PIPELINE UNIFIED DATA LAYER                                ║
+    ║    - Merges ALL localStorage sources (pipelineData,           ║
+    ║      pipelineClients, _dataCache) into single source          ║
+    ║    - Auto-deduplicates before returning                       ║
+    ║    - Fixes the duplicate entries issue                        ║
+    ║                                                               ║
+    ║  • PIPELINE INTERACTIVE HEADERS                               ║
+    ║    - Click column headers to expand/collapse                  ║
+    ║    - Visual status indicator dots                             ║
+    ║    - Count badges with column colors                          ║
+    ║                                                               ║
+    ║  • MAP MARKERS SIMPLIFIED                                     ║
+    ║    - Green = Available, Gray = Taken                          ║
+    ║    - Subtle glow for fresh (<7 days) properties               ║
+    ║    - Clusters: green if ANY available, gray if all taken      ║
+    ║                                                               ║
+    ║  • VIEWINGS FULLY ACCESSIBLE                                  ║
+    ║    - Past viewings visible and editable                       ║
+    ║    - deduplicateViewings() removes duplicates                 ║
+    ║  ──────────────────────────────────────────────────────────── ║
+    ║  v67.6 - AGENT LOCATION TRACKING                              ║
+    ║  ──────────────────────────────────────────────────────────── ║
+    ║  NEW FEATURES:                                                ║
+    ║  • AGENT LIVE LOCATION ON MAP                                 ║
+    ║    - Shows where agents are scheduled to be                   ║
+    ║    - Based on viewings entered for today                      ║
+    ║  ──────────────────────────────────────────────────────────── ║
+    ║  v67.5 - THE WATCHER + LIVE DATA                                         ║
+    ║  ──────────────────────────────────────────────────────────── ║
+    ║  FIXES:                                                       ║
+    ║  • Header stats - removed colors, minimal style               ║
+    ║  • TFL widget removed (API unreliable)                        ║
+    ║  • Map markers - SOLID colors, white borders, very visible    ║
+    ║  • Background - lighter gray, less navy blue                  ║
+    ║  • Cards - lighter, cleaner, less glow                        ║
+    ║  • Removed "Harir Industries" branding                        ║
+    ║  • Unified logo to just "HELM"                                ║
+    ║  ──────────────────────────────────────────────────────────── ║
     ║  v67.3 - MERCURY BRIGHT MODE                                  ║
     ║  ──────────────────────────────────────────────────────────── ║
     ║  ✨ COMPLETE VISUAL OVERHAUL:                                 ║
@@ -470,7 +517,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HPM - Harir Property Manager</title>
+    <title>HELM - Property Manager</title>
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%231a5d38'/%3E%3Cstop offset='100%25' style='stop-color:%23f59e0b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='url(%23bg)'/%3E%3Cpath d='M32 12 L52 28 L48 28 L48 52 L38 52 L38 40 L26 40 L26 52 L16 52 L16 28 L12 28 Z' fill='white' stroke='%23fafaf9' stroke-width='2' stroke-linejoin='round'/%3E%3Crect x='28' y='32' width='8' height='8' fill='%231a5d38'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -1779,6 +1826,186 @@
         }
 
         // ═══════════════════════════════════════════════════════════
+        // THE WATCHER - Activity Tracking System
+        // "What we observe, we preserve" - Records all system activity
+        // ═══════════════════════════════════════════════════════════
+        window.TheWatcher = {
+            // Activity types
+            TYPES: {
+                VIEWING_CREATED: 'viewing_created',
+                VIEWING_COMPLETED: 'viewing_completed',
+                VIEWING_CANCELLED: 'viewing_cancelled',
+                PROPERTY_ADDED: 'property_added',
+                PROPERTY_UPDATED: 'property_updated',
+                PROPERTY_STATUS_CHANGED: 'property_status',
+                CLIENT_SIGNED_UP: 'client_signed_up',
+                CLIENT_NO_SHOW: 'client_no_show',
+                CLIENT_ADDED: 'client_added',
+                CLIENT_MOVED_PIPELINE: 'client_pipeline',
+                REFERRAL_CREATED: 'referral_created',
+                XP_AWARDED: 'xp_awarded',
+                LOGIN: 'login',
+                SYNC: 'sync'
+            },
+
+            // Log an activity
+            log: function(type, details, options = {}) {
+                const activity = {
+                    id: Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                    type: type,
+                    details: details,
+                    timestamp: new Date().toISOString(),
+                    user: window.HPMAuth?.userProfile?.display_name || 'System',
+                    userId: window.HPMAuth?.currentUser?.id || null,
+                    synced: false
+                };
+
+                // Get existing log
+                const log = this.getLog();
+                log.unshift(activity);
+
+                // Keep only last 500 entries
+                if (log.length > 500) log.length = 500;
+
+                // Save to localStorage
+                localStorage.setItem('watcher_activity_log', JSON.stringify(log));
+
+                // Try to sync to Supabase if online
+                if (!options.skipSync && window.supabaseClient && navigator.onLine) {
+                    this.syncActivity(activity);
+                }
+
+                // Update activity feed UI
+                if (typeof updateHelmActivityFeed === 'function') {
+                    setTimeout(updateHelmActivityFeed, 100);
+                }
+
+                console.log('[THE WATCHER]', type, details);
+                return activity;
+            },
+
+            // Get all logged activities
+            getLog: function() {
+                try {
+                    return JSON.parse(localStorage.getItem('watcher_activity_log') || '[]');
+                } catch (e) {
+                    return [];
+                }
+            },
+
+            // Get recent activities (for feeds)
+            getRecent: function(count = 20, filterTypes = null) {
+                let log = this.getLog();
+                if (filterTypes) {
+                    log = log.filter(a => filterTypes.includes(a.type));
+                }
+                return log.slice(0, count);
+            },
+
+            // Get activities from last N hours
+            getLastHours: function(hours = 24) {
+                const cutoff = new Date(Date.now() - (hours * 60 * 60 * 1000));
+                return this.getLog().filter(a => new Date(a.timestamp) > cutoff);
+            },
+
+            // Sync activity to Supabase
+            syncActivity: async function(activity) {
+                try {
+                    if (!window.supabaseClient) return;
+                    
+                    await window.supabaseClient
+                        .from('activity_log')
+                        .insert([{
+                            type: activity.type,
+                            details: activity.details,
+                            timestamp: activity.timestamp,
+                            user_name: activity.user,
+                            user_id: activity.userId
+                        }]);
+                    
+                    // Mark as synced
+                    const log = this.getLog();
+                    const idx = log.findIndex(a => a.id === activity.id);
+                    if (idx >= 0) {
+                        log[idx].synced = true;
+                        localStorage.setItem('watcher_activity_log', JSON.stringify(log));
+                    }
+                } catch (e) {
+                    // Table might not exist - that's OK
+                    console.log('[THE WATCHER] Supabase sync skipped:', e.message);
+                }
+            },
+
+            // Sync all unsynced activities
+            syncAll: async function() {
+                const unsynced = this.getLog().filter(a => !a.synced);
+                for (const activity of unsynced) {
+                    await this.syncActivity(activity);
+                }
+            },
+
+            // Generate human-readable description
+            describe: function(activity) {
+                const d = activity.details || {};
+                switch (activity.type) {
+                    case this.TYPES.VIEWING_CREATED:
+                        return `${d.clientName || 'Client'} viewing scheduled at ${d.property || d.address || 'property'}`;
+                    case this.TYPES.VIEWING_COMPLETED:
+                        return `${d.clientName || 'Client'} completed viewing at ${d.property || 'property'}`;
+                    case this.TYPES.CLIENT_SIGNED_UP:
+                        return `${d.clientName || 'Client'} SIGNED UP for ${d.property || 'property'}`;
+                    case this.TYPES.CLIENT_NO_SHOW:
+                        return `${d.clientName || 'Client'} no-showed at ${d.property || 'property'}`;
+                    case this.TYPES.PROPERTY_ADDED:
+                        return `Property added: ${d.address || 'New property'}`;
+                    case this.TYPES.PROPERTY_STATUS_CHANGED:
+                        return `${d.address || 'Property'} marked as ${d.newStatus || 'updated'}`;
+                    case this.TYPES.CLIENT_MOVED_PIPELINE:
+                        return `${d.clientName || 'Client'} moved to ${d.newStage || 'new stage'}`;
+                    case this.TYPES.XP_AWARDED:
+                        return `+${d.amount || 0} XP: ${d.reason || 'Activity'}`;
+                    default:
+                        return activity.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                }
+            },
+
+            // Get icon for activity type
+            getIcon: function(type) {
+                const icons = {
+                    [this.TYPES.VIEWING_CREATED]: '<span class="material-symbols-rounded" style="font-size:16px;color:#3b82f6;">event</span>',
+                    [this.TYPES.VIEWING_COMPLETED]: '<span class="material-symbols-rounded" style="font-size:16px;color:#22c55e;">check_circle</span>',
+                    [this.TYPES.CLIENT_SIGNED_UP]: '<span class="material-symbols-rounded" style="font-size:16px;color:#22c55e;">celebration</span>',
+                    [this.TYPES.CLIENT_NO_SHOW]: '<span class="material-symbols-rounded" style="font-size:16px;color:#f59e0b;">warning</span>',
+                    [this.TYPES.PROPERTY_ADDED]: '<span class="material-symbols-rounded" style="font-size:16px;color:#8b5cf6;">add_home</span>',
+                    [this.TYPES.PROPERTY_STATUS_CHANGED]: '<span class="material-symbols-rounded" style="font-size:16px;color:#06b6d4;">sync</span>',
+                    [this.TYPES.CLIENT_MOVED_PIPELINE]: '<span class="material-symbols-rounded" style="font-size:16px;color:#f97316;">arrow_forward</span>',
+                    [this.TYPES.XP_AWARDED]: '<span class="material-symbols-rounded" style="font-size:16px;color:#fbbf24;">star</span>',
+                    [this.TYPES.LOGIN]: '<span class="material-symbols-rounded" style="font-size:16px;color:#6366f1;">login</span>'
+                };
+                return icons[type] || '<span class="material-symbols-rounded" style="font-size:16px;color:#9ca3af;">info</span>';
+            },
+
+            // Format timestamp relative
+            formatTime: function(timestamp) {
+                const now = new Date();
+                const then = new Date(timestamp);
+                const diff = now - then;
+                const mins = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (mins < 1) return 'Just now';
+                if (mins < 60) return `${mins}m ago`;
+                if (hours < 24) return `${hours}h ago`;
+                if (days < 7) return `${days}d ago`;
+                return then.toLocaleDateString();
+            }
+        };
+
+        // Alias for convenience
+        window.Watcher = window.TheWatcher;
+
+        // ═══════════════════════════════════════════════════════════
         // SYNC SYSTEM
         // ═══════════════════════════════════════════════════════════
         window.HPMSync = {
@@ -1821,15 +2048,29 @@
                     
                     // 1. Upload VIEWINGS
                     const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                    const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                    
                     for (const viewing of viewings) {
+                        // v67.7: ALWAYS look up property_name from properties if missing
+                        let propName = viewing.propertyName || viewing.property;
+                        let propAddress = viewing.propertyAddress || viewing.address;
+                        
+                        if ((!propName || propName === 'NULL') && viewing.propertyId) {
+                            const prop = properties.find(p => p.id === parseInt(viewing.propertyId));
+                            if (prop) {
+                                propName = prop.name;
+                                propAddress = propAddress || prop.address;
+                            }
+                        }
+                        
                         const { error } = await window.supabase.from('viewings').upsert({
                             id: String(viewing.id),
                             client_name: viewing.name || viewing.clientName || viewing.visitor,
                             client_phone: viewing.phone || viewing.visitorPhone || viewing.clientPhone,
                             client_email: viewing.email || viewing.clientEmail,
                             property_id: viewing.propertyId ? parseInt(viewing.propertyId) : null,
-                            property_name: viewing.propertyName || viewing.property,
-                            property_address: viewing.propertyAddress || viewing.address,
+                            property_name: propName,
+                            property_address: propAddress,
                             viewing_date: viewing.date,
                             viewing_time: viewing.time,
                             status: viewing.status || 'scheduled',
@@ -5637,18 +5878,7 @@
             margin-bottom: 40px;
         }
 
-        .login-logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            background: linear-gradient(135deg, var(--primary-orange) 0%, var(--secondary-orange) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            color: white;
-        }
+        /* Old login-logo style removed - conflicts with new HELM login */
 
         .login-title {
             font-size: 28px;
@@ -10686,7 +10916,7 @@
 
         /* v56.9: Removed .marker-bounce-anim - no longer needed */
 
-        /* Property type marker styles - vintage palette */
+        /* Property type marker styles - BRIGHT & VISIBLE */
         .property-marker {
             width: 44px;
             height: 44px;
@@ -10696,84 +10926,82 @@
             justify-content: center;
             font-size: 16px;
             color: white;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1);
+            border: 3px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(0,0,0,0.3);
             position: relative;
             cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
         }
 
         .property-marker:hover {
-            /* transform: scale(1.2); REMOVED to prevent jumping */
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(94, 234, 212, 0.3);
-            border-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.15);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(0,0,0,0.4);
         }
 
+        /* Solid, bright colors for visibility */
         .property-marker.studio {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(124, 58, 237, 0.75));
+            background: #8b5cf6;
         }
 
         .property-marker.one-bed {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.75));
+            background: #3b82f6;
         }
 
         .property-marker.two-bed {
-            background: linear-gradient(135deg, rgba(20, 184, 166, 0.85), rgba(13, 148, 136, 0.75));
+            background: #14b8a6;
         }
 
         .property-marker.three-bed {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.85), rgba(22, 163, 74, 0.75));
+            background: #22c55e;
         }
 
         .property-marker.other {
-            background: linear-gradient(135deg, rgba(100, 116, 139, 0.85), rgba(71, 85, 105, 0.75));
+            background: #64748b;
         }
 
         .property-marker.age-new {
-            border-color: rgba(94, 234, 212, 0.8);
-            box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-color: #00ff88;
+            box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.4), 0 4px 15px rgba(0, 0, 0, 0.5);
             animation: marker-pulse-new 2s infinite;
         }
 
         .property-marker.age-medium {
-            border-color: rgba(251, 191, 36, 0.8);
-            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.4), 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
         .property-marker.age-old {
-            border-color: rgba(239, 68, 68, 0.8);
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3), 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4), 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
         .property-marker.taken {
-            background: linear-gradient(135deg, rgba(107, 114, 128, 0.7), rgba(75, 85, 99, 0.6)) !important;
-            opacity: 0.7;
-            border-color: rgba(156, 163, 175, 0.5);
+            background: #6b7280 !important;
+            opacity: 0.6;
+            border-color: #9ca3af;
         }
 
         .property-marker .unit-count {
             position: absolute;
-            top: -6px;
-            right: -6px;
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.8));
+            top: -8px;
+            right: -8px;
+            background: #22c55e;
             color: white;
-            font-size: 10px;
-            font-weight: 700;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
+            font-size: 11px;
+            font-weight: 800;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            padding: 0 4px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 2px solid white;
+            padding: 0 5px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
 
         .property-marker .unit-count.available {
-            background: linear-gradient(135deg, rgba(94, 234, 212, 0.9), rgba(45, 212, 191, 0.8));
+            background: #00d4b4;
         }
 
         /* Map layer control buttons - FIXED v55.2 dark glass */
@@ -11817,32 +12045,30 @@
             align-items: center;
         }
 
+        /* v67.3 - Minimal header widgets - no colors */
         .helm-widget {
             display: flex;
             align-items: center;
             gap: 8px;
             padding: 8px 14px;
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-            border-radius: 12px;
+            background: transparent;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+            color: rgba(255, 255, 255, 0.8);
+            border: none;
         }
 
         .helm-widget:hover {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
         }
 
         .helm-widget-icon {
-            font-size: 1.2rem;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            font-size: 1rem;
             display: flex;
             align-items: center;
+            opacity: 0.7;
         }
 
         .helm-widget-content {
@@ -11851,55 +12077,34 @@
         }
 
         .helm-widget-value {
-            font-weight: 700;
-            font-size: 0.95rem;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            font-weight: 600;
+            font-size: 0.9rem;
             color: white;
         }
 
         .helm-widget-label {
-            font-size: 0.6rem;
-            opacity: 0.85;
+            font-size: 0.55rem;
+            opacity: 0.6;
             text-transform: uppercase;
-            font-weight: 600;
+            font-weight: 500;
             letter-spacing: 0.5px;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
-        .helm-widget.success {
-            background: linear-gradient(145deg, rgba(34, 197, 94, 0.4), rgba(34, 197, 94, 0.2));
-            border-color: rgba(34, 197, 94, 0.3);
-        }
-
-        .helm-widget.success:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 25px rgba(34, 197, 94, 0.5);
-        }
-
-        .helm-widget.warning {
-            background: linear-gradient(145deg, rgba(245, 158, 11, 0.4), rgba(245, 158, 11, 0.2));
-            border-color: rgba(245, 158, 11, 0.3);
-        }
-
-        .helm-widget.warning:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 25px rgba(245, 158, 11, 0.5);
-        }
-
-        .helm-widget.danger {
-            background: linear-gradient(145deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.2));
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        .helm-widget.danger:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 25px rgba(239, 68, 68, 0.5);
-        }
-
+        /* Remove all colored variants - keep everything plain */
+        .helm-widget.success,
+        .helm-widget.warning,
+        .helm-widget.danger,
         .helm-widget.info {
-            background: linear-gradient(145deg, rgba(59, 130, 246, 0.4), rgba(59, 130, 246, 0.2));
-            border-color: rgba(59, 130, 246, 0.3);
+            background: transparent;
+            border: none;
         }
 
+        .helm-widget.success:hover,
+        .helm-widget.warning:hover,
+        .helm-widget.danger:hover,
         .helm-widget.info:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 25px rgba(59, 130, 246, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
         }
 
         /* HELM NAV */
@@ -15760,27 +15965,26 @@
            ═══════════════════════════════════════════════════════════════════════════════════ */
 
         /* ─────────────────────────────────────────────────────────────────────────────────
-           GLOBAL BACKGROUND - Fresh gradient with cyan/purple undertones
+           GLOBAL BACKGROUND - Lighter, less navy
            ───────────────────────────────────────────────────────────────────────────────── */
         html, body {
-            background: #080d15 !important;
+            background: #0f1419 !important;
         }
 
         #helm-ui-shell,
         .helm-ui-shell,
         body.authenticated {
             background: linear-gradient(
-                150deg,
-                #0a1220 0%,
-                #0d1a2d 25%,
-                #101e30 50%,
-                #0c1825 75%,
-                #080d15 100%
+                160deg,
+                #12181f 0%,
+                #161d26 30%,
+                #1a222c 60%,
+                #12181f 100%
             ) !important;
             background-attachment: fixed !important;
         }
 
-        /* Animated gradient orb overlays for depth */
+        /* Subtle gradient orb - less intense */
         #helm-ui-shell::before {
             content: '';
             position: fixed;
@@ -15788,12 +15992,10 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(ellipse at 30% 20%, rgba(0, 210, 180, 0.08) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, rgba(120, 80, 220, 0.06) 0%, transparent 50%),
-                        radial-gradient(ellipse at 50% 50%, rgba(0, 150, 255, 0.04) 0%, transparent 60%);
+            background: radial-gradient(ellipse at 30% 20%, rgba(0, 200, 170, 0.05) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(100, 60, 180, 0.03) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
-            animation: gradientShift 30s ease-in-out infinite;
         }
 
         @keyframes gradientShift {
@@ -15803,28 +16005,27 @@
         }
 
         /* ─────────────────────────────────────────────────────────────────────────────────
-           HEADER - Cleaner, brighter, more modern
+           HEADER - Clean and minimal
            ───────────────────────────────────────────────────────────────────────────────── */
         .helm-header,
         header,
-        .top-bar,
-        [class*="header"] {
-            background: rgba(12, 20, 35, 0.85) !important;
-            backdrop-filter: blur(20px) saturate(150%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
-            border-bottom: 1px solid rgba(0, 210, 180, 0.2) !important;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3) !important;
+        .top-bar {
+            background: rgba(18, 24, 31, 0.95) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.2) !important;
         }
 
         .helm-header h1,
         .helm-header .logo,
         .app-title {
-            color: #00d4b4 !important;
-            text-shadow: 0 0 30px rgba(0, 212, 180, 0.5) !important;
+            color: white !important;
+            text-shadow: none !important;
         }
 
         /* ─────────────────────────────────────────────────────────────────────────────────
-           ALL CARDS - Bright glass effect with glow
+           ALL CARDS - Lighter, cleaner look
            ───────────────────────────────────────────────────────────────────────────────── */
         .bento-card,
         .bento-card-stat,
@@ -15835,52 +16036,41 @@
         .dash-card,
         .stat-card,
         [class*="-card"]:not([class*="card-btn"]):not([class*="card-action"]) {
-            background: linear-gradient(
-                135deg,
-                rgba(20, 35, 60, 0.9) 0%,
-                rgba(15, 25, 45, 0.95) 100%
-            ) !important;
-            border: 1px solid rgba(0, 210, 180, 0.15) !important;
-            border-radius: 16px !important;
-            box-shadow: 
-                0 4px 20px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                0 0 0 1px rgba(0, 210, 180, 0.05) !important;
-            backdrop-filter: blur(10px) !important;
+            background: rgba(26, 34, 44, 0.9) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
         }
 
         .bento-card:hover,
         .v24-viewing-card:hover,
         .client-card:hover,
         .property-item:hover {
-            border-color: rgba(0, 210, 180, 0.4) !important;
-            box-shadow: 
-                0 8px 40px rgba(0, 0, 0, 0.5),
-                0 0 30px rgba(0, 210, 180, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-            transform: translateY(-4px) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+            transform: translateY(-2px) !important;
         }
 
-        /* Card left border accent */
+        /* Card left border accent - subtle */
         .v24-viewing-card {
-            border-left: 4px solid #00d4b4 !important;
+            border-left: 3px solid #22c55e !important;
         }
 
         .v24-viewing-card.virtual {
-            border-left-color: #a78bfa !important;
+            border-left-color: #8b5cf6 !important;
         }
 
         .v24-viewing-card.today-card {
             border-left-color: #00e676 !important;
-            background: linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(20, 35, 60, 0.9)) !important;
+            background: rgba(0, 230, 118, 0.08) !important;
         }
 
         .client-card {
-            border-left: 4px solid var(--status-color, #00d4b4) !important;
+            border-left: 3px solid var(--status-color, #22c55e) !important;
         }
 
         /* ─────────────────────────────────────────────────────────────────────────────────
-           TYPOGRAPHY - Brighter, better contrast
+           TYPOGRAPHY - Clean and readable
            ───────────────────────────────────────────────────────────────────────────────── */
         h1, h2, h3, h4, h5, h6,
         .modal-panel-header h2,
@@ -15891,72 +16081,74 @@
         .client-card-name,
         .stat-value {
             color: #ffffff !important;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
         }
 
-        /* Accent color for labels */
+        /* Labels - subtle green accent */
         strong, label,
-        .v24-card-info strong,
+        .v24-card-info strong {
+            color: #4ade80 !important;
+        }
+        
         th {
-            color: #00d4b4 !important;
+            color: #9ca3af !important;
         }
 
-        /* Body text - brighter */
+        /* Body text */
         p, span, div, td, li,
         .v24-card-info,
         .client-meta {
-            color: #c8d4e6 !important;
+            color: #d1d5db !important;
         }
 
         /* Muted text */
         .text-muted, .muted,
         small, .small {
-            color: #8899b0 !important;
+            color: #9ca3af !important;
         }
 
         /* ─────────────────────────────────────────────────────────────────────────────────
-           BUTTONS - Vibrant with glow effects
+           BUTTONS - Clean, simple
            ───────────────────────────────────────────────────────────────────────────────── */
         button, .btn,
         .action-btn,
         .toolbar-btn,
         .v24-card-btn,
         [class*="btn"]:not(.hm-btn) {
-            background: linear-gradient(135deg, #1a2a45, #152035) !important;
-            border: 1px solid rgba(0, 210, 180, 0.25) !important;
-            color: #e0e8f0 !important;
-            border-radius: 10px !important;
-            font-weight: 600 !important;
-            transition: all 0.2s ease !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #e5e7eb !important;
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            transition: all 0.15s ease !important;
         }
 
         button:hover, .btn:hover,
         .action-btn:hover,
         .toolbar-btn:hover,
         .v24-card-btn:hover {
-            background: linear-gradient(135deg, #1e3352, #1a2840) !important;
-            border-color: #00d4b4 !important;
-            box-shadow: 0 0 20px rgba(0, 210, 180, 0.3) !important;
-            transform: translateY(-2px) !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            border-color: rgba(255, 255, 255, 0.25) !important;
+            box-shadow: none !important;
+            transform: none !important;
         }
 
-        /* Primary/Success buttons - Bright teal */
+        /* Primary/Success buttons - Green */
         .v24-card-btn.whatsapp,
         .v24-card-btn.pipeline,
         .primary-btn,
         button.primary,
         .btn-primary,
         [class*="success"] {
-            background: linear-gradient(135deg, #00d4b4, #00a890) !important;
+            background: #22c55e !important;
             border: none !important;
             color: #000 !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
         }
 
         .v24-card-btn.whatsapp:hover,
         .primary-btn:hover {
-            background: linear-gradient(135deg, #00e6c4, #00b89a) !important;
-            box-shadow: 0 0 30px rgba(0, 210, 180, 0.5) !important;
+            background: #16a34a !important;
+            box-shadow: none !important;
         }
 
         /* Edit/Warning buttons - Amber */
@@ -16718,47 +16910,46 @@
                 pointer-events: none;
             }
             #hpm-login-screen .login-container{display:flex;gap:32px;max-width:900px;width:95%;padding:20px;position:relative;z-index:1}
-            #hpm-login-screen .login-card{flex:1;background:rgba(15,23,42,0.9);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:40px;backdrop-filter:blur(20px);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);animation:slide-up 0.6s ease forwards}
+            #hpm-login-screen .login-card{flex:1;background:rgba(22,28,36,0.95);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:40px;backdrop-filter:blur(20px);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);animation:slide-up 0.6s ease forwards}
             #hpm-login-screen .login-header{text-align:left;margin-bottom:32px}
-            #hpm-login-screen .login-logo{display:flex;align-items:center;gap:16px;margin-bottom:32px}
-            #hpm-login-screen .logo-mark{width:56px;height:56px;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 10px 25px -5px rgba(34,197,94,0.4);animation:pulse-glow 3s ease-in-out infinite}
-            #hpm-login-screen .logo-text{text-align:left}
-            #hpm-login-screen .logo-title{font-size:32px;font-weight:800;background:linear-gradient(135deg, #ffffff 0%, #22c55e 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;line-height:1}
-            #hpm-login-screen .logo-subtitle{font-size:13px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;margin-top:4px;font-weight:500}
+            #hpm-login-screen .login-logo{margin-bottom:24px}
+            #hpm-login-screen .logo-title{font-size:36px;font-weight:800;color:white;letter-spacing:4px;line-height:1}
+            #hpm-login-screen .logo-subtitle{font-size:12px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:3px;margin-top:6px;font-weight:500}
             #hpm-login-screen .welcome-text h2{margin:0 0 8px;font-size:28px;font-weight:700;color:white}
             #hpm-login-screen .welcome-text p{margin:0;color:rgba(255,255,255,0.5);font-size:16px}
-            #hpm-login-screen .auth-tabs{display:flex;background:rgba(255,255,255,0.03);padding:4px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px}
-            #hpm-login-screen .auth-tab{flex:1;padding:12px 16px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.5);font-size:15px;font-weight:500;cursor:pointer;transition:all 0.3s;position:relative}
-            #hpm-login-screen .auth-tab.active{color:white}
-            #hpm-login-screen .auth-tab.active::after{content:'';position:absolute;bottom:0;left:20%;width:60%;height:2px;background:#22c55e;border-radius:2px}
-            #hpm-login-screen .auth-tab:hover:not(.active){color:rgba(255,255,255,0.7)}
+            #hpm-login-screen .auth-tabs{display:flex;gap:8px;background:transparent;padding:0;border-radius:12px;border:none;margin-bottom:24px}
+            #hpm-login-screen .auth-tab{flex:1;padding:14px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:rgba(255,255,255,0.6);font-size:15px;font-weight:500;cursor:pointer;transition:all 0.2s}
+            #hpm-login-screen .auth-tab.active{color:white;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2)}
+            #hpm-login-screen .auth-tab:hover:not(.active){color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.07)}
             #hpm-login-screen .auth-form{display:flex;flex-direction:column;gap:16px}
             #hpm-login-screen .form-group{display:flex;flex-direction:column;gap:8px}
             #hpm-login-screen .form-group label{color:rgba(255,255,255,0.7);font-size:14px;font-weight:500}
-            #hpm-login-screen .form-group input{padding:16px 20px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:white;font-size:16px;transition:all 0.3s}
-            #hpm-login-screen .form-group input:focus{outline:none;border-color:#22c55e;background:rgba(34,197,94,0.05);box-shadow:0 0 30px rgba(34,197,94,0.1)}
+            #hpm-login-screen .form-group input{padding:16px 20px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:white;font-size:16px;transition:all 0.2s}
+            #hpm-login-screen .form-group input:focus{outline:none;border-color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.12)}
             #hpm-login-screen .form-group input::placeholder{color:rgba(255,255,255,0.4)}
             #hpm-login-screen .auth-error{color:#f87171;font-size:13px;margin:4px 0 0;min-height:20px;line-height:1.4}
             #hpm-login-screen .auth-error.success{color:#4ade80}
-            #hpm-login-screen .auth-btn{padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s;margin-top:8px}
-            #hpm-login-screen .auth-btn.primary{background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);color:white;box-shadow:0 4px 15px rgba(34,197,94,0.3)}
-            #hpm-login-screen .auth-btn.primary:hover{transform:translateY(-2px);box-shadow:0 10px 40px rgba(34,197,94,0.4)}
+            #hpm-login-screen .auth-btn{padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s;margin-top:8px}
+            #hpm-login-screen .auth-btn.primary{background:#22c55e;color:white}
+            #hpm-login-screen .auth-btn.primary:hover{background:#16a34a}
             #hpm-login-screen .auth-btn.primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
             #hpm-login-screen .login-footer{text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.05)}
             #hpm-login-screen .login-footer p{color:rgba(255,255,255,0.4);font-size:13px;margin:0}
-            #hpm-login-screen .leaderboard-card{width:320px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:24px;padding:24px;backdrop-filter:blur(20px);position:relative;overflow:hidden}
+            #hpm-login-screen .leaderboard-card{width:320px;background:rgba(22,28,36,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:24px;backdrop-filter:blur(20px);position:relative;overflow:hidden}
             #hpm-login-screen .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
-            #hpm-login-screen .stat-card{text-align:center;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;border:1px solid rgba(255,255,255,0.05);transition:all 0.3s}
-            #hpm-login-screen .stat-card:hover{background:rgba(255,255,255,0.04);border-color:rgba(34,197,94,0.2)}
-            #hpm-login-screen .stat-value{font-size:24px;font-weight:700;font-family:'Space Mono',monospace}
+            #hpm-login-screen .stat-card{text-align:center;padding:16px;background:rgba(255,255,255,0.04);border-radius:12px;border:1px solid rgba(255,255,255,0.06);transition:all 0.3s}
+            #hpm-login-screen .stat-card:hover{background:rgba(255,255,255,0.06)}
+            #hpm-login-screen .stat-value{font-size:24px;font-weight:700;font-family:'Space Mono',monospace;color:#22c55e}
             #hpm-login-screen .stat-label{font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px}
             #hpm-login-screen .lb-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-            #hpm-login-screen .lb-icon{width:48px;height:48px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;animation:crown-bounce 2s ease-in-out infinite;box-shadow:0 4px 20px rgba(251,191,36,0.4)}
+            #hpm-login-screen .lb-icon{width:48px;height:48px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 20px rgba(251,191,36,0.3)}
             #hpm-login-screen .lb-title h3{margin:0;font-size:18px;font-weight:700;color:white}
             #hpm-login-screen .lb-title p{margin:0;font-size:13px;color:rgba(255,255,255,0.5)}
-            #hpm-login-screen .lb-live{margin-left:auto;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:6px 12px;font-size:11px;color:#22c55e;font-weight:600}
-            #hpm-login-screen .lb-row{display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px;margin-bottom:8px;transition:all 0.3s;animation:slide-up 0.5s ease forwards;opacity:0}
-            #hpm-login-screen .lb-row:hover{background:rgba(255,255,255,0.05);transform:translateX(5px)}
+            #hpm-login-screen .lb-live{margin-left:auto;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);border-radius:20px;padding:6px 12px;font-size:11px;color:#22c55e;font-weight:600;display:flex;align-items:center;gap:6px}
+            #hpm-login-screen .lb-live::before{content:'';width:6px;height:6px;background:#22c55e;border-radius:50%;animation:pulse 1.5s infinite}
+            @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+            #hpm-login-screen .lb-row{display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:8px;transition:all 0.3s}
+            #hpm-login-screen .lb-row:hover{background:rgba(255,255,255,0.06)}
             #hpm-login-screen .lb-rank{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin-right:12px}
             #hpm-login-screen .lb-rank.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a}
             #hpm-login-screen .lb-rank.silver{background:linear-gradient(135deg,#9ca3af,#6b7280);color:white}
@@ -16766,11 +16957,11 @@
             #hpm-login-screen .lb-rank.other{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6)}
             #hpm-login-screen .lb-name{flex:1;color:white;font-weight:600;font-size:14px}
             #hpm-login-screen .lb-score{color:rgba(255,255,255,0.8);font-weight:600;font-family:'Space Mono',monospace;font-size:14px}
-            #hpm-login-screen .lb-cta{margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(34,197,94,0.05));border:1px solid rgba(34,197,94,0.2);border-radius:12px;text-align:center}
+            #hpm-login-screen .lb-cta{margin-top:20px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;text-align:center}
             #hpm-login-screen .lb-cta p{margin:0;color:rgba(255,255,255,0.7);font-size:14px}
             #hpm-login-screen .lb-cta span{color:#22c55e;font-weight:600}
-            #hpm-login-screen .skyline{position:absolute;bottom:0;left:0;right:0;height:200px;display:flex;align-items:flex-end;justify-content:center;gap:4px;opacity:0.2;pointer-events:none}
-            #hpm-login-screen .building{background:linear-gradient(to top,#1a1f35,#2a3050);border-radius:4px 4px 0 0;animation:building-rise 1s ease forwards}
+            #hpm-login-screen .skyline{position:absolute;bottom:0;left:0;right:0;height:200px;display:flex;align-items:flex-end;justify-content:center;gap:4px;opacity:0.15;pointer-events:none}
+            #hpm-login-screen .building{background:linear-gradient(to top,#1a1f35,#2a3050);border-radius:4px 4px 0 0}
             @media(max-width:768px){#hpm-login-screen .login-container{flex-direction:column}#hpm-login-screen .leaderboard-card{width:100%;order:-1}}
         </style>
         <div class="login-grid-bg"></div>
@@ -16778,11 +16969,8 @@
             <div class="login-card">
                 <div class="login-header">
                     <div class="login-logo">
-                        <div class="logo-mark">🏠</div>
-                        <div class="logo-text">
-                            <div class="logo-title">HELM</div>
-                            <div class="logo-subtitle">Property Manager</div>
-                        </div>
+                        <div class="logo-title">HELM</div>
+                        <div class="logo-subtitle">Property Manager</div>
                     </div>
                     <div class="welcome-text">
                         <h2>Welcome back</h2>
@@ -16830,7 +17018,7 @@
                 </form>
                 
                 <div class="login-footer">
-                    <p>Harir Industries © 2026</p>
+                    <p>HELM © 2026</p>
                 </div>
             </div>
             
@@ -16884,20 +17072,67 @@
                     skyline.appendChild(building);
                 }
                 
-                // Animate stats
-                const targets = { properties: 137, viewings: 172, agents: 3 };
-                const duration = 2000;
-                const steps = 60;
-                let step = 0;
-                const interval = setInterval(() => {
-                    step++;
-                    const progress = step / steps;
-                    const eased = 1 - Math.pow(1 - progress, 3);
-                    document.getElementById('stat-properties').textContent = Math.floor(targets.properties * eased);
-                    document.getElementById('stat-viewings').textContent = Math.floor(targets.viewings * eased);
-                    document.getElementById('stat-agents').textContent = Math.floor(targets.agents * eased);
-                    if (step >= steps) clearInterval(interval);
-                }, duration / steps);
+                // Fetch LIVE stats from Supabase
+                async function loadLiveStats() {
+                    try {
+                        // Get property count
+                        const { data: props, error: propErr } = await window.supabaseClient
+                            .from('properties')
+                            .select('id', { count: 'exact', head: true });
+                        
+                        // Get viewings count
+                        const { data: views, error: viewErr } = await window.supabaseClient
+                            .from('viewings')
+                            .select('id', { count: 'exact', head: true });
+                        
+                        // Get agents count
+                        const { data: agents, error: agentErr } = await window.supabaseClient
+                            .from('profiles')
+                            .select('id', { count: 'exact', head: true });
+                        
+                        return {
+                            properties: props ? (await window.supabaseClient.from('properties').select('id', { count: 'exact' })).count || 0 : 0,
+                            viewings: views ? (await window.supabaseClient.from('viewings').select('id', { count: 'exact' })).count || 0 : 0,
+                            agents: agents ? (await window.supabaseClient.from('profiles').select('id', { count: 'exact' })).count || 0 : 0
+                        };
+                    } catch (e) {
+                        console.warn('[LOGIN] Could not fetch live stats:', e);
+                        // Fallback to localStorage
+                        const localProps = JSON.parse(localStorage.getItem('propertySystemProperties') || '[]');
+                        const localViews = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                        return {
+                            properties: localProps.length,
+                            viewings: localViews.length,
+                            agents: 1
+                        };
+                    }
+                }
+                
+                // Animate stats with live data
+                loadLiveStats().then(targets => {
+                    // If targets are 0, try localStorage as fallback
+                    if (targets.properties === 0) {
+                        const localProps = JSON.parse(localStorage.getItem('propertySystemProperties') || '[]');
+                        targets.properties = localProps.length;
+                    }
+                    if (targets.viewings === 0) {
+                        const localViews = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                        targets.viewings = localViews.length;
+                    }
+                    
+                    const duration = 1500;
+                    const steps = 45;
+                    let step = 0;
+                    const interval = setInterval(() => {
+                        step++;
+                        const progress = step / steps;
+                        const eased = 1 - Math.pow(1 - progress, 3);
+                        document.getElementById('stat-properties').textContent = Math.floor(targets.properties * eased);
+                        document.getElementById('stat-viewings').textContent = Math.floor(targets.viewings * eased);
+                        document.getElementById('stat-agents').textContent = Math.max(1, Math.floor(targets.agents * eased));
+                        if (step >= steps) clearInterval(interval);
+                    }, duration / steps);
+                });
             })();
         </script>
     </div>
@@ -16939,10 +17174,8 @@
                 <h1 class="helm-welcome-title" style="font-size: 72px; letter-spacing: 16px; margin-bottom: 12px;">HELM
                 </h1>
                 <p class="helm-welcome-subtitle"
-                    style="font-size: 13px; letter-spacing: 3px; opacity: 0.6; margin-bottom: 8px;">PROPERTY MANAGEMENT
+                    style="font-size: 13px; letter-spacing: 3px; opacity: 0.5; margin-bottom: 40px;">PROPERTY MANAGEMENT
                     SYSTEM</p>
-                <div class="helm-welcome-brand" style="font-size: 11px; opacity: 0.4; margin-bottom: 40px;">by Harir
-                    Industries</div>
 
                 <!-- Integrated Floating Glass Stats -->
                 <div class="helm-welcome-stats" style="display: flex; gap: 16px; margin-bottom: 40px;">
@@ -17001,33 +17234,26 @@
                         <span class="helm-widget-label" id="helm-current-date">---</span>
                     </div>
                 </div>
-                <div class="helm-widget" id="helm-tfl-widget" onclick="toggleHelmTflPopup()">
+                <!-- TFL removed - API unreliable -->
+                <div class="helm-widget" onclick="helmSwitchView('map')">
                     <span class="helm-widget-icon"><span class="material-symbols-rounded"
-                            style="font-size: 20px; color: #4ade80;">subway</span></span>
-                    <div class="helm-widget-content">
-                        <span class="helm-widget-value" id="helm-tfl-status">Good</span>
-                        <span class="helm-widget-label">TFL STATUS</span>
-                    </div>
-                </div>
-                <div class="helm-widget success" onclick="helmSwitchView('map')">
-                    <span class="helm-widget-icon"><span class="material-symbols-rounded"
-                            style="font-size: 20px; color: #4ade80;">home</span></span>
+                            style="font-size: 18px;">home</span></span>
                     <div class="helm-widget-content">
                         <span class="helm-widget-value" id="helm-available-count">0</span>
                         <span class="helm-widget-label">AVAILABLE</span>
                     </div>
                 </div>
-                <div class="helm-widget warning" onclick="helmSwitchView('pipeline')">
+                <div class="helm-widget" onclick="helmSwitchView('pipeline')">
                     <span class="helm-widget-icon"><span class="material-symbols-rounded"
-                            style="font-size: 20px; color: #f97316;">local_fire_department</span></span>
+                            style="font-size: 18px;">calendar_today</span></span>
                     <div class="helm-widget-content">
                         <span class="helm-widget-value" id="helm-today-viewings">0</span>
                         <span class="helm-widget-label">TODAY</span>
                     </div>
                 </div>
-                <div class="helm-widget info" onclick="showXPStats()">
+                <div class="helm-widget" onclick="showXPStats()">
                     <span class="helm-widget-icon"><span class="material-symbols-rounded"
-                            style="font-size: 20px; color: #fbbf24;">star</span></span>
+                            style="font-size: 18px;">star</span></span>
                     <div class="helm-widget-content">
                         <span class="helm-widget-value" id="helm-xp-points">0</span>
                         <span class="helm-widget-label">XP</span>
@@ -21004,12 +21230,20 @@
 
             /**
              * Safe array getter from storage (always returns array)
+             * v67.7: Added deduplication for viewings
              * @param {string} key - Storage key
              * @returns {Array} Array (empty if not found)
              */
             function getStorageArray(key) {
                 const value = getStorageItem(key, []);
-                return Array.isArray(value) ? value : [];
+                let arr = Array.isArray(value) ? value : [];
+                
+                // v67.7: Apply deduplication for propertyViewings
+                if (key === 'propertyViewings' && typeof window.deduplicateViewings === 'function') {
+                    arr = window.deduplicateViewings(arr);
+                }
+                
+                return arr;
             }
 
             /**
@@ -24959,38 +25193,33 @@
                                     }
                                 });
 
-                                // Determine cluster color based on availability
-                                let bgColor = '#22c55e'; // Green for mostly available
-                                let borderColor = '#16a34a';
-                                if (takenCount > availableCount) {
-                                    bgColor = '#ef4444';
-                                    borderColor = '#dc2626';
-                                } else if (takenCount > 0) {
-                                    bgColor = '#f59e0b';
-                                    borderColor = '#d97706';
-                                }
+                                // v67.7: SIMPLIFIED - Green if any available, gray if all taken
+                                let bgColor = availableCount > 0 ? '#22c55e' : '#64748b';
 
                                 // Size based on count
-                                let diameter = 48;
-                                if (count >= 10) diameter = 58;
-                                else if (count >= 5) diameter = 52;
+                                let diameter = 44;
+                                let fontSize = 14;
+                                if (count >= 20) { diameter = 56; fontSize = 18; }
+                                else if (count >= 10) { diameter = 52; fontSize = 17; }
+                                else if (count >= 5) { diameter = 48; fontSize = 16; }
 
                                 return L.divIcon({
                                     html: `<div class="hpm-cluster-icon" style="
                                     width: ${diameter}px;
                                     height: ${diameter}px;
-                                    background: linear-gradient(135deg, ${bgColor}, ${borderColor});
-                                    border-radius: 12px;
-                                    border: 4px solid white;
-                                    box-shadow: 0 6px 25px rgba(0,0,0,0.6), 0 0 0 3px rgba(0,0,0,0.25), 0 0 40px ${bgColor}40;
+                                    background: ${bgColor};
+                                    border-radius: 50%;
+                                    border: 3px solid white;
+                                    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
                                     display: flex;
                                     align-items: center;
                                     justify-content: center;
                                     color: white;
-                                    font-weight: 800;
-                                    font-size: ${count >= 10 ? '18px' : '16px'};
+                                    font-weight: 700;
+                                    font-size: ${fontSize}px;
                                     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                                    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+                                    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+                                    cursor: pointer;
                                 ">
                                     <span>${count}</span>
                                 </div>`,
@@ -25076,51 +25305,48 @@
                         const dateAdded = new Date(firstProp.dateAdded || Date.now());
                         const age = Math.floor((Date.now() - dateAdded) / (1000 * 60 * 60 * 24));
 
-                        // Determine property type icon
-                        const propType = firstProp.type || 'Studio';
-
-                        // Age-based styling
-                        let markerColor = '#22c55e'; // Green for new
-                        let markerBorder = '#16a34a';
-                        if (age > 60) {
-                            markerColor = '#ef4444';
-                            markerBorder = '#dc2626';
-                        } else if (age > 28) {
-                            markerColor = '#f59e0b';
-                            markerBorder = '#d97706';
-                        }
-
                         // Check if taken
                         const groupTaken = group.filter(p => takenProperties.has(p.id)).length;
                         const groupAvailable = group.length - groupTaken;
 
+                        // v67.7: SIMPLIFIED COLORS - Green for available, Gray for taken
+                        let markerColor = '#22c55e'; // Green
+                        let markerBorder = '#16a34a';
+                        
                         if (groupAvailable === 0) {
-                            markerColor = '#6b7280';
-                            markerBorder = '#4b5563';
+                            markerColor = '#64748b';
+                            markerBorder = '#475569';
+                        }
+                        
+                        // Subtle border glow for freshness indication
+                        let borderGlow = '';
+                        if (age <= 7 && groupAvailable > 0) {
+                            borderGlow = '0 0 8px rgba(34, 197, 94, 0.6),'; // Fresh glow
+                        } else if (age > 60 && groupAvailable > 0) {
+                            borderGlow = '0 0 8px rgba(239, 68, 68, 0.4),'; // Stale subtle warning
                         }
 
-                        // Create clean pin marker HTML - v63 enhanced visibility
+                        // v67.7: Clean simple pin marker
                         const markerHtml = `
-                        <div class="hpm-property-pin" style="
-                            width: 42px;
-                            height: 42px;
-                            background: linear-gradient(135deg, ${markerColor}, ${markerBorder});
+                        <div style="
+                            width: 38px;
+                            height: 38px;
+                            background: ${markerColor};
                             border-radius: 50% 50% 50% 0;
                             transform: rotate(-45deg);
-                            border: 4px solid white;
-                            box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 0 3px rgba(0,0,0,0.3), 0 8px 25px rgba(0,0,0,0.3);
+                            border: 3px solid white;
+                            box-shadow: ${borderGlow} 0 3px 10px rgba(0,0,0,0.4);
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            position: relative;
                         ">
                             <span style="
                                 transform: rotate(45deg);
                                 color: white;
-                                font-weight: 800;
-                                font-size: ${group.length > 1 ? '14px' : '12px'};
+                                font-weight: 700;
+                                font-size: ${group.length > 1 ? '13px' : '11px'};
                                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+                                text-shadow: 0 1px 2px rgba(0,0,0,0.4);
                             ">${group.length > 1 ? group.length : '🏠'}</span>
                         </div>
                     `;
@@ -27608,6 +27834,19 @@
                         const typeIcon = viewingType === 'virtual' ? '📹' : '🏠';
                         const typeText = viewingType === 'virtual' ? 'Virtual Viewing' : 'In-Person Viewing';
                         const zone = getPropertyZone(property);
+
+                        // 👁️ THE WATCHER: Log viewing creation
+                        if (window.TheWatcher) {
+                            window.TheWatcher.log(window.TheWatcher.TYPES.VIEWING_CREATED, {
+                                clientName: name,
+                                property: property?.address || 'Property',
+                                propertyId: propertyId,
+                                date: dateStr,
+                                time: selectedTime,
+                                type: viewingType,
+                                viewingId: newViewing.id
+                            });
+                        }
 
                         // 🏆 Award XP for booking viewing (v64 team system)
                         if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
@@ -34115,7 +34354,150 @@ Total: ${referrals.length}
 
         // ==================== PIPELINE TRACKER ====================
         // v55.7 - Improved data persistence
+        // ═══════════════════════════════════════════════════════════════════════════════
+        // v67.7 UNIFIED DATA LAYER - SINGLE SOURCE OF TRUTH
+        // ═══════════════════════════════════════════════════════════════════════════════
+        
+        // DEDUPLICATION UTILITY - Uses phone number as primary key
+        window.deduplicateByPhone = function(records) {
+            if (!Array.isArray(records)) return [];
+            
+            const seen = new Map();
+            const result = [];
+            
+            records.forEach(record => {
+                // Get phone number from various possible fields
+                const phone = (record.phone || record.client_phone || record.visitorPhone || record.clientPhone || '').replace(/\D/g, '');
+                const name = (record.name || record.visitor || record.client_name || record.clientName || '').toLowerCase().trim();
+                
+                // Create composite key: phone (primary) or name (fallback)
+                const key = phone.length >= 10 ? phone.slice(-10) : (name || record.id || Date.now());
+                
+                if (!seen.has(key)) {
+                    seen.set(key, record);
+                    result.push(record);
+                } else {
+                    // Merge: keep newer data, preserve important fields
+                    const existing = seen.get(key);
+                    const existingDate = new Date(existing.dateAdded || existing.date || existing.createdAt || 0);
+                    const newDate = new Date(record.dateAdded || record.date || record.createdAt || 0);
+                    
+                    if (newDate > existingDate) {
+                        // Update with newer record but preserve ID
+                        const mergedRecord = { ...existing, ...record, id: existing.id || record.id };
+                        const idx = result.indexOf(existing);
+                        if (idx >= 0) result[idx] = mergedRecord;
+                        seen.set(key, mergedRecord);
+                    }
+                }
+            });
+            
+            console.log(`[v67.7 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
+            return result;
+        };
+        
+        // Deduplicate viewings by property+date+time+client
+        window.deduplicateViewings = function(viewings) {
+            if (!Array.isArray(viewings)) return [];
+            
+            const seen = new Map();
+            const result = [];
+            
+            viewings.forEach(v => {
+                const propId = v.propertyId || v.property_id || '';
+                const date = v.date || v.viewing_date || '';
+                const time = v.time || v.viewing_time || '';
+                const phone = (v.phone || v.client_phone || v.visitorPhone || '').replace(/\D/g, '').slice(-10);
+                
+                // Composite key: propertyId + date + time + phone
+                const key = `${propId}-${date}-${time}-${phone}`;
+                
+                if (!seen.has(key) || !key.includes('--')) {
+                    seen.set(key, v);
+                    result.push(v);
+                }
+            });
+            
+            console.log(`[v67.7 Dedup Viewings] ${viewings.length} → ${result.length}`);
+            return result;
+        };
+
         let pipelineData = [];
+        
+        // v67.7: ONE-TIME CLEANUP - Run this to fix existing duplicates in localStorage
+        window.cleanupAllData = function() {
+            console.log('[v67.7] Starting data cleanup...');
+            let cleaned = { pipeline: 0, viewings: 0 };
+            
+            // 1. Clean pipeline data from ALL sources
+            const sources = ['pipelineData', 'pipelineClients', 'pipelineEntries'];
+            let allPipeline = [];
+            
+            sources.forEach(key => {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key) || '[]');
+                    if (data.length > 0) {
+                        console.log(`[Cleanup] Found ${data.length} entries in ${key}`);
+                        allPipeline = allPipeline.concat(data);
+                    }
+                } catch(e) {}
+            });
+            
+            // Deduplicate
+            const cleanPipeline = window.deduplicateByPhone(allPipeline);
+            cleaned.pipeline = allPipeline.length - cleanPipeline.length;
+            
+            // Save cleaned data to primary source only
+            localStorage.setItem('pipelineData', JSON.stringify(cleanPipeline));
+            localStorage.removeItem('pipelineClients'); // Remove redundant
+            localStorage.removeItem('pipelineEntries'); // Remove redundant
+            
+            // Update memory
+            pipelineData = cleanPipeline;
+            window._dataCache.pipeline = cleanPipeline;
+            
+            // 2. Clean viewings
+            try {
+                const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                const cleanViewings = window.deduplicateViewings(viewings);
+                cleaned.viewings = viewings.length - cleanViewings.length;
+                localStorage.setItem('propertyViewings', JSON.stringify(cleanViewings));
+                window.viewings = cleanViewings;
+                window._dataCache.viewings = cleanViewings;
+            } catch(e) {}
+            
+            console.log(`[v67.7] Cleanup complete: Removed ${cleaned.pipeline} pipeline dupes, ${cleaned.viewings} viewing dupes`);
+            
+            // Refresh UI
+            if (typeof renderPipelineTable === 'function') renderPipelineTable();
+            if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
+            
+            if (typeof showToast === 'function') {
+                showToast('Data Cleaned', `Removed ${cleaned.pipeline + cleaned.viewings} duplicates`, 'success');
+            }
+            
+            return cleaned;
+        };
+        
+        // Auto-run cleanup on first load if duplicates detected
+        setTimeout(() => {
+            try {
+                const p1 = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+                const p2 = JSON.parse(localStorage.getItem('pipelineClients') || '[]');
+                const p3 = JSON.parse(localStorage.getItem('pipelineEntries') || '[]');
+                const total = p1.length + p2.length + p3.length;
+                const phones = new Set();
+                [...p1, ...p2, ...p3].forEach(r => {
+                    const p = (r.phone || '').replace(/\D/g, '').slice(-10);
+                    if (p) phones.add(p);
+                });
+                // If we have significantly more records than unique phones, we have dupes
+                if (total > phones.size * 1.5 && total > 10) {
+                    console.log('[v67.7] Detected duplicates, auto-cleaning...');
+                    window.cleanupAllData();
+                }
+            } catch(e) {}
+        }, 3000);
 
         // Load pipeline data immediately on script execution
         (function initPipelineData() {
@@ -34144,18 +34526,41 @@ Total: ${referrals.length}
             lastSync: null
         };
 
-        // Load pipeline data - Now Supabase-first with memory cache
+        // Load pipeline data - v67.7: Unified with deduplication
         window.loadPipelineData = function() {
-            // Return from memory cache first for instant UI
-            if (window._dataCache.pipeline.length > 0) {
-                return window._dataCache.pipeline;
+            // Build comprehensive pipeline from ALL sources
+            let allData = [];
+            
+            // Source 1: Memory cache
+            if (window._dataCache?.pipeline?.length > 0) {
+                allData = allData.concat(window._dataCache.pipeline);
             }
-            // Fallback to pipelineData in-memory var (old compatibility)
+            
+            // Source 2: In-memory pipelineData
             if (pipelineData && pipelineData.length > 0) {
-                window._dataCache.pipeline = pipelineData;
-                return pipelineData;
+                allData = allData.concat(pipelineData);
             }
-            return [];
+            
+            // Source 3: localStorage pipelineData
+            try {
+                const stored1 = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+                if (stored1.length > 0) allData = allData.concat(stored1);
+            } catch(e) {}
+            
+            // Source 4: localStorage pipelineClients
+            try {
+                const stored2 = JSON.parse(localStorage.getItem('pipelineClients') || '[]');
+                if (stored2.length > 0) allData = allData.concat(stored2);
+            } catch(e) {}
+            
+            // DEDUPLICATE before returning
+            const deduped = window.deduplicateByPhone ? window.deduplicateByPhone(allData) : allData;
+            
+            // Update cache with deduplicated data
+            pipelineData = deduped;
+            window._dataCache.pipeline = deduped;
+            
+            return deduped;
         };
 
         // Save pipeline data - Supabase-first with memory cache
@@ -35680,6 +36085,16 @@ window.updatePipelineRowStatus = function(id, newStatus) {
         
         // v61.9: Trigger celebration and XP for Signed Up
         if (newStatus === 'Signed Up' && oldStatus !== 'Signed Up') {
+            // 👁️ THE WATCHER: Log sign-up
+            if (window.TheWatcher) {
+                window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_SIGNED_UP, {
+                    clientName: row.visitor || 'Client',
+                    property: row.property || 'Property',
+                    propertyId: row.propertyId,
+                    date: new Date().toISOString()
+                });
+            }
+
             // Show celebration
             if (typeof showSignUpCelebration === 'function') {
                 showSignUpCelebration(row.visitor || 'Client', row.property || 'Property');
@@ -35708,6 +36123,17 @@ window.updatePipelineRowStatus = function(id, newStatus) {
             
             // Refresh stats
             if (typeof refreshAllStats === 'function') setTimeout(refreshAllStats, 100);
+        } else if (newStatus === 'No Show' && oldStatus !== 'No Show') {
+            // 👁️ THE WATCHER: Log no-show
+            if (window.TheWatcher) {
+                window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_NO_SHOW, {
+                    clientName: row.visitor || 'Client',
+                    property: row.property || 'Property',
+                    propertyId: row.propertyId,
+                    date: new Date().toISOString()
+                });
+            }
+            showToast('No Show', 'Client marked as no-show');
         } else {
             showToast('Updated', 'Status changed to ' + newStatus)
         }
@@ -36673,20 +37099,37 @@ window.renderPipelineTable = function() {
         }
 
     } else {
-        // BOARD VIEW (Kanban)
+        // BOARD VIEW (Kanban) - v67.7: Interactive headers
         container.innerHTML = `
             <div class="pipeline-board">
                 ${Object.entries(columns).map(([key, col]) => `
                 <div class="pipeline-column" id="col-${key}" ondragover="allowDrop(event)" ondrop="dropClient(event, '${col.statuses[0]}')">
-                    <div class="pipeline-column-header">
-                        <span>${col.title}</span>
-                        <span class="count-badge" id="count-${key}">0</span>
+                    <div class="pipeline-column-header" style="cursor: pointer;" onclick="togglePipelineColumn('${key}')" title="Click to expand/collapse">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 10px; height: 10px; background: ${col.color}; border-radius: 50%;"></span>
+                            <span>${col.title}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="count-badge" id="count-${key}" style="background: ${col.color}20; color: ${col.color}; padding: 4px 10px; border-radius: 12px; font-weight: 700;">0</span>
+                            <span class="material-symbols-rounded" id="chevron-${key}" style="font-size: 18px; transition: transform 0.2s;">expand_more</span>
+                        </div>
                     </div>
                     <div class="pipeline-column-body" id="body-${key}"></div>
                 </div>
                 `).join('')}
             </div>
         `;
+        
+        // v67.7: Toggle column expand/collapse
+        window.togglePipelineColumn = window.togglePipelineColumn || function(key) {
+            const body = document.getElementById('body-' + key);
+            const chevron = document.getElementById('chevron-' + key);
+            if (body) {
+                const isCollapsed = body.style.display === 'none';
+                body.style.display = isCollapsed ? 'block' : 'none';
+                if (chevron) chevron.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+            }
+        };
 
         // Render cards into columns
         Object.values(clients).forEach(client => {
@@ -40826,6 +41269,22 @@ Harir Industries`
                     " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" title="Boroughs">
                         <i class="fas fa-border-all"></i> <span>Boroughs</span>
                     </button>
+                    <button id="helm-layer-agents" onclick="helmToggleAgentLayer()" style="
+                        padding: 8px 12px;
+                        background: rgba(139,92,246,0.2);
+                        border: 1px solid rgba(139,92,246,0.4);
+                        color: #a78bfa;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    " onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="if(!this.classList.contains('active'))this.style.background='rgba(139,92,246,0.2)'" title="Show agents at their scheduled viewings">
+                        <i class="fas fa-user-clock"></i> <span>Agents</span>
+                    </button>
                 </div>
                 
                 <!-- Divider -->
@@ -41154,6 +41613,35 @@ Harir Industries`
             }
 
             // Toast is already shown by setMapStyle function
+        };
+
+        // Toggle agent location markers on map
+        window.helmToggleAgentLayer = function() {
+            const btn = document.getElementById('helm-layer-agents');
+            const isActive = btn && btn.classList.contains('active');
+            
+            if (isActive) {
+                // Turn off
+                btn.classList.remove('active');
+                btn.style.background = 'rgba(139,92,246,0.2)';
+                if (typeof toggleAgentLocationMarkers === 'function') {
+                    toggleAgentLocationMarkers(false);
+                }
+                showToast('Agent Locations', 'Hidden');
+            } else {
+                // Turn on
+                btn.classList.add('active');
+                btn.style.background = 'rgba(139,92,246,0.4)';
+                
+                // Initialize if not already
+                if (!window.agentLocationLayer && typeof initAgentLocationTracking === 'function') {
+                    initAgentLocationTracking();
+                } else if (typeof toggleAgentLocationMarkers === 'function') {
+                    toggleAgentLocationMarkers(true);
+                }
+                
+                showToast('Agent Locations', 'Showing scheduled viewing locations');
+            }
         };
 
         // Helm Pipeline Management Functions
@@ -43322,7 +43810,253 @@ Harir Industries`
             document.getElementById('agent-modal-overlay')?.remove();
         };
 
-        // Show agent on map
+        // ═══════════════════════════════════════════════════════════
+        // AGENT LIVE LOCATION - Shows where agents are scheduled to be
+        // Based on their viewings for today
+        // ═══════════════════════════════════════════════════════════
+        
+        window.agentLocationMarkers = {}; // Store agent location markers
+        window.agentLocationLayer = null; // Layer group for agent markers
+        
+        // Initialize agent location tracking
+        window.initAgentLocationTracking = function() {
+            if (!window.map) {
+                console.log('[AGENT LOCATION] Map not ready, waiting...');
+                setTimeout(initAgentLocationTracking, 1000);
+                return;
+            }
+            
+            // Create layer group if not exists
+            if (!window.agentLocationLayer) {
+                window.agentLocationLayer = L.layerGroup().addTo(window.map);
+            }
+            
+            // Initial render
+            updateAgentLocations();
+            
+            // Update every 5 minutes
+            setInterval(updateAgentLocations, 300000);
+            
+            console.log('[AGENT LOCATION] Tracking initialized');
+        };
+        
+        // Get agent's current/next scheduled location based on viewings
+        window.getAgentScheduledLocation = function(agentId) {
+            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentTimeMinutes = currentHour * 60 + currentMinute;
+            
+            // Get today's viewings for this agent, sorted by time
+            const todayViewings = viewings
+                .filter(v => {
+                    const isToday = v.date === today;
+                    const isAgent = v.agentId == agentId || v.agentName?.toLowerCase().includes(agentId?.toString().toLowerCase());
+                    const isScheduled = v.status === 'scheduled' || v.status === 'confirmed' || !v.status;
+                    return isToday && isScheduled;
+                })
+                .sort((a, b) => {
+                    const aTime = a.time.split(':').map(Number);
+                    const bTime = b.time.split(':').map(Number);
+                    return (aTime[0] * 60 + aTime[1]) - (bTime[0] * 60 + bTime[1]);
+                });
+            
+            if (todayViewings.length === 0) return null;
+            
+            // Find current or next viewing
+            let currentViewing = null;
+            let nextViewing = null;
+            
+            for (const viewing of todayViewings) {
+                const [hour, minute] = viewing.time.split(':').map(Number);
+                const viewingTimeMinutes = hour * 60 + minute;
+                const viewingEndMinutes = viewingTimeMinutes + 30; // Assume 30 min viewing
+                
+                if (viewingTimeMinutes <= currentTimeMinutes && currentTimeMinutes < viewingEndMinutes) {
+                    // Currently at this viewing
+                    currentViewing = viewing;
+                    break;
+                } else if (viewingTimeMinutes > currentTimeMinutes && !nextViewing) {
+                    // This is the next upcoming viewing
+                    nextViewing = viewing;
+                }
+            }
+            
+            const targetViewing = currentViewing || nextViewing || todayViewings[0];
+            if (!targetViewing) return null;
+            
+            // Get property location
+            const property = window.properties?.find(p => 
+                p.id == targetViewing.propertyId || 
+                p.address?.includes(targetViewing.property) ||
+                targetViewing.propertyAddress?.includes(p.address)
+            );
+            
+            if (property && property.lat && property.lng) {
+                return {
+                    viewing: targetViewing,
+                    isCurrent: !!currentViewing,
+                    lat: property.lat,
+                    lng: property.lng,
+                    address: property.address || targetViewing.propertyAddress,
+                    time: targetViewing.time,
+                    client: targetViewing.clientName || targetViewing.visitorName || targetViewing.name || 'Client',
+                    remainingToday: todayViewings.length
+                };
+            }
+            
+            // Try to geocode the address if property not found
+            return {
+                viewing: targetViewing,
+                isCurrent: !!currentViewing,
+                address: targetViewing.propertyAddress || targetViewing.property,
+                time: targetViewing.time,
+                client: targetViewing.clientName || targetViewing.visitorName || targetViewing.name || 'Client',
+                remainingToday: todayViewings.length,
+                needsGeocoding: true
+            };
+        };
+        
+        // Update all agent location markers
+        window.updateAgentLocations = function() {
+            if (!window.map || !window.agentLocationLayer) return;
+            
+            // Clear existing markers
+            window.agentLocationLayer.clearLayers();
+            window.agentLocationMarkers = {};
+            
+            // Get all agents
+            const agents = typeof loadAgents === 'function' ? loadAgents() : [
+                { id: 1, name: 'Current User', initials: (window.HPMAuth?.userProfile?.display_name?.[0] || 'U'), color: '#22c55e' }
+            ];
+            
+            let hasLocations = false;
+            
+            agents.forEach(agent => {
+                const location = getAgentScheduledLocation(agent.id);
+                if (location && location.lat && location.lng) {
+                    hasLocations = true;
+                    
+                    // Create agent marker with pulsing effect if current
+                    const pulseStyle = location.isCurrent ? 
+                        'animation: agentPulse 2s infinite;' : '';
+                    
+                    const statusColor = location.isCurrent ? '#22c55e' : '#3b82f6'; // Green if current, blue if next
+                    const statusText = location.isCurrent ? 'NOW' : location.time;
+                    
+                    const agentIcon = L.divIcon({
+                        className: 'agent-location-marker',
+                        html: `
+                            <div style="position:relative;${pulseStyle}">
+                                <div style="
+                                    width: 48px;
+                                    height: 48px;
+                                    background: linear-gradient(135deg, ${agent.color || '#8b5cf6'}, ${agent.color || '#8b5cf6'}dd);
+                                    border-radius: 50%;
+                                    border: 4px solid white;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-weight: 700;
+                                    font-size: 16px;
+                                    color: white;
+                                    box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 3px ${statusColor}40;
+                                    cursor: pointer;
+                                ">
+                                    ${agent.initials || agent.name?.split(' ').map(n => n[0]).join('') || '?'}
+                                </div>
+                                <div style="
+                                    position: absolute;
+                                    bottom: -6px;
+                                    left: 50%;
+                                    transform: translateX(-50%);
+                                    background: ${statusColor};
+                                    color: white;
+                                    font-size: 9px;
+                                    font-weight: 700;
+                                    padding: 2px 6px;
+                                    border-radius: 8px;
+                                    white-space: nowrap;
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                ">${statusText}</div>
+                            </div>
+                        `,
+                        iconSize: [48, 60],
+                        iconAnchor: [24, 55]
+                    });
+                    
+                    const marker = L.marker([location.lat, location.lng], { icon: agentIcon });
+                    
+                    // Popup with viewing details
+                    marker.bindPopup(`
+                        <div style="min-width:180px;padding:4px;">
+                            <div style="font-weight:700;font-size:14px;color:#1f2937;margin-bottom:8px;">
+                                ${agent.name || 'Agent'}
+                            </div>
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">
+                                <strong>${location.isCurrent ? '🔴 Currently at:' : '📍 Next viewing:'}</strong>
+                            </div>
+                            <div style="font-size:13px;color:#374151;margin-bottom:8px;">
+                                ${escapeHTML(location.address || 'Property')}
+                            </div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;">
+                                <span>⏰ ${location.time}</span>
+                                <span>👤 ${escapeHTML(location.client)}</span>
+                            </div>
+                            <div style="font-size:10px;color:#22c55e;margin-top:6px;text-align:center;">
+                                ${location.remainingToday} viewing${location.remainingToday > 1 ? 's' : ''} today
+                            </div>
+                        </div>
+                    `, { autoPan: false, maxWidth: 250 });
+                    
+                    marker.addTo(window.agentLocationLayer);
+                    window.agentLocationMarkers[agent.id] = marker;
+                }
+            });
+            
+            if (hasLocations) {
+                console.log('[AGENT LOCATION] Updated', Object.keys(window.agentLocationMarkers).length, 'agent markers');
+            }
+        };
+        
+        // Toggle agent location markers visibility
+        window.toggleAgentLocationMarkers = function(show) {
+            if (!window.map || !window.agentLocationLayer) return;
+            
+            if (show) {
+                window.agentLocationLayer.addTo(window.map);
+                updateAgentLocations();
+            } else {
+                window.map.removeLayer(window.agentLocationLayer);
+            }
+        };
+        
+        // Add CSS for agent marker pulse animation
+        const agentLocationStyles = document.createElement('style');
+        agentLocationStyles.textContent = `
+            @keyframes agentPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+            
+            .agent-location-marker {
+                z-index: 1000 !important;
+            }
+            
+            .agent-location-marker:hover {
+                z-index: 1001 !important;
+            }
+        `;
+        document.head.appendChild(agentLocationStyles);
+        
+        // Initialize on map ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initAgentLocationTracking, 3000);
+        });
+
+        // Show agent on map (original function)
         window.showAgentOnMap = function () {
             const agents = loadAgents();
 
@@ -46679,7 +47413,7 @@ Harir Industries`;
             if (countEl) countEl.textContent = `${window.properties?.length || 0} properties`;
         };
 
-        // Update activity feed
+        // Update activity feed - NOW POWERED BY THE WATCHER
         window.updateHelmActivityFeed = function () {
             const container = document.getElementById('helm-activity-list');
             const dashContainer = document.getElementById('dash-recent-activity');
@@ -46690,50 +47424,94 @@ Harir Industries`;
             let propsArray = window.properties || [];
             if (!Array.isArray(propsArray)) propsArray = Object.values(propsArray);
 
-            // Get recent viewings
+            // PRIMARY SOURCE: The Watcher activity log (last 24 hours)
+            if (window.TheWatcher) {
+                const watcherActivities = window.TheWatcher.getLastHours(24);
+                watcherActivities.forEach(w => {
+                    activities.push({
+                        icon: window.TheWatcher.getIcon(w.type),
+                        title: window.TheWatcher.describe(w),
+                        time: window.TheWatcher.formatTime(w.timestamp),
+                        rawTime: w.timestamp,
+                        type: w.type.includes('signed_up') ? 'signup' : 
+                              w.type.includes('no_show') ? 'noshow' : 
+                              w.type.includes('viewing') ? 'viewing' : 'activity',
+                        source: 'watcher'
+                    });
+                });
+            }
+
+            // SECONDARY SOURCE: Viewings from localStorage (if not already in Watcher)
             const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-            viewings.slice(-5).reverse().forEach(v => {
+            viewings.slice(-10).reverse().forEach(v => {
+                // Check if already logged by Watcher
+                const alreadyLogged = activities.some(a => 
+                    a.source === 'watcher' && 
+                    a.title.includes(v.clientName || v.visitorName || v.name || '')
+                );
+                if (alreadyLogged) return;
+
                 const prop = propsArray.find(p => p.id === v.propertyId);
                 const clientName = v.clientName || v.visitorName || v.name || v.visitor || v.client || 'Client';
                 activities.push({
-                    icon: '<span class="material-symbols-rounded" style="font-size:18px;color:#3b82f6;">event</span>',
+                    icon: '<span class="material-symbols-rounded" style="font-size:16px;color:#3b82f6;">event</span>',
                     title: `${clientName} - ${prop?.address || v.propertyName || 'Property'}`,
                     time: `${v.date} ${v.time}`,
-                    type: 'viewing'
+                    rawTime: v.date + 'T' + v.time,
+                    type: 'viewing',
+                    source: 'localStorage'
                 });
             });
 
-            // Get pipeline updates (Sign Ups)
+            // TERTIARY SOURCE: Pipeline data
             const pipelineData = getStorageArray('pipelineData');
-            pipelineData.filter(p => p.status === 'Signed Up').slice(-3).forEach(p => {
+            pipelineData.filter(p => p.status === 'Signed Up').slice(-5).forEach(p => {
+                const alreadyLogged = activities.some(a => a.source === 'watcher' && a.type === 'signup');
+                if (alreadyLogged) return;
+
                 const clientName = p.visitor || p.visitorName || p.clientName || p.name || 'Client';
                 activities.push({
-                    icon: '<span class="material-symbols-rounded" style="font-size:18px;color:#22c55e;">check_circle</span>',
+                    icon: '<span class="material-symbols-rounded" style="font-size:16px;color:#22c55e;">celebration</span>',
                     title: `${clientName} SIGNED UP`,
                     time: p.date || 'Recently',
-                    type: 'signup'
+                    rawTime: p.date || new Date().toISOString(),
+                    type: 'signup',
+                    source: 'pipeline'
                 });
             });
 
-            // Get No Shows
-            pipelineData.filter(p => p.status === 'No Show').slice(-2).forEach(p => {
+            pipelineData.filter(p => p.status === 'No Show').slice(-3).forEach(p => {
+                const alreadyLogged = activities.some(a => a.source === 'watcher' && a.type === 'noshow');
+                if (alreadyLogged) return;
+
                 const clientName = p.visitor || p.visitorName || p.clientName || p.name || 'Client';
                 activities.push({
-                    icon: '<span class="material-symbols-rounded" style="font-size:18px;color:#f59e0b;">warning</span>',
+                    icon: '<span class="material-symbols-rounded" style="font-size:16px;color:#f59e0b;">warning</span>',
                     title: `${clientName} - No Show`,
                     time: p.date || 'Recently',
-                    type: 'noshow'
+                    rawTime: p.date || new Date().toISOString(),
+                    type: 'noshow',
+                    source: 'pipeline'
                 });
             });
 
             // Sort by date (most recent first)
             activities.sort((a, b) => {
-                const dateA = new Date(a.time);
-                const dateB = new Date(b.time);
+                const dateA = new Date(a.rawTime || a.time);
+                const dateB = new Date(b.rawTime || b.time);
                 return dateB - dateA;
             });
 
-            const activityHTML = activities.slice(0, 8).map(act => `
+            // Remove duplicates
+            const seen = new Set();
+            const uniqueActivities = activities.filter(a => {
+                const key = a.title + a.time;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+
+            const activityHTML = uniqueActivities.slice(0, 10).map(act => `
         <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: ${act.type === 'signup' ? 'rgba(34, 197, 94, 0.1)' :
                     act.type === 'noshow' ? 'rgba(245, 158, 11, 0.1)' :
                         'rgba(255,255,255,0.03)'
@@ -46747,11 +47525,11 @@ Harir Industries`;
                 <div style="font-size: 10px; color: rgba(255,255,255,0.5);">${act.time}</div>
             </div>
         </div>
-    `).join('') || '<div style="color: rgba(255,255,255,0.4); text-align: center; padding: 20px; font-size: 12px;">No recent activity</div>';
+    `).join('') || '<div style="color: rgba(255,255,255,0.4); text-align: center; padding: 20px; font-size: 12px;">No recent activity - start adding viewings!</div>';
 
             // Update both containers
             if (container) {
-                container.innerHTML = activities.slice(0, 5).map(act => `
+                container.innerHTML = uniqueActivities.slice(0, 5).map(act => `
             <div class="helm-activity-item" style="${act.type === 'signup' ? 'background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22c55e;' : ''}">
                 <div class="helm-activity-icon">${act.icon}</div>
                 <div>
@@ -55485,9 +56263,12 @@ Write the email now:`;
 
             if (briefingStep === 0) {
                 // Step 1: Yesterday's Summary
+                const userName = window.HPMAuth?.userProfile?.display_name || 
+                                 window.HPMAuth?.userProfile?.full_name?.split(' ')[0] || 
+                                 'there';
                 html += `
                 <div class="briefing-header">
-                    <h2>Good ${getTimeOfDay()}, Ridwan</h2>
+                    <h2>Good ${getTimeOfDay()}, ${userName}</h2>
                     <p>Here's how yesterday went</p>
                 </div>
                 <div class="briefing-stats-grid">
@@ -56711,15 +57492,29 @@ Write the email now:`;
     async function uploadAllLocalData() {
         // Upload viewings
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        
         for (const v of viewings) {
+            // v67.7: Ensure property_name is populated
+            let propName = v.propertyName || v.property;
+            let propAddress = v.propertyAddress || v.address;
+            
+            if ((!propName || propName === 'NULL') && v.propertyId) {
+                const prop = properties.find(p => p.id === parseInt(v.propertyId));
+                if (prop) {
+                    propName = prop.name;
+                    propAddress = propAddress || prop.address;
+                }
+            }
+            
             await window.supabase.from('viewings').upsert({
                 id: v.id,
                 client_name: v.clientName || v.name || v.visitor,
                 client_phone: v.phone || v.clientPhone,
                 client_email: v.email || v.clientEmail,
                 property_id: v.propertyId,
-                property_name: v.propertyName || v.property,
-                property_address: v.propertyAddress || v.address,
+                property_name: propName,
+                property_address: propAddress,
                 viewing_date: v.date,
                 viewing_time: v.time,
                 status: v.status || 'scheduled',
@@ -56924,16 +57719,29 @@ Write the email now:`;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
         
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
         
         for (const v of viewings) {
+            // v67.7: Ensure property_name is populated
+            let propName = v.propertyName || v.property;
+            let propAddress = v.propertyAddress || v.address;
+            
+            if ((!propName || propName === 'NULL') && v.propertyId) {
+                const prop = properties.find(p => p.id === parseInt(v.propertyId));
+                if (prop) {
+                    propName = prop.name;
+                    propAddress = propAddress || prop.address;
+                }
+            }
+            
             const { error } = await window.supabase.from('viewings').upsert({
                 id: v.id,
                 client_name: v.clientName || v.name || v.visitor,
                 client_phone: v.phone || v.clientPhone,
                 client_email: v.email || v.clientEmail,
                 property_id: v.propertyId,
-                property_name: v.propertyName || v.property,
-                property_address: v.propertyAddress || v.address,
+                property_name: propName,
+                property_address: propAddress,
                 viewing_date: v.date,
                 viewing_time: v.time,
                 status: v.status || 'scheduled',
@@ -57301,6 +58109,7 @@ Write the email now:`;
         
         // Check for local viewings not in cloud
         const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
         const { data: cloudViewings } = await window.supabase.from('viewings').select('id');
         const cloudIds = new Set((cloudViewings || []).map(v => String(v.id)));
         
@@ -57309,14 +58118,26 @@ Write the email now:`;
         if (localOnly.length > 0) {
             console.log(`[HPM Sync] ⬆️ Uploading ${localOnly.length} local-only viewings...`);
             for (const v of localOnly) {
+                // v67.7: Ensure property_name is populated
+                let propName = v.propertyName || v.property;
+                let propAddress = v.propertyAddress || v.address;
+                
+                if ((!propName || propName === 'NULL') && v.propertyId) {
+                    const prop = localProps.find(p => p.id === parseInt(v.propertyId));
+                    if (prop) {
+                        propName = prop.name;
+                        propAddress = propAddress || prop.address;
+                    }
+                }
+                
                 await window.supabase.from('viewings').upsert({
                     id: String(v.id),
                     client_name: v.clientName || v.name || v.visitor,
                     client_phone: v.phone || v.clientPhone,
                     client_email: v.email,
                     property_id: v.propertyId,
-                    property_name: v.propertyName || v.property,
-                    property_address: v.propertyAddress || v.address,
+                    property_name: propName,
+                    property_address: propAddress,
                     viewing_date: v.date,
                     viewing_time: v.time,
                     status: v.status || 'scheduled',
@@ -57330,7 +58151,6 @@ Write the email now:`;
         }
         
         // Check for local properties not in cloud
-        const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
         const { data: cloudProps } = await window.supabase.from('properties').select('id');
         const cloudPropIds = new Set((cloudProps || []).map(p => p.id));
         
