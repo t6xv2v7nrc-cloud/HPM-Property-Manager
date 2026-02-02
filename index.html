@@ -2446,15 +2446,19 @@
                             rent: prop.rent,
                             lha_rate: prop.lhaRate,
                             bedrooms: prop.bedrooms || 0,
+                            type: prop.type || 'Studio',
                             status: prop.status || 'available',
                             lat: prop.lat,
                             lng: prop.lng,
                             landlord: prop.landlord,
                             notes: prop.notes,
+                            client_name: prop.clientName,
+                            taken_by: prop.takenBy,
+                            taken_date: prop.takenDate,
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
                         if (!error) uploadedCounts.properties++;
-                        else console.error('[Sync] Property upload error:', error);
+                        else if (error.code !== '23505') console.error('[Sync] Property upload error:', error);
                     }
                     
                     // 3. Upload PIPELINE/CLIENTS
@@ -2462,20 +2466,19 @@
                     for (const client of clients) {
                         const { error } = await window.supabase.from('clients').upsert({
                             id: client.id,
-                            name: client.name,
-                            phone: client.phone,
+                            name: client.name || client.clientName,
+                            phone: client.phone || client.clientPhone,
                             email: client.email,
-                            stage: client.stage || 'new',
-                            property_interest: client.propertyInterest,
-                            max_rent: client.maxRent,
-                            borough_preference: client.boroughPreference,
-                            referral_source: client.referralSource,
+                            status: client.stage || client.status || 'new',
+                            source: client.referralSource || client.source,
+                            council: client.council,
+                            housing_officer: client.housingOfficer,
+                            budget_max: client.maxRent || client.budgetMax,
                             notes: client.notes,
-                            last_contact: client.lastContact,
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
                         if (!error) uploadedCounts.clients++;
-                        else console.error('[Sync] Client upload error:', error);
+                        else if (error.code !== '23505') console.error('[Sync] Client upload error:', error);
                     }
                     
                     console.log('[HPM Sync] Upload complete:', uploadedCounts);
@@ -58498,6 +58501,11 @@ Write the email now:`;
     // REAL-TIME SUBSCRIPTION
     // ═══════════════════════════════════════════════════════════
     let lastSyncToastTime = 0;
+    // v67.9: Debounce tracking for real-time updates
+    let lastViewingsReload = 0;
+    let lastPropertiesReload = 0;
+    const SYNC_DEBOUNCE_MS = 3000; // Only reload once per 3 seconds
+    
     function subscribeToViewings() {
         if (!window.supabase) return;
         
@@ -58506,17 +58514,15 @@ Write the email now:`;
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'viewings' },
                 (payload) => {
+                    // v67.9: Debounce to prevent sync loop
+                    const now = Date.now();
+                    if (now - lastViewingsReload < SYNC_DEBOUNCE_MS) {
+                        return; // Skip - too soon since last reload
+                    }
+                    lastViewingsReload = now;
+                    
                     console.log('[HPM Sync] Real-time update:', payload.eventType);
                     loadViewingsFromSupabase();
-                    // v65.4: Only show toast max once per 30 seconds to prevent spam
-                    const now = Date.now();
-                    if (now - lastSyncToastTime > 30000) {
-                        lastSyncToastTime = now;
-                        // Toast disabled - too spammy during normal use
-                        // if (typeof showToast === 'function') {
-                        //     showToast('☁️ Synced', 'Data updated');
-                        // }
-                    }
                 }
             )
             .subscribe((status) => {
@@ -58529,6 +58535,13 @@ Write the email now:`;
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'properties' },
                 (payload) => {
+                    // v67.9: Debounce to prevent sync loop
+                    const now = Date.now();
+                    if (now - lastPropertiesReload < SYNC_DEBOUNCE_MS) {
+                        return; // Skip - too soon since last reload
+                    }
+                    lastPropertiesReload = now;
+                    
                     console.log('[HPM Sync] Property update:', payload.eventType, payload.new?.id);
                     // Reload properties from Supabase
                     loadPropertiesFromSupabase();
