@@ -2,9 +2,9 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 67.9                           ║
+    ║                        Version 67.7                           ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  v67.9 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
+    ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
     ║  ──────────────────────────────────────────────────────────── ║
     ║  CRITICAL FIXES:                                              ║
     ║  • DEDUPLICATION SYSTEM                                       ║
@@ -7722,7 +7722,7 @@
 
         .tab-content.active {
             display: block;
-            animation: fadeInUp 0.3s ease;
+            /* v67.9: Removed animation to prevent drift on tab switch */
         }
 
         .filter-buttons {
@@ -15416,7 +15416,7 @@
             margin-bottom: 24px;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            animation: fadeInUp 0.4s ease;
+            /* v67.9: Removed animation to prevent drift on re-render */
         }
 
         .helm-calendar-nav {
@@ -22745,8 +22745,54 @@
                     if (success1 && success2) {
                         console.log('[SAVE] Saved', props.length, 'properties and', taken.size, 'taken properties');
                     }
+                    
+                    // v67.9: SYNC ALL PROPERTIES TO SUPABASE
+                    if (window.supabase && props.length > 0) {
+                        syncPropertiesToSupabase(props);
+                    }
+                    
                     return success1 && success2;
                 }
+                
+                // v67.9: Sync properties to Supabase
+                async function syncPropertiesToSupabase(props) {
+                    if (!window.supabase) return;
+                    
+                    try {
+                        for (const p of props) {
+                            const { error } = await window.supabase.from('properties').upsert({
+                                id: p.id,
+                                name: p.name,
+                                address: p.address,
+                                postcode: p.postcode,
+                                borough: p.borough,
+                                rent: p.rent,
+                                lha_rate: p.lhaRate || p.lha_rate,
+                                bedrooms: p.bedrooms || 0,
+                                type: p.type || 'Studio',
+                                status: p.status || 'available',
+                                lat: p.lat,
+                                lng: p.lng,
+                                landlord: p.landlord,
+                                notes: p.notes,
+                                client_name: p.clientName || p.takenBy,
+                                taken_by: p.takenBy,
+                                taken_date: p.takenDate,
+                                date_added: p.dateAdded || new Date().toISOString()
+                            }, { onConflict: 'id' });
+                            
+                            if (error && error.code !== '23505') { // Ignore duplicate key errors
+                                console.error('[Supabase] Property sync error:', error.message);
+                            }
+                        }
+                        console.log('[Supabase] ✓ Synced', props.length, 'properties');
+                    } catch (err) {
+                        console.error('[Supabase] Property sync error:', err);
+                    }
+                }
+                
+                // Expose for global use
+                window.syncPropertiesToSupabase = syncPropertiesToSupabase;
 
                 // v62: NO HARDCODED DATA - All data from localStorage only
                 const defaultProperties = [];
@@ -23757,12 +23803,60 @@
                         window.viewings = viewings;
                         setStorageItem('propertyViewings', viewings);
                         updateViewingsCounts();
+                        
+                        // v67.9: SYNC TO SUPABASE IMMEDIATELY
+                        if (window.supabase && viewings.length > 0) {
+                            syncViewingsToSupabaseNow(viewings);
+                        }
+                        
                         return true;
                     } catch (e) {
                         showToast('Error', 'Failed to save!', true);
                         return false;
                     }
                 }
+                
+                // v67.9: Sync viewings to Supabase
+                async function syncViewingsToSupabaseNow(viewingsArray) {
+                    if (!window.supabase) return;
+                    
+                    try {
+                        for (const v of viewingsArray) {
+                            // Only sync if it has an ID
+                            if (!v.id) continue;
+                            
+                            const { error } = await window.supabase.from('viewings').upsert({
+                                id: v.id,
+                                client_name: v.name || v.visitor || v.clientName,
+                                client_phone: v.phone || v.visitorPhone || v.clientPhone,
+                                client_email: v.email,
+                                property_id: v.propertyId,
+                                property_name: v.propertyName || v.property,
+                                property_address: v.propertyAddress || v.address,
+                                viewing_date: v.date,
+                                viewing_time: v.time,
+                                status: v.status || 'Pending',
+                                outcome: v.outcome,
+                                notes: v.notes,
+                                viewing_type: v.viewingType,
+                                referral_source: v.referralSource,
+                                booked_by: v.bookedBy,
+                                booked_by_name: v.bookedByName,
+                                agent_id: v.agentId,
+                                created_at: v.bookedAt || v.createdAt || new Date().toISOString()
+                            }, { onConflict: 'id' });
+                            
+                            if (error && error.code !== '23505') {
+                                console.error('[Sync] Viewing sync error:', error.message);
+                            }
+                        }
+                        console.log('[Sync] ✓ Synced', viewingsArray.length, 'viewings to Supabase');
+                    } catch (err) {
+                        console.error('[Sync] Viewings sync error:', err);
+                    }
+                }
+                
+                window.syncViewingsToSupabaseNow = syncViewingsToSupabaseNow;
 
                 function updateViewingsCounts() {
                     const badge = document.getElementById('viewings-badge');
@@ -52500,6 +52594,19 @@ Harir Industries`;
                     } catch (e) {
                         console.error('[setViewingOutcome] Failed to save properties:', e);
                     }
+                    
+                    // v67.9: SYNC TO SUPABASE - Mark property as taken
+                    if (window.supabase) {
+                        window.supabase.from('properties').update({
+                            status: 'taken',
+                            client_name: clientName,
+                            taken_by: viewing.phone || '',
+                            taken_date: new Date().toISOString()
+                        }).eq('id', propId).then(({ error }) => {
+                            if (error) console.error('[Supabase] Property update error:', error);
+                            else console.log('[Supabase] ✓ Property marked as taken:', propId);
+                        });
+                    }
 
                     // Real-time map update
                     if (typeof updateAllMarkerIcons === 'function') updateAllMarkerIcons();
@@ -58416,8 +58523,133 @@ Write the email now:`;
                 console.log('[HPM Sync] Subscription status:', status);
             });
         
+        // v67.9: Subscribe to properties changes
+        window.supabase
+            .channel('hpm-properties-sync')
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'properties' },
+                (payload) => {
+                    console.log('[HPM Sync] Property update:', payload.eventType, payload.new?.id);
+                    // Reload properties from Supabase
+                    loadPropertiesFromSupabase();
+                }
+            )
+            .subscribe((status) => {
+                console.log('[HPM Sync] Properties subscription:', status);
+            });
+        
         console.log('[HPM Sync] Real-time subscription active');
     }
+    
+    // v67.9: Load properties from Supabase
+    async function loadPropertiesFromSupabase() {
+        if (!window.supabase) return;
+        
+        try {
+            const { data, error } = await window.supabase
+                .from('properties')
+                .select('*');
+            
+            if (error) {
+                console.error('[HPM Sync] Properties load error:', error);
+                return;
+            }
+            
+            if (data && data.length > 0) {
+                const takenSet = new Set();
+                const props = data.map(cp => {
+                    if (cp.status === 'taken') takenSet.add(cp.id);
+                    return {
+                        id: cp.id,
+                        name: cp.name,
+                        address: cp.address,
+                        postcode: cp.postcode,
+                        borough: cp.borough,
+                        rent: cp.rent,
+                        lhaRate: cp.lha_rate,
+                        bedrooms: cp.bedrooms,
+                        type: cp.type || 'Studio',
+                        status: cp.status || 'available',
+                        lat: cp.lat,
+                        lng: cp.lng,
+                        landlord: cp.landlord,
+                        notes: cp.notes,
+                        clientName: cp.client_name,
+                        takenBy: cp.taken_by || cp.client_name,
+                        takenDate: cp.taken_date,
+                        dateAdded: cp.date_added || cp.created_at
+                    };
+                });
+                
+                localStorage.setItem('propertySystemProperties', JSON.stringify(props));
+                localStorage.setItem('elevate_properties', JSON.stringify(props));
+                localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
+                window.properties = props;
+                window.takenProperties = takenSet;
+                
+                console.log('[HPM Sync] ✓ Reloaded', props.length, 'properties (taken:', takenSet.size, ')');
+                
+                // Refresh UI
+                if (typeof updateMarkers === 'function') updateMarkers();
+                if (typeof helmRenderPropertiesList === 'function') helmRenderPropertiesList();
+            }
+        } catch (err) {
+            console.error('[HPM Sync] Properties load error:', err);
+        }
+    }
+    
+    window.loadPropertiesFromSupabase = loadPropertiesFromSupabase;
+    
+    // v67.9: Force sync ALL taken properties to Supabase
+    window.forceSyncTakenProperties = async function() {
+        if (!window.supabase) {
+            console.error('[Sync] Supabase not connected');
+            return;
+        }
+        
+        const props = window.properties || JSON.parse(localStorage.getItem('propertySystemProperties') || '[]');
+        const taken = window.takenProperties || new Set(JSON.parse(localStorage.getItem('takenPropertiesSet') || '[]'));
+        
+        let synced = 0;
+        let errors = 0;
+        
+        for (const p of props) {
+            const isTaken = taken.has(p.id) || p.status === 'taken';
+            
+            try {
+                const { error } = await window.supabase.from('properties').update({
+                    status: isTaken ? 'taken' : (p.status || 'available'),
+                    client_name: p.clientName || p.takenBy,
+                    taken_by: p.takenBy,
+                    taken_date: isTaken ? (p.takenDate || new Date().toISOString()) : null
+                }).eq('id', p.id);
+                
+                if (error) {
+                    console.error('[Sync] Property', p.id, 'error:', error.message);
+                    errors++;
+                } else {
+                    synced++;
+                }
+            } catch (err) {
+                errors++;
+            }
+        }
+        
+        console.log(`[Sync] ✓ Force synced ${synced} properties (${errors} errors)`);
+        if (typeof showHelmNotification === 'function') {
+            showHelmNotification(`Synced ${synced} properties to cloud`, errors > 0 ? 'warning' : 'success');
+        }
+        
+        return { synced, errors };
+    };
+    
+    // v67.9: Refresh taken properties from Supabase
+    window.refreshTakenFromCloud = async function() {
+        await loadPropertiesFromSupabase();
+        if (typeof showHelmNotification === 'function') {
+            showHelmNotification('Properties refreshed from cloud', 'success');
+        }
+    };
     
     // ═══════════════════════════════════════════════════════════
     // AUTO-SYNC ON LOCAL CHANGES (debounced)
@@ -58532,8 +58764,11 @@ Write the email now:`;
             if (propError) {
                 console.error('[HPM Sync] Properties download error:', propError);
             } else if (cloudProps && cloudProps.length > 0) {
-                const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                const localProps = JSON.parse(localStorage.getItem('propertySystemProperties') || localStorage.getItem('elevate_properties') || '[]');
                 const localPropsMap = new Map(localProps.map(p => [p.id, p]));
+                
+                // v67.9: Track taken properties
+                const takenSet = new Set();
                 
                 // Merge: cloud wins for existing, add new from both
                 cloudProps.forEach(cp => {
@@ -58546,22 +58781,37 @@ Write the email now:`;
                         rent: cp.rent,
                         lhaRate: cp.lha_rate,
                         bedrooms: cp.bedrooms,
-                        status: cp.status,
+                        type: cp.type || 'Studio',
+                        status: cp.status || 'available',
                         lat: cp.lat,
                         lng: cp.lng,
                         landlord: cp.landlord,
                         notes: cp.notes,
+                        // v67.9: Include taken fields
+                        clientName: cp.client_name,
+                        takenBy: cp.taken_by || cp.client_name,
+                        takenDate: cp.taken_date,
                         dateAdded: cp.date_added || cp.created_at
                     });
+                    
+                    // v67.9: Track taken properties
+                    if (cp.status === 'taken') {
+                        takenSet.add(cp.id);
+                    }
                 });
                 
                 const mergedProps = Array.from(localPropsMap.values());
+                
+                // v67.9: Save to BOTH storage keys for compatibility
+                localStorage.setItem('propertySystemProperties', JSON.stringify(mergedProps));
                 localStorage.setItem('elevate_properties', JSON.stringify(mergedProps));
+                localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
                 
                 // Also set window.properties for immediate use
                 window.properties = mergedProps;
+                window.takenProperties = takenSet;
                 
-                console.log(`[HPM Sync] ✅ Properties: ${mergedProps.length} (cloud: ${cloudProps.length})`);
+                console.log(`[HPM Sync] ✅ Properties: ${mergedProps.length} (cloud: ${cloudProps.length}, taken: ${takenSet.size})`);
             }
             
             // 2. Download VIEWINGS from Supabase
