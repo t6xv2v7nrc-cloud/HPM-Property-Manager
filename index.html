@@ -2,9 +2,9 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 67.7                           ║
+    ║                        Version 67.9                           ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
+    ║  v67.9 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
     ║  ──────────────────────────────────────────────────────────── ║
     ║  CRITICAL FIXES:                                              ║
     ║  • DEDUPLICATION SYSTEM                                       ║
@@ -1388,9 +1388,180 @@
         window.HPMAuth = {
             currentUser: null,
             userProfile: null,
+            userRole: 'viewer',  // v67.9: Role-based access
+            rolePermissions: null,
+            
+            // v67.9: Role levels
+            ROLE_LEVELS: {
+                owner: 100,
+                admin: 80,
+                manager: 60,
+                agent: 40,
+                tester: 20,
+                viewer: 10
+            },
             
             getCurrentUser: function() { return this.currentUser; },
             getUserProfile: function() { return this.userProfile; },
+            getRole: function() { return this.userRole || 'viewer'; },
+            getRoleLevel: function() { return this.ROLE_LEVELS[this.userRole] || 10; },
+            
+            // v67.9: Permission checks
+            canEditViewings: function() { return this.getRoleLevel() >= 40; },
+            canDeleteViewings: function() { return this.getRoleLevel() >= 80; },
+            canViewClientDetails: function() { return this.getRoleLevel() >= 40; },
+            canEditClients: function() { return this.getRoleLevel() >= 40; },
+            canViewPropertyDetails: function() { return this.getRoleLevel() >= 40; },
+            canEditProperties: function() { return this.getRoleLevel() >= 60; },
+            canViewFinancials: function() { return this.getRoleLevel() >= 60; },
+            canManageAgents: function() { return this.getRoleLevel() >= 60; },
+            canManageUsers: function() { return this.getRoleLevel() >= 80; },
+            canExportData: function() { return this.getRoleLevel() >= 60; },
+            isOwner: function() { return this.userRole === 'owner'; },
+            isAdmin: function() { return this.getRoleLevel() >= 80; },
+            isTester: function() { return this.userRole === 'tester' || this.userRole === 'viewer'; },
+            
+            // v67.9: Data masking for testers
+            maskPhone: function(phone) {
+                if (!this.isTester()) return phone;
+                if (!phone || phone.length < 4) return '****';
+                return '*'.repeat(phone.length - 4) + phone.slice(-4);
+            },
+            
+            maskName: function(name) {
+                if (!this.isTester()) return name;
+                if (!name) return 'Client';
+                const parts = name.split(' ');
+                return parts.map(p => p[0] + '.').join(' ');
+            },
+            
+            maskEmail: function(email) {
+                if (!this.isTester()) return email;
+                return null; // Hide email completely for testers
+            },
+            
+            maskAddress: function(address) {
+                if (!this.isTester()) return address;
+                if (!address) return 'Area';
+                // Show only last part (usually borough/city)
+                const parts = address.split(',');
+                return parts[parts.length - 1]?.trim() + ' area' || 'Area';
+            },
+            
+            // v67.9: Load role and permissions
+            loadRolePermissions: async function() {
+                if (!window.supabase || !this.currentUser) return;
+                
+                try {
+                    // Get user's role from profile
+                    const { data: profile, error } = await window.supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', this.currentUser.id)
+                        .single();
+                    
+                    if (!error && profile) {
+                        this.userRole = profile.role || 'viewer';
+                        console.log('[RBAC] User role:', this.userRole, '(level:', this.getRoleLevel(), ')');
+                        
+                        // Load role permissions
+                        const { data: perms } = await window.supabase
+                            .from('role_permissions')
+                            .select('*')
+                            .eq('role', this.userRole)
+                            .single();
+                        
+                        if (perms) {
+                            this.rolePermissions = perms;
+                            console.log('[RBAC] Permissions loaded:', perms);
+                        }
+                        
+                        // Apply role-based UI restrictions
+                        this.applyRoleRestrictions();
+                    }
+                } catch (err) {
+                    console.error('[RBAC] Error loading role:', err);
+                    this.userRole = 'viewer';
+                }
+            },
+            
+            // v67.9: Apply UI restrictions based on role
+            applyRoleRestrictions: function() {
+                const level = this.getRoleLevel();
+                
+                // Show role badge in header
+                const roleBadge = document.getElementById('user-role-badge');
+                if (roleBadge) {
+                    const roleColors = {
+                        owner: '#fbbf24',
+                        admin: '#ef4444',
+                        manager: '#8b5cf6',
+                        agent: '#3b82f6',
+                        tester: '#22c55e',
+                        viewer: '#64748b'
+                    };
+                    roleBadge.textContent = this.userRole.toUpperCase();
+                    roleBadge.style.background = roleColors[this.userRole] + '33';
+                    roleBadge.style.color = roleColors[this.userRole];
+                    roleBadge.style.display = 'inline-block';
+                }
+                
+                // Show user management button for owner/admin
+                const manageUsersBtn = document.getElementById('btn-user-management');
+                if (manageUsersBtn && level >= 80) {
+                    manageUsersBtn.style.display = 'flex';
+                }
+                
+                // Hide edit buttons for viewers/testers
+                if (level < 40) {
+                    document.querySelectorAll('.edit-btn, .delete-btn, [data-requires="edit"]').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                    // Show "View Only" badge
+                    const viewOnlyBadge = document.createElement('div');
+                    viewOnlyBadge.id = 'view-only-badge';
+                    viewOnlyBadge.style.cssText = 'position:fixed;bottom:20px;left:20px;padding:8px 16px;background:rgba(100,116,139,0.9);color:white;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;';
+                    viewOnlyBadge.textContent = '👁️ VIEW ONLY MODE';
+                    if (!document.getElementById('view-only-badge')) {
+                        document.body.appendChild(viewOnlyBadge);
+                    }
+                }
+                
+                // Hide delete buttons for non-admins
+                if (level < 80) {
+                    document.querySelectorAll('.delete-btn, [data-requires="delete"]').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
+                
+                // Hide financial data for testers
+                if (level < 60) {
+                    document.querySelectorAll('[data-requires="financials"], .rent-display, .lha-display').forEach(el => {
+                        el.style.filter = 'blur(5px)';
+                        el.title = 'Financial data hidden for your role';
+                    });
+                }
+                
+                // Hide user management for non-admins
+                if (level < 80) {
+                    document.querySelectorAll('[data-requires="admin"], .admin-only').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
+                
+                // Show tester warning banner
+                if (this.isTester()) {
+                    const banner = document.createElement('div');
+                    banner.id = 'tester-banner';
+                    banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:8px 20px;background:linear-gradient(90deg,#22c55e,#16a34a);color:white;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 15px rgba(34,197,94,0.3);';
+                    banner.innerHTML = '🧪 TEST MODE - Client data is masked for privacy';
+                    if (!document.getElementById('tester-banner')) {
+                        document.body.appendChild(banner);
+                    }
+                }
+                
+                console.log('[RBAC] UI restrictions applied for role:', this.userRole);
+            },
             
             // v65.8: Enhanced XP system - writes to xp_transactions AND updates profile
             awardXP: async function(amountOrReason, reasonText = null) {
@@ -1521,7 +1692,8 @@
                             display_name: this.currentUser.user_metadata?.display_name || this.currentUser.email?.split('@')[0] || 'Agent',
                             initials: (this.currentUser.user_metadata?.full_name || this.currentUser.email || 'U').substring(0,2).toUpperCase(),
                             avatar_color: '#22c55e',
-                            xp_points: 0
+                            xp_points: 0,
+                            role: 'viewer'  // v67.9: Default role for new users
                         };
                         
                         const { data: created } = await window.supabase
@@ -1534,6 +1706,10 @@
                     } else if (!error && data) {
                         this.userProfile = data;
                     }
+                    
+                    // v67.9: Load role and permissions
+                    this.userRole = this.userProfile?.role || 'viewer';
+                    await this.loadRolePermissions();
                     
                     this.updateUserUI();
                 } catch (err) {
@@ -1548,6 +1724,7 @@
                 }
                 this.currentUser = null;
                 this.userProfile = null;
+                this.userRole = 'viewer';  // v67.9: Reset role
                 location.reload();
             }
         };
@@ -1570,6 +1747,176 @@
                 }
             }
         });
+        
+        // ═══════════════════════════════════════════════════════════
+        // v67.9: USER MANAGEMENT (Owner/Admin only)
+        // ═══════════════════════════════════════════════════════════
+        window.openUserManagement = async function() {
+            if (!HPMAuth.canManageUsers()) {
+                showHelmNotification('You do not have permission to manage users', 'error');
+                return;
+            }
+            
+            // Fetch all users
+            const { data: users, error } = await window.supabase
+                .from('profiles')
+                .select('id, email, display_name, role, xp_points, created_at, last_active')
+                .order('created_at', { ascending: true });
+            
+            if (error) {
+                showHelmNotification('Error loading users', 'error');
+                return;
+            }
+            
+            const roleColors = {
+                owner: { bg: 'rgba(251,191,36,0.2)', color: '#fbbf24' },
+                admin: { bg: 'rgba(239,68,68,0.2)', color: '#ef4444' },
+                manager: { bg: 'rgba(139,92,246,0.2)', color: '#a78bfa' },
+                agent: { bg: 'rgba(59,130,246,0.2)', color: '#60a5fa' },
+                tester: { bg: 'rgba(34,197,94,0.2)', color: '#4ade80' },
+                viewer: { bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' }
+            };
+            
+            const modal = document.createElement('div');
+            modal.id = 'user-management-modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:100000;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="background:linear-gradient(135deg,#1e293b,#0f172a);border-radius:20px;width:90%;max-width:800px;max-height:80vh;overflow:hidden;border:1px solid rgba(255,255,255,0.1);box-shadow:0 25px 50px rgba(0,0,0,0.5);">
+                    <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h2 style="color:white;margin:0;font-size:20px;font-weight:700;">👥 User Management</h2>
+                            <p style="color:rgba(255,255,255,0.5);margin:5px 0 0;font-size:13px;">Control access levels for team members</p>
+                        </div>
+                        <button onclick="document.getElementById('user-management-modal').remove()" style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:20px;cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:20px;overflow-y:auto;max-height:calc(80vh - 120px);">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                                    <th style="padding:12px;text-align:left;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">User</th>
+                                    <th style="padding:12px;text-align:left;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">Email</th>
+                                    <th style="padding:12px;text-align:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">XP</th>
+                                    <th style="padding:12px;text-align:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">Role</th>
+                                    <th style="padding:12px;text-align:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${users.map(u => {
+                                    const rc = roleColors[u.role] || roleColors.viewer;
+                                    const isCurrentUser = u.id === HPMAuth.currentUser?.id;
+                                    const canEdit = HPMAuth.isOwner() || (!isCurrentUser && HPMAuth.getRoleLevel() > HPMAuth.ROLE_LEVELS[u.role]);
+                                    return `
+                                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                            <td style="padding:12px;color:white;font-weight:600;">${u.display_name || 'User'} ${isCurrentUser ? '<span style="color:#4ade80;font-size:10px;">(you)</span>' : ''}</td>
+                                            <td style="padding:12px;color:rgba(255,255,255,0.7);font-size:13px;">${u.email}</td>
+                                            <td style="padding:12px;text-align:center;color:#fbbf24;font-weight:600;">${u.xp_points || 0}</td>
+                                            <td style="padding:12px;text-align:center;">
+                                                ${canEdit ? `
+                                                    <select onchange="updateUserRole('${u.id}', this.value)" style="padding:6px 12px;background:${rc.bg};color:${rc.color};border:1px solid ${rc.color}44;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
+                                                        <option value="owner" ${u.role === 'owner' ? 'selected' : ''} ${!HPMAuth.isOwner() ? 'disabled' : ''}>👑 Owner</option>
+                                                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>🔑 Admin</option>
+                                                        <option value="manager" ${u.role === 'manager' ? 'selected' : ''}>📊 Manager</option>
+                                                        <option value="agent" ${u.role === 'agent' ? 'selected' : ''}>👤 Agent</option>
+                                                        <option value="tester" ${u.role === 'tester' ? 'selected' : ''}>🧪 Tester</option>
+                                                        <option value="viewer" ${u.role === 'viewer' ? 'selected' : ''}>👁️ Viewer</option>
+                                                    </select>
+                                                ` : `
+                                                    <span style="padding:6px 12px;background:${rc.bg};color:${rc.color};border-radius:8px;font-size:11px;font-weight:600;">${u.role?.toUpperCase() || 'VIEWER'}</span>
+                                                `}
+                                            </td>
+                                            <td style="padding:12px;text-align:center;">
+                                                ${canEdit && !isCurrentUser ? `
+                                                    <button onclick="resetUserXP('${u.id}')" style="padding:4px 8px;background:rgba(239,68,68,0.2);color:#f87171;border:none;border-radius:6px;font-size:10px;cursor:pointer;" title="Reset XP">Reset XP</button>
+                                                ` : '-'}
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                        
+                        <div style="margin-top:20px;padding:15px;background:rgba(255,255,255,0.05);border-radius:12px;">
+                            <h4 style="color:white;margin:0 0 10px;font-size:14px;">📋 Role Permissions</h4>
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+                                <div style="padding:10px;background:rgba(251,191,36,0.1);border-radius:8px;border-left:3px solid #fbbf24;">
+                                    <div style="color:#fbbf24;font-weight:700;font-size:12px;">👑 OWNER</div>
+                                    <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-top:4px;">Full access, manage roles</div>
+                                </div>
+                                <div style="padding:10px;background:rgba(239,68,68,0.1);border-radius:8px;border-left:3px solid #ef4444;">
+                                    <div style="color:#ef4444;font-weight:700;font-size:12px;">🔑 ADMIN</div>
+                                    <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-top:4px;">Full data, manage users</div>
+                                </div>
+                                <div style="padding:10px;background:rgba(139,92,246,0.1);border-radius:8px;border-left:3px solid #8b5cf6;">
+                                    <div style="color:#a78bfa;font-weight:700;font-size:12px;">📊 MANAGER</div>
+                                    <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-top:4px;">Edit data, view financials</div>
+                                </div>
+                                <div style="padding:10px;background:rgba(59,130,246,0.1);border-radius:8px;border-left:3px solid #3b82f6;">
+                                    <div style="color:#60a5fa;font-weight:700;font-size:12px;">👤 AGENT</div>
+                                    <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-top:4px;">Edit own viewings/clients</div>
+                                </div>
+                                <div style="padding:10px;background:rgba(34,197,94,0.1);border-radius:8px;border-left:3px solid #22c55e;">
+                                    <div style="color:#4ade80;font-weight:700;font-size:12px;">🧪 TESTER</div>
+                                    <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-top:4px;">Read-only, masked data</div>
+                                </div>
+                                <div style="padding:10px;background:rgba(100,116,139,0.1);border-radius:8px;border-left:3px solid #64748b;">
+                                    <div style="color:#94a3b8;font-weight:700;font-size:12px;">👁️ VIEWER</div>
+                                    <div style="color:rgba(255,255,255,0.6);font-size:10px;margin-top:4px;">Read-only, very limited</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        };
+        
+        // Update user role
+        window.updateUserRole = async function(userId, newRole) {
+            if (!HPMAuth.canManageUsers()) {
+                showHelmNotification('Permission denied', 'error');
+                return;
+            }
+            
+            // Only owner can set someone as owner
+            if (newRole === 'owner' && !HPMAuth.isOwner()) {
+                showHelmNotification('Only the owner can assign owner role', 'error');
+                return;
+            }
+            
+            const { error } = await window.supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', userId);
+            
+            if (error) {
+                showHelmNotification('Error updating role: ' + error.message, 'error');
+            } else {
+                showHelmNotification(`Role updated to ${newRole.toUpperCase()}`, 'success');
+                // Refresh the modal
+                document.getElementById('user-management-modal')?.remove();
+                openUserManagement();
+            }
+        };
+        
+        // Reset user XP
+        window.resetUserXP = async function(userId) {
+            if (!confirm('Reset this user\'s XP to 0? This cannot be undone.')) return;
+            
+            const { error } = await window.supabase
+                .from('profiles')
+                .update({ xp_points: 0 })
+                .eq('id', userId);
+            
+            if (error) {
+                showHelmNotification('Error resetting XP', 'error');
+            } else {
+                showHelmNotification('XP reset to 0', 'success');
+                document.getElementById('user-management-modal')?.remove();
+                openUserManagement();
+            }
+        };
 
         // ═══════════════════════════════════════════════════════════
         // AUTH FUNCTIONS
@@ -17290,14 +17637,20 @@
                 <div class="helm-user-avatar" onclick="toggleUserMenu()" style="cursor:pointer;"
                     title="Account" id="header-user-avatar">?</div>
                 <!-- User Menu Dropdown -->
-                <div id="hpm-user-menu" style="display:none;position:absolute;top:60px;right:20px;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:12px;min-width:200px;backdrop-filter:blur(30px);box-shadow:0 20px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.05) inset;z-index:999999;">
+                <div id="hpm-user-menu" style="display:none;position:absolute;top:60px;right:20px;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:12px;min-width:220px;backdrop-filter:blur(30px);box-shadow:0 20px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.05) inset;z-index:999999;">
                     <div style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:8px;">
                         <div style="font-weight:600;color:white;font-size:14px;" id="menu-user-name">Agent</div>
                         <div style="font-size:11px;color:rgba(255,255,255,0.5);" id="menu-user-email">-</div>
-                        <div style="font-size:12px;color:#fbbf24;font-weight:600;margin-top:4px;" id="menu-user-xp">0 XP</div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+                            <span style="font-size:12px;color:#fbbf24;font-weight:600;" id="menu-user-xp">0 XP</span>
+                            <span id="user-role-badge" style="padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;display:none;">VIEWER</span>
+                        </div>
                     </div>
                     <button onclick="HPMSync.showSyncModal();toggleUserMenu();" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.8);font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                         <span style="font-size:16px;">☁️</span> Cloud Sync
+                    </button>
+                    <button id="btn-user-management" onclick="openUserManagement();toggleUserMenu();" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.8);font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;display:none;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'" data-requires="admin">
+                        <span style="font-size:16px;">👥</span> Manage Users
                     </button>
                     <button onclick="helmSwitchView('tools');toggleUserMenu();" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.8);font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                         <span style="font-size:16px;">⚙️</span> Settings
