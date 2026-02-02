@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 67.7                           ║
+    ║                        Version 68.0                            ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
     ║  ──────────────────────────────────────────────────────────── ║
@@ -2435,50 +2435,55 @@
                         else console.error('[Sync] Viewing upload error:', error);
                     }
                     
-                    // 2. Upload PROPERTIES (reuse properties array from above)
+                    // 2. Upload PROPERTIES - v68 fixed field mapping
                     for (const prop of properties) {
                         const { error } = await window.supabase.from('properties').upsert({
                             id: prop.id,
-                            name: prop.name,
-                            address: prop.address,
-                            postcode: prop.postcode,
-                            borough: prop.borough,
-                            rent: prop.rent,
-                            lha_rate: prop.lhaRate,
+                            name: prop.name || '',
+                            address: prop.address || '',
+                            postcode: prop.postcode || '',
+                            borough: prop.borough || '',
+                            rent: prop.rent || 0,
+                            lha_rate: prop.lhaRate || prop.lha_rate || 0,
                             bedrooms: prop.bedrooms || 0,
                             type: prop.type || 'Studio',
                             status: prop.status || 'available',
-                            lat: prop.lat,
-                            lng: prop.lng,
-                            landlord: prop.landlord,
-                            notes: prop.notes,
-                            client_name: prop.clientName,
-                            taken_by: prop.takenBy,
-                            taken_date: prop.takenDate,
+                            lat: prop.lat || null,
+                            lng: prop.lng || null,
+                            landlord: prop.landlord || '',
+                            notes: prop.notes || '',
+                            client_name: prop.clientName || prop.client_name || null,
+                            taken_by: prop.takenBy || prop.taken_by || null,
+                            taken_date: prop.takenDate || prop.taken_date || null,
+                            taken: prop.taken || false,
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
                         if (!error) uploadedCounts.properties++;
-                        else if (error.code !== '23505') console.error('[Sync] Property upload error:', error);
+                        else if (error.code !== '23505' && error.code !== 'PGRST204') {
+                            console.error('[v68 Sync] Property error:', error.message);
+                        }
                     }
                     
-                    // 3. Upload PIPELINE/CLIENTS
+                    // 3. Upload PIPELINE/CLIENTS - v68 fixed field mapping
                     const clients = JSON.parse(localStorage.getItem('elevate_clients') || '[]');
                     for (const client of clients) {
                         const { error } = await window.supabase.from('clients').upsert({
                             id: client.id,
-                            name: client.name || client.clientName,
-                            phone: client.phone || client.clientPhone,
-                            email: client.email,
+                            name: client.name || client.clientName || '',
+                            phone: client.phone || client.clientPhone || '',
+                            email: client.email || '',
                             status: client.stage || client.status || 'new',
-                            source: client.referralSource || client.source,
-                            council: client.council,
-                            housing_officer: client.housingOfficer,
-                            budget_max: client.maxRent || client.budgetMax,
-                            notes: client.notes,
+                            source: client.referralSource || client.source || null,
+                            council: client.council || null,
+                            housing_officer: client.housingOfficer || client.housing_officer || null,
+                            budget_max: client.maxRent || client.budgetMax || client.budget_max || null,
+                            notes: client.notes || '',
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
                         if (!error) uploadedCounts.clients++;
-                        else if (error.code !== '23505') console.error('[Sync] Client upload error:', error);
+                        else if (error.code !== '23505' && error.code !== 'PGRST204') {
+                            console.error('[v68 Sync] Client error:', error.message);
+                        }
                     }
                     
                     console.log('[HPM Sync] Upload complete:', uploadedCounts);
@@ -3631,6 +3636,208 @@
             .bento-grid-3,
             .bento-grid-2 {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           v68 MOBILE BROWSER SUPPORT
+           ═══════════════════════════════════════════════════════════════ */
+        
+        @media (max-width: 768px) {
+            /* Hide sidebar on mobile by default */
+            .helm-sidebar {
+                position: fixed !important;
+                left: -280px !important;
+                top: 0 !important;
+                height: 100vh !important;
+                z-index: 9999 !important;
+                transition: left 0.3s ease !important;
+                width: 260px !important;
+            }
+            
+            .helm-sidebar.mobile-open {
+                left: 0 !important;
+            }
+            
+            /* Mobile overlay when sidebar is open */
+            .mobile-sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 9998;
+            }
+            
+            .mobile-sidebar-overlay.active {
+                display: block;
+            }
+            
+            /* Main content takes full width */
+            .helm-main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+                padding: 12px !important;
+            }
+            
+            /* Mobile header adjustments */
+            .helm-header {
+                padding: 10px 12px !important;
+            }
+            
+            .helm-header h1 {
+                font-size: 18px !important;
+            }
+            
+            /* Mobile menu button */
+            .mobile-menu-btn {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                background: rgba(255,255,255,0.1);
+                border: none;
+                border-radius: 10px;
+                color: white;
+                font-size: 24px;
+                cursor: pointer;
+                margin-right: 12px;
+            }
+            
+            /* Bento cards on mobile */
+            .bento-card {
+                padding: 14px !important;
+            }
+            
+            /* Tables scroll on mobile */
+            .bento-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Form inputs larger for touch */
+            input, select, textarea {
+                font-size: 16px !important; /* Prevents zoom on iOS */
+                min-height: 44px;
+            }
+            
+            /* Buttons larger for touch */
+            button, .btn, .helm-btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Modal full width on mobile */
+            .modal-content, .helm-modal {
+                width: 95% !important;
+                max-width: none !important;
+                margin: 10px auto !important;
+                max-height: 90vh !important;
+                overflow-y: auto !important;
+            }
+            
+            /* Calendar card full width */
+            .helm-calendar-card {
+                width: 95% !important;
+                max-width: none !important;
+            }
+            
+            /* Stats row scrollable */
+            .stats-row, .stat-pills {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                flex-wrap: nowrap !important;
+            }
+            
+            /* Pipeline columns stack */
+            .pipeline-wrapper {
+                flex-direction: column !important;
+            }
+            
+            .pipeline-column {
+                width: 100% !important;
+                margin-bottom: 16px !important;
+            }
+            
+            /* Leaderboard adjustments */
+            .leaderboard-item {
+                padding: 10px !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            /* Extra small screens */
+            .helm-header h1 {
+                font-size: 16px !important;
+            }
+            
+            .bento-card {
+                padding: 12px !important;
+            }
+            
+            .stat-pill {
+                padding: 8px 12px !important;
+                font-size: 12px !important;
+            }
+        }
+        
+        /* Hide mobile menu button on desktop */
+        @media (min-width: 769px) {
+            .mobile-menu-btn {
+                display: none !important;
+            }
+            
+            .mobile-sidebar-overlay {
+                display: none !important;
+            }
+        }
+        
+        /* v68: Mobile bottom nav improvements */
+        @media (max-width: 768px) {
+            .helm-bottom-nav {
+                height: 60px !important;
+                min-height: 60px !important;
+                padding: 0 4px !important;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .helm-nav-item {
+                min-width: 50px !important;
+                padding: 6px 8px !important;
+            }
+            
+            .helm-nav-label {
+                font-size: 9px !important;
+            }
+            
+            .helm-nav-icon .material-symbols-rounded {
+                font-size: 20px !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .helm-bottom-nav {
+                height: 56px !important;
+                justify-content: flex-start !important;
+                gap: 2px !important;
+            }
+            
+            .helm-nav-item {
+                min-width: 44px !important;
+                padding: 4px 6px !important;
+            }
+            
+            .helm-nav-label {
+                font-size: 8px !important;
+                display: none; /* Hide labels on very small screens */
+            }
+            
+            .helm-nav-item.active .helm-nav-label {
+                display: block; /* Show label only for active item */
             }
         }
 
@@ -17565,6 +17772,11 @@
 
         <!-- HELM HEADER -->
         <header class="helm-header">
+            <!-- v68: Mobile menu button -->
+            <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Menu">
+                <span class="material-symbols-rounded">menu</span>
+            </button>
+            
             <div class="helm-logo">
                 <div class="helm-logo-monograph">
                     <span
@@ -23819,43 +24031,63 @@
                     }
                 }
                 
-                // v67.9: Sync viewings to Supabase
+                // v68: Sync viewings to Supabase - FIXED field mapping
                 async function syncViewingsToSupabaseNow(viewingsArray) {
                     if (!window.supabase) return;
                     
+                    // v68: Debounce - don't sync more than once per 2 seconds
+                    const now = Date.now();
+                    if (window._lastViewingsSync && now - window._lastViewingsSync < 2000) {
+                        return;
+                    }
+                    window._lastViewingsSync = now;
+                    
                     try {
+                        let synced = 0;
                         for (const v of viewingsArray) {
                             // Only sync if it has an ID
                             if (!v.id) continue;
                             
-                            const { error } = await window.supabase.from('viewings').upsert({
+                            // v68: Map app fields → database columns (cleaned schema)
+                            const dbRecord = {
                                 id: v.id,
-                                client_name: v.name || v.visitor || v.clientName,
-                                client_phone: v.phone || v.visitorPhone || v.clientPhone,
-                                client_email: v.email,
-                                property_id: v.propertyId,
-                                property_name: v.propertyName || v.property,
-                                property_address: v.propertyAddress || v.address,
-                                viewing_date: v.date,
-                                viewing_time: v.time,
+                                client_name: v.name || v.visitor || v.clientName || '',
+                                client_phone: v.phone || v.visitorPhone || v.clientPhone || '',
+                                client_email: v.email || '',
+                                property_id: v.propertyId || null,
+                                property_name: v.propertyName || v.property || '',
+                                property_address: v.propertyAddress || v.address || '',
+                                viewing_date: v.date || null, // App uses 'date', DB uses 'viewing_date'
+                                viewing_time: v.time || '', // App uses 'time', DB uses 'viewing_time'
                                 status: v.status || 'Pending',
-                                outcome: v.outcome,
-                                notes: v.notes,
-                                viewing_type: v.viewingType,
-                                referral_source: v.referralSource,
-                                booked_by: v.bookedBy,
-                                booked_by_name: v.bookedByName,
-                                agent_id: v.agentId,
+                                outcome: v.outcome || null,
+                                notes: v.notes || '',
+                                viewing_type: v.viewingType || 'in-person',
+                                referral_source: v.referralSource || null,
+                                booked_by: v.bookedBy || null,
+                                booked_by_name: v.bookedByName || null,
+                                agent_id: v.agentId || null,
                                 created_at: v.bookedAt || v.createdAt || new Date().toISOString()
-                            }, { onConflict: 'id' });
+                            };
                             
-                            if (error && error.code !== '23505') {
-                                console.error('[Sync] Viewing sync error:', error.message);
+                            const { error } = await window.supabase
+                                .from('viewings')
+                                .upsert(dbRecord, { onConflict: 'id' });
+                            
+                            if (error) {
+                                // Only log real errors, not conflicts
+                                if (error.code !== '23505') {
+                                    console.error('[v68 Sync] Error:', error.message);
+                                }
+                            } else {
+                                synced++;
                             }
                         }
-                        console.log('[Sync] ✓ Synced', viewingsArray.length, 'viewings to Supabase');
+                        if (synced > 0) {
+                            console.log('[v68 Sync] ✓', synced, 'viewings synced');
+                        }
                     } catch (err) {
-                        console.error('[Sync] Viewings sync error:', err);
+                        console.error('[v68 Sync] Error:', err);
                     }
                 }
                 
@@ -42010,6 +42242,35 @@ Harir Industries`
             // Map is now fixed at z-index 0 - no need to move it back
             console.log('[GLASS OS] returnMapFromHelm called - map is fixed, no action needed');
         }
+
+        // v68: Mobile sidebar toggle (for future sidebar implementation)
+        window.toggleMobileSidebar = function() {
+            const sidebar = document.querySelector('.helm-sidebar');
+            const overlay = document.querySelector('.mobile-sidebar-overlay');
+            
+            if (sidebar) {
+                sidebar.classList.toggle('mobile-open');
+            }
+            if (overlay) {
+                overlay.classList.toggle('active');
+            }
+            
+            // If no sidebar exists, show a mobile menu instead
+            if (!sidebar) {
+                // For now, just focus the bottom nav
+                const bottomNav = document.querySelector('.helm-bottom-nav');
+                if (bottomNav) {
+                    bottomNav.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        };
+        
+        // v68: Close mobile sidebar when clicking overlay
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('mobile-sidebar-overlay')) {
+                window.toggleMobileSidebar();
+            }
+        });
 
         // Switch Helm view
         window.helmSwitchView = function (viewName) {
