@@ -9592,6 +9592,22 @@
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
         }
 
+        /* v68: Sortable Table Headers */
+        .sortable-header {
+            cursor: pointer !important;
+            user-select: none;
+            transition: background 0.2s, color 0.2s;
+        }
+        
+        .sortable-header:hover {
+            background: rgba(96, 165, 250, 0.15) !important;
+            color: #60a5fa !important;
+        }
+        
+        .sortable-header:active {
+            background: rgba(96, 165, 250, 0.25) !important;
+        }
+
         /* ═══════════════════════════════════════════════════════════════
            WW5: FROSTED GLASS DROPDOWNS & SELECTS
            ═══════════════════════════════════════════════════════════════ */
@@ -18285,27 +18301,27 @@
                                             <input type="checkbox" id="pipeline-select-all"
                                                 onchange="togglePipelineSelectAll()" style="cursor: pointer;">
                                         </th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Date</th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Time</th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Property</th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Visitor</th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Phone</th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Type</th>
-                                        <th
-                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                            Status</th>
+                                        <th onclick="sortPipelineBy('date')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Date <span id="sort-icon-date" style="opacity:0.5;">↕</span></th>
+                                        <th onclick="sortPipelineBy('time')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Time <span id="sort-icon-time" style="opacity:0.5;">↕</span></th>
+                                        <th onclick="sortPipelineBy('property')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Property <span id="sort-icon-property" style="opacity:0.5;">↕</span></th>
+                                        <th onclick="sortPipelineBy('visitor')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Visitor <span id="sort-icon-visitor" style="opacity:0.5;">↕</span></th>
+                                        <th onclick="sortPipelineBy('phone')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Phone <span id="sort-icon-phone" style="opacity:0.5;">↕</span></th>
+                                        <th onclick="sortPipelineBy('type')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Type <span id="sort-icon-type" style="opacity:0.5;">↕</span></th>
+                                        <th onclick="sortPipelineBy('status')" class="sortable-header"
+                                            style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                                            Status <span id="sort-icon-status" style="opacity:0.5;">↕</span></th>
                                         <th
                                             style="padding: 14px 12px; text-align: left; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                                             Notes</th>
@@ -35129,6 +35145,85 @@ Total: ${referrals.length}
 
         let pipelineData = [];
         
+        // v68: Pipeline sorting state and function
+        let pipelineSortColumn = 'date';
+        let pipelineSortDirection = 'desc'; // desc = newest first
+        
+        window.sortPipelineBy = function(column) {
+            // Toggle direction if clicking same column
+            if (pipelineSortColumn === column) {
+                pipelineSortDirection = pipelineSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                pipelineSortColumn = column;
+                pipelineSortDirection = 'asc';
+            }
+            
+            // Update sort icons
+            document.querySelectorAll('[id^="sort-icon-"]').forEach(icon => {
+                icon.textContent = '↕';
+                icon.style.opacity = '0.5';
+            });
+            const activeIcon = document.getElementById('sort-icon-' + column);
+            if (activeIcon) {
+                activeIcon.textContent = pipelineSortDirection === 'asc' ? '↑' : '↓';
+                activeIcon.style.opacity = '1';
+                activeIcon.style.color = '#60a5fa';
+            }
+            
+            // Re-render with new sort
+            if (typeof renderPipelineTable === 'function') {
+                renderPipelineTable();
+            }
+        };
+        
+        // v68: Apply sorting to pipeline data
+        window.sortPipelineData = function(data) {
+            const sorted = [...data];
+            sorted.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(pipelineSortColumn) {
+                    case 'date':
+                        aVal = a.date || a.viewingDate || '';
+                        bVal = b.date || b.viewingDate || '';
+                        break;
+                    case 'time':
+                        aVal = a.time || a.viewingTime || '';
+                        bVal = b.time || b.viewingTime || '';
+                        break;
+                    case 'property':
+                        aVal = (a.property || a.propertyName || '').toLowerCase();
+                        bVal = (b.property || b.propertyName || '').toLowerCase();
+                        break;
+                    case 'visitor':
+                        aVal = (a.visitor || a.name || a.clientName || '').toLowerCase();
+                        bVal = (b.visitor || b.name || b.clientName || '').toLowerCase();
+                        break;
+                    case 'phone':
+                        aVal = a.phone || a.clientPhone || '';
+                        bVal = b.phone || b.clientPhone || '';
+                        break;
+                    case 'type':
+                        aVal = a.type || a.viewingType || '';
+                        bVal = b.type || b.viewingType || '';
+                        break;
+                    case 'status':
+                        aVal = a.status || 'Pending';
+                        bVal = b.status || 'Pending';
+                        break;
+                    default:
+                        aVal = a[pipelineSortColumn] || '';
+                        bVal = b[pipelineSortColumn] || '';
+                }
+                
+                // Compare
+                if (aVal < bVal) return pipelineSortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return pipelineSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            return sorted;
+        };
+        
         // v67.7: ONE-TIME CLEANUP - Run this to fix existing duplicates in localStorage
         window.cleanupAllData = function() {
             console.log('[v67.7] Starting data cleanup...');
@@ -36557,7 +36652,12 @@ Total: ${referrals.length}
             if (!tbody) return;
 
             // v60.27: Use filtered data based on date range
-            const allData = typeof getFilteredPipelineData === 'function' ? getFilteredPipelineData() : loadPipelineData();
+            let allData = typeof getFilteredPipelineData === 'function' ? getFilteredPipelineData() : loadPipelineData();
+            
+            // v68: Apply sorting
+            if (typeof window.sortPipelineData === 'function') {
+                allData = window.sortPipelineData(allData);
+            }
 
             if (!allData || allData.length === 0) {
                 tbody.innerHTML = '';
@@ -36712,7 +36812,29 @@ Total: ${referrals.length}
             var data = loadPipelineData();
             var row = data.find(function(r) { return r.id === rowId; });
             if (!row) return;
-
+            
+            // v68: Try to find the corresponding viewing and use the better viewing info modal
+            const viewings = window.viewings || getStorageArray('propertyViewings') || [];
+            
+            // Try to match by ID first, then by phone+property
+            let matchedViewing = viewings.find(v => v.id === rowId || v.id == rowId);
+            
+            if (!matchedViewing) {
+                // Try to match by phone number
+                const rowPhone = (row.phone || '').replace(/\D/g, '').slice(-10);
+                matchedViewing = viewings.find(v => {
+                    const viewingPhone = (v.phone || v.visitorPhone || v.clientPhone || v.client_phone || '').replace(/\D/g, '').slice(-10);
+                    return rowPhone && viewingPhone && rowPhone === viewingPhone;
+                });
+            }
+            
+            // If we found a matching viewing, use the better viewing info modal
+            if (matchedViewing && typeof showViewingInfoModal === 'function') {
+                showViewingInfoModal(matchedViewing.id);
+                return;
+            }
+            
+            // Fallback to original pipeline modal if no viewing found
             var statusColors = {
                 'Pending': { bg: 'rgba(251,191,36,0.2)', color: '#fbbf24' },
                 'Confirmed': { bg: 'rgba(59,130,246,0.2)', color: '#60a5fa' },
@@ -38273,8 +38395,24 @@ window.updatePipelineRow = function(index, field, value) {
                 if (typeof celebrateSignUp === 'function') celebrateSignUp(visitorName);
             }, 100);
             
-            // Award XP (200 XP for Deal Closed per spec v56.5)
-            if (typeof awardXP === 'function') awardXP(200, 'Deal Closed!', '🎉');
+            // v68: PREVENT XP FARMING - Only award XP once per viewing
+            const viewingId = pipelineData[index].id || pipelineData[index].viewingId;
+            const awardedXPKey = 'helm_awarded_xp';
+            let awardedXP = JSON.parse(localStorage.getItem(awardedXPKey) || '{}');
+            
+            if (viewingId && !awardedXP[viewingId]) {
+                // First time signing up this viewing - award XP
+                if (typeof awardXP === 'function') awardXP(200, 'Deal Closed!', '🎉');
+                // Mark as awarded
+                awardedXP[viewingId] = { 
+                    awardedAt: new Date().toISOString(),
+                    amount: 200,
+                    client: visitorName
+                };
+                localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
+            } else {
+                console.log('[v68] XP already awarded for viewing', viewingId);
+            }
             
             // Only ONE notification
             showHelmNotification(`${visitorName}: Signed Up!`, 'success');
@@ -47621,6 +47759,11 @@ Harir Industries`;
             if (!window.viewings) window.viewings = [];
             window.viewings.push(viewing);
             localStorage.setItem('propertyViewings', JSON.stringify(window.viewings));
+            
+            // v68: SYNC TO SUPABASE IMMEDIATELY
+            if (window.supabase && typeof window.syncViewingsToSupabaseNow === 'function') {
+                window.syncViewingsToSupabaseNow([viewing]);
+            }
 
             // Update tracker badge
             if (typeof helmUpdateTrackerBadge === 'function') {
@@ -52798,11 +52941,27 @@ Harir Industries`;
             }
 
             // All checks passed - Award XP via team system (v64)
-            if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                HPMAuth.awardXP('SIGNUP_CLOSED', viewingId);
-            } else if (typeof addXP === 'function') {
-                addXP(200);
-                showHelmNotification('Deal Closed! +200 XP', 'success');
+            // v68: PREVENT XP FARMING - Only award XP once per viewing
+            const awardedXPKey = 'helm_awarded_xp';
+            let awardedXP = JSON.parse(localStorage.getItem(awardedXPKey) || '{}');
+            
+            if (!awardedXP[viewingId]) {
+                if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
+                    HPMAuth.awardXP('SIGNUP_CLOSED', viewingId);
+                } else if (typeof addXP === 'function') {
+                    addXP(200);
+                    showHelmNotification('Deal Closed! +200 XP', 'success');
+                }
+                // Mark as awarded
+                awardedXP[viewingId] = { 
+                    awardedAt: new Date().toISOString(),
+                    amount: 200,
+                    client: clientName
+                };
+                localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
+            } else {
+                console.log('[v68] XP already awarded for viewing', viewingId);
+                showHelmNotification('Deal Closed! (XP already awarded)', 'success');
             }
 
             // Assign agent XP if agent assigned
