@@ -35065,6 +35065,17 @@ Total: ${referrals.length}
             const seen = new Map();
             const result = [];
             
+            // v68: Status priority - higher = more important to keep
+            const statusPriority = {
+                'Signed Up': 100,
+                'Viewed': 80,
+                'Confirmed': 60,
+                'No Show': 50,
+                'Declined': 50,
+                'Cancelled': 40,
+                'Pending': 10
+            };
+            
             // Helper to score record completeness
             const scoreRecord = (r) => {
                 let score = 0;
@@ -35073,7 +35084,10 @@ Total: ${referrals.length}
                 if (r.date || r.viewing_date) score += 5;
                 if (r.time || r.viewing_time) score += 5;
                 if (r.email) score += 3;
-                if (r.status && r.status !== 'Pending') score += 2;
+                // v68: Add status priority to score
+                score += (statusPriority[r.status] || 0);
+                // v68: Prefer more recently updated records
+                if (r.updatedAt) score += 20;
                 return score;
             };
             
@@ -35089,10 +35103,15 @@ Total: ${referrals.length}
                     seen.set(key, record);
                     result.push(record);
                 } else {
-                    // v67.8: Merge - prefer record with MORE DATA
+                    // v68: Merge - prefer record with HIGHER STATUS PRIORITY and MORE DATA
                     const existing = seen.get(key);
                     const existingScore = scoreRecord(existing);
                     const newScore = scoreRecord(record);
+                    
+                    // v68: Determine which status to keep
+                    const existingPriority = statusPriority[existing.status] || 0;
+                    const newPriority = statusPriority[record.status] || 0;
+                    const keepStatus = newPriority >= existingPriority ? record.status : existing.status;
                     
                     // Merge fields - keep the best of both
                     const mergedRecord = {
@@ -35104,7 +35123,9 @@ Total: ${referrals.length}
                         property: record.property || record.propertyName || existing.property || existing.propertyName || '',
                         date: record.date || record.viewing_date || existing.date || existing.viewing_date || '',
                         time: record.time || record.viewing_time || existing.time || existing.viewing_time || '',
-                        status: (record.status && record.status !== 'Pending') ? record.status : existing.status || 'Pending'
+                        // v68: Keep the higher-priority status
+                        status: keepStatus,
+                        updatedAt: record.updatedAt || existing.updatedAt
                     };
                     
                     const idx = result.indexOf(existing);
@@ -35113,7 +35134,7 @@ Total: ${referrals.length}
                 }
             });
             
-            console.log(`[v67.8 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
+            console.log(`[v68 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
             return result;
         };
         
@@ -36940,7 +36961,11 @@ window.updatePipelineRowStatus = function(id, newStatus) {
         const oldStatus = data[idx].status;
         const row = data[idx];
         data[idx].status = newStatus;
+        data[idx].updatedAt = new Date().toISOString(); // v68: Track update time
+        
+        // v68: Update ALL data stores immediately
         pipelineData = data;
+        window._dataCache.pipeline = data; // Update cache!
         localStorage.setItem('pipelineData', JSON.stringify(data));
         
         // v67.8: Also update in propertyViewings
@@ -36949,8 +36974,23 @@ window.updatePipelineRowStatus = function(id, newStatus) {
         if (viewingIdx !== -1) {
             viewings[viewingIdx].status = newStatus;
             viewings[viewingIdx].outcome = newStatus;
+            viewings[viewingIdx].updatedAt = new Date().toISOString();
             localStorage.setItem('propertyViewings', JSON.stringify(viewings));
+            window.viewings = viewings; // Update memory too!
+            if (window._dataCache) window._dataCache.viewings = viewings;
         }
+        
+        // v68: Also update pipelineClients if it exists
+        try {
+            const pipelineClients = JSON.parse(localStorage.getItem('pipelineClients') || '[]');
+            const clientIdx = pipelineClients.findIndex(c => c.id === id || String(c.id) === String(id));
+            if (clientIdx !== -1) {
+                pipelineClients[clientIdx].status = newStatus;
+                localStorage.setItem('pipelineClients', JSON.stringify(pipelineClients));
+            }
+        } catch(e) {}
+        
+        console.log('[v68] Status updated:', oldStatus, '→', newStatus, 'for ID:', id);
         
         // v67.8: SYNC TO SUPABASE IMMEDIATELY
         if (window.supabase) {
@@ -36992,13 +37032,33 @@ window.updatePipelineRowStatus = function(id, newStatus) {
             if (typeof showSignUpCelebration === 'function') {
                 showSignUpCelebration(row.visitor || row.name || 'Client', row.property || row.propertyName || 'Property');
             }
-            // Award XP
-            if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                HPMAuth.awardXP(200, 'Deal Closed!');
-            } else if (typeof addXP === 'function') {
-                addXP(200);
+            
+            // v68: PREVENT XP FARMING - Only award XP once per viewing
+            const awardedXPKey = 'helm_awarded_xp';
+            let awardedXP = JSON.parse(localStorage.getItem(awardedXPKey) || '{}');
+            const viewingId = id || row.id || row.viewingId;
+            
+            if (viewingId && !awardedXP[viewingId]) {
+                // Award XP
+                if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
+                    HPMAuth.awardXP(200, 'Deal Closed!');
+                } else if (typeof awardXP === 'function') {
+                    awardXP(200, 'Deal Closed!', '🎉');
+                } else if (typeof addXP === 'function') {
+                    addXP(200);
+                }
+                // Mark as awarded
+                awardedXP[viewingId] = { 
+                    awardedAt: new Date().toISOString(),
+                    amount: 200,
+                    client: row.visitor || row.name || 'Client'
+                };
+                localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
+                showHelmNotification('Deal Closed! +200 XP', 'success');
+            } else {
+                console.log('[v68] XP already awarded for viewing', viewingId);
+                showHelmNotification('Deal Closed! (XP already awarded)', 'success');
             }
-            showHelmNotification('Deal Closed! +200 XP', 'success');
             
             // Mark property as taken if we have propertyId
             if (row.propertyId) {
