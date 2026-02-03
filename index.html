@@ -2425,7 +2425,8 @@
                             viewing_time: viewing.time,
                             status: viewing.status || 'scheduled',
                             outcome: viewing.outcome,
-                            agent_id: viewing.agentId,
+                            agent_id: viewing.agentId || null,
+                            agent_name: viewing.agentName || viewing.agent || null, // v68.1: Also store agent name
                             notes: viewing.notes,
                             booked_by: user.id,
                             booked_by_name: user.name,
@@ -2464,19 +2465,26 @@
                         }
                     }
                     
-                    // 3. Upload PIPELINE/CLIENTS - v68 fixed field mapping
+                    // 3. Upload PIPELINE/CLIENTS - v68.1 fixed field mapping
                     const clients = JSON.parse(localStorage.getItem('elevate_clients') || '[]');
                     for (const client of clients) {
+                        // v68.1: Skip clients without a name - they'll cause NOT NULL errors
+                        const clientName = client.name || client.clientName || client.client_name || '';
+                        if (!clientName) {
+                            console.log('[v68 Sync] Skipping client with no name:', client.id);
+                            continue;
+                        }
+                        
                         const { error } = await window.supabase.from('clients').upsert({
                             id: client.id,
-                            name: client.name || client.clientName || '',
+                            client_name: clientName,  // v68.1: DB uses client_name not name!
                             phone: client.phone || client.clientPhone || '',
                             email: client.email || '',
-                            status: client.stage || client.status || 'new',
-                            source: client.referralSource || client.source || null,
-                            council: client.council || null,
-                            housing_officer: client.housingOfficer || client.housing_officer || null,
-                            budget_max: client.maxRent || client.budgetMax || client.budget_max || null,
+                            stage: client.stage || client.status || 'New',
+                            referral_source: client.referralSource || client.source || '',
+                            property_interest: client.propertyInterest || client.property_interest || '',
+                            max_rent: client.maxRent || client.max_rent || null,
+                            borough_preference: client.boroughPreference || client.borough_preference || '',
                             notes: client.notes || '',
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
@@ -2505,7 +2513,27 @@
                     
                     let downloadedCounts = { viewings: 0, properties: 0, clients: 0 };
                     
-                    // 1. Download VIEWINGS
+                    // v68.1: SAFETY CHECK - count local vs cloud BEFORE overwriting
+                    const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                    const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                    
+                    const { count: cloudPropsCount } = await window.supabase.from('properties').select('*', { count: 'exact', head: true });
+                    const { count: cloudViewingsCount } = await window.supabase.from('viewings').select('*', { count: 'exact', head: true });
+                    
+                    console.log(`[Sync Safety] Local: ${localProps.length} props, ${localViewings.length} viewings`);
+                    console.log(`[Sync Safety] Cloud: ${cloudPropsCount} props, ${cloudViewingsCount} viewings`);
+                    
+                    // If cloud has way fewer, warn user!
+                    if (localProps.length > 10 && cloudPropsCount < localProps.length * 0.5) {
+                        const proceed = confirm(`⚠️ WARNING: Cloud has only ${cloudPropsCount} properties but you have ${localProps.length} locally!\n\nDownloading may cause data loss.\n\nClick OK to proceed anyway, or Cancel to stop.`);
+                        if (!proceed) {
+                            if (typeof showToast === 'function') showToast('Download Cancelled', 'Upload your data first to avoid loss', 'warning');
+                            this.isSyncing = false;
+                            return;
+                        }
+                    }
+                    
+                    // 1. Download VIEWINGS - MERGE with local
                     const { data: viewings, error: vError } = await window.supabase
                         .from('viewings')
                         .select('*')
@@ -2513,71 +2541,123 @@
                     
                     if (vError) console.error('[Sync] Viewings download error:', vError);
                     if (viewings && viewings.length > 0) {
-                        const localViewings = viewings.map(v => ({
-                            id: v.id,
-                            name: v.client_name, clientName: v.client_name, visitor: v.client_name,
-                            phone: v.client_phone, visitorPhone: v.client_phone, clientPhone: v.client_phone,
-                            email: v.client_email, clientEmail: v.client_email,
-                            propertyId: v.property_id, propertyName: v.property_name, property: v.property_name,
-                            propertyAddress: v.property_address, address: v.property_address,
-                            date: v.viewing_date || v.date, time: v.viewing_time || v.time,  // v67.7: Fallback
-                            status: v.status, outcome: v.outcome, notes: v.notes,
-                            agentId: v.agent_id,
-                            updatedAt: v.updated_at
-                        }));
-                        localStorage.setItem('propertyViewings', JSON.stringify(localViewings));
-                        downloadedCounts.viewings = localViewings.length;
+                        // v68.1: MERGE with existing local viewings
+                        const existingViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                        const viewingsMap = new Map(existingViewings.map(v => [String(v.id), v]));
+                        
+                        viewings.forEach(v => {
+                            viewingsMap.set(String(v.id), {
+                                id: v.id,
+                                name: v.client_name, clientName: v.client_name, visitor: v.client_name,
+                                phone: v.client_phone, visitorPhone: v.client_phone, clientPhone: v.client_phone,
+                                email: v.client_email, clientEmail: v.client_email,
+                                propertyId: v.property_id, propertyName: v.property_name, property: v.property_name,
+                                propertyAddress: v.property_address, address: v.property_address,
+                                date: v.viewing_date || v.date, time: v.viewing_time || v.time,
+                                status: v.status, outcome: v.outcome, notes: v.notes,
+                                agentId: v.agent_id,
+                                agentName: v.agent_name, // v68.1: Get agent name from cloud
+                                agent: v.agent_name, // v68.1: Alias for matching
+                                updatedAt: v.updated_at
+                            });
+                        });
+                        
+                        const mergedViewings = Array.from(viewingsMap.values());
+                        localStorage.setItem('propertyViewings', JSON.stringify(mergedViewings));
+                        window.viewings = mergedViewings;
+                        downloadedCounts.viewings = mergedViewings.length;
                     }
                     
-                    // 2. Download PROPERTIES
+                    // 2. Download PROPERTIES - MERGE with local, preserve taken status
                     const { data: properties, error: pError } = await window.supabase
                         .from('properties')
                         .select('*');
                     
                     if (pError) console.error('[Sync] Properties download error:', pError);
+                    
+                    // v68.1: MERGE - don't lose local properties!
+                    const existingProps = JSON.parse(localStorage.getItem('propertySystemProperties') || localStorage.getItem('elevate_properties') || '[]');
+                    const propsMap = new Map(existingProps.map(p => [p.id, p]));
+                    const takenSet = new Set(JSON.parse(localStorage.getItem('takenPropertiesSet') || '[]'));
+                    
                     if (properties && properties.length > 0) {
-                        const localProps = properties.map(p => ({
-                            id: p.id,
-                            name: p.name,
-                            address: p.address,
-                            postcode: p.postcode,
-                            borough: p.borough,
-                            rent: p.rent,
-                            lhaRate: p.lha_rate,
-                            bedrooms: p.bedrooms,
-                            status: p.status,
-                            lat: p.lat,
-                            lng: p.lng,
-                            landlord: p.landlord,
-                            notes: p.notes
-                        }));
-                        localStorage.setItem('elevate_properties', JSON.stringify(localProps));
-                        downloadedCounts.properties = localProps.length;
+                        properties.forEach(p => {
+                            const existing = propsMap.get(p.id);
+                            propsMap.set(p.id, {
+                                id: p.id,
+                                name: p.name,
+                                address: p.address,
+                                postcode: p.postcode,
+                                borough: p.borough,
+                                rent: p.rent,
+                                lhaRate: p.lha_rate,
+                                bedrooms: p.bedrooms,
+                                type: p.type || existing?.type || 'Studio',
+                                status: p.status || existing?.status || 'available',
+                                lat: p.lat,
+                                lng: p.lng,
+                                landlord: p.landlord,
+                                notes: p.notes,
+                                // v68.1: PRESERVE TAKEN STATUS!
+                                clientName: p.client_name || existing?.clientName,
+                                takenBy: p.taken_by || existing?.takenBy,
+                                takenDate: p.taken_date || existing?.takenDate,
+                                taken: p.status === 'taken' || existing?.taken || false
+                            });
+                            
+                            if (p.status === 'taken') {
+                                takenSet.add(p.id);
+                            }
+                        });
                     }
                     
-                    // 3. Download CLIENTS/PIPELINE
+                    const mergedProps = Array.from(propsMap.values());
+                    // v68.1: Save to BOTH storage keys!
+                    localStorage.setItem('elevate_properties', JSON.stringify(mergedProps));
+                    localStorage.setItem('propertySystemProperties', JSON.stringify(mergedProps));
+                    localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
+                    window.properties = mergedProps;
+                    window.takenProperties = takenSet;
+                    downloadedCounts.properties = mergedProps.length;
+                    
+                    // 3. Download CLIENTS/PIPELINE - MERGE with local
                     const { data: clients, error: cError } = await window.supabase
                         .from('clients')
                         .select('*');
                     
                     if (cError) console.error('[Sync] Clients download error:', cError);
+                    
+                    // v68.1: MERGE with existing pipeline
+                    const existingPipeline = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+                    const clientsMap = new Map(existingPipeline.map(c => [c.id, c]));
+                    
                     if (clients && clients.length > 0) {
-                        const localClients = clients.map(c => ({
-                            id: c.id,
-                            name: c.name,
-                            phone: c.phone,
-                            email: c.email,
-                            stage: c.stage,
-                            propertyInterest: c.property_interest,
-                            maxRent: c.max_rent,
-                            boroughPreference: c.borough_preference,
-                            referralSource: c.referral_source,
-                            notes: c.notes,
-                            lastContact: c.last_contact
-                        }));
-                        localStorage.setItem('elevate_clients', JSON.stringify(localClients));
-                        downloadedCounts.clients = localClients.length;
+                        clients.forEach(c => {
+                            clientsMap.set(c.id, {
+                                id: c.id,
+                                name: c.client_name,
+                                clientName: c.client_name,
+                                visitor: c.client_name,
+                                phone: c.phone,
+                                email: c.email,
+                                stage: c.stage,
+                                status: c.stage,
+                                propertyInterest: c.property_interest,
+                                property: c.property_interest,
+                                maxRent: c.max_rent,
+                                boroughPreference: c.borough_preference,
+                                referralSource: c.referral_source,
+                                source: c.referral_source,
+                                notes: c.notes,
+                                lastContact: c.last_contact
+                            });
+                        });
                     }
+                    
+                    const mergedClients = Array.from(clientsMap.values());
+                    localStorage.setItem('pipelineData', JSON.stringify(mergedClients));
+                    localStorage.setItem('elevate_clients', JSON.stringify(mergedClients));
+                    downloadedCounts.clients = mergedClients.length;
                     
                     console.log('[HPM Sync] Download complete:', downloadedCounts);
                     if (typeof showToast === 'function') {
@@ -2588,8 +2668,9 @@
                     if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
                     if (typeof initViewingsTimetable === 'function') initViewingsTimetable();
                     if (typeof updateViewingsStats === 'function') updateViewingsStats();
-                    if (typeof updateMapMarkers === 'function') updateMapMarkers();
+                    if (typeof updateMarkers === 'function') updateMarkers();
                     if (typeof renderPipelineTable === 'function') renderPipelineTable();
+                    if (typeof renderPipelineTrackerTable === 'function') renderPipelineTrackerTable();
                     
                 } catch (err) {
                     console.error('[Sync] Download error:', err);
@@ -35423,27 +35504,33 @@ Total: ${referrals.length}
             updatePipelineMetrics();
             
             // Sync to Supabase if available
-            if (window.supabase) {
+            if (window.supabase && !window._isSyncing) {
                 try {
                     // Batch upsert to clients table
+                    let syncCount = 0;
                     for (const row of pipelineData) {
+                        // v68.1: Skip entries without a name
+                        const clientName = row.visitor || row.name || row.clientName || '';
+                        if (!clientName) continue;
+                        
                         if (!row.id) row.id = Date.now() + Math.random().toString(36).substr(2, 9);
                         
-                        await window.supabase.from('clients').upsert({
+                        const { error } = await window.supabase.from('clients').upsert({
                             id: row.id,
-                            client_name: row.visitor || row.name || row.clientName,
-                            phone: row.phone,
-                            email: row.email,
+                            client_name: clientName,
+                            phone: row.phone || '',
+                            email: row.email || '',
                             stage: row.status || 'Pending',
-                            property_interest: row.property,
-                            max_rent: row.budget || row.maxRent,
-                            borough_preference: row.borough,
-                            referral_source: row.source || row.referralSource,
-                            notes: row.notes,
+                            property_interest: row.property || '',
+                            max_rent: row.budget || row.maxRent || null,
+                            borough_preference: row.borough || '',
+                            referral_source: row.source || row.referralSource || '',
+                            notes: row.notes || '',
                             last_contact: row.lastContact || new Date().toISOString()
                         }, { onConflict: 'id' });
+                        if (!error) syncCount++;
                     }
-                    console.log('[v66 Data] ✅ Synced ' + pipelineData.length + ' entries to Supabase');
+                    console.log('[v66 Data] ✅ Synced ' + syncCount + ' entries to Supabase');
                 } catch (e) {
                     console.error('[v66 Data] Supabase sync error:', e);
                 }
@@ -43658,8 +43745,13 @@ Harir Industries`
             container.innerHTML = agents.map(agent => {
                 const isSick = agent.status === 'sick' || agent.status === 'leave';
 
-                // Get agent's viewings for today
-                const agentViewings = viewings.filter(v => v.agentId == agent.id && v.date === today);
+                // Get agent's viewings for today - v68.1: match by ID or name
+                const agentViewings = viewings.filter(v => {
+                    if (!v || v.date !== today) return false;
+                    const matchById = v.agentId == agent.id || v.agent_id == agent.id;
+                    const matchByName = v.agent === agent.name || v.agentName === agent.name || v.assignedAgent === agent.name;
+                    return matchById || matchByName;
+                });
                 const agentTasks = tasks.filter(t => t.agentId == agent.id && t.date === today);
 
                 // Build slot content
@@ -52005,8 +52097,11 @@ Harir Industries`;
 
             const agentViewings = dayViewings.filter(v => {
                 if (!v) return false;
-                // Handle both string and number agentId comparisons
-                return String(v.agentId) === String(agent.id) || v.agentId == agent.id;
+                // v68.1: Match by ID OR by name (viewings might have agent name instead of ID)
+                const matchById = String(v.agentId) === String(agent.id) || v.agentId == agent.id;
+                const matchByAgentIdField = String(v.agent_id) === String(agent.id) || v.agent_id == agent.id;
+                const matchByName = v.agent === agentName || v.agentName === agentName || v.assignedAgent === agentName;
+                return matchById || matchByAgentIdField || matchByName;
             });
 
             return `
@@ -52052,7 +52147,13 @@ Harir Industries`;
         }).join('');
 
         // v65.6: Add UNASSIGNED row for viewings without an agent
-        const unassignedViewings = dayViewings.filter(v => !v || !v.agentId);
+        // v68.1: Check both agentId AND agent name fields
+        const unassignedViewings = dayViewings.filter(v => {
+            if (!v) return false;
+            const hasAgentId = v.agentId || v.agent_id;
+            const hasAgentName = v.agent || v.agentName || v.assignedAgent;
+            return !hasAgentId && !hasAgentName;
+        });
         if (unassignedViewings.length > 0) {
             const unassignedColor = '#6366f1'; // Purple for unassigned
             const unassignedRow = `
@@ -58729,24 +58830,30 @@ Write the email now:`;
         const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
         console.log(`[HPM Sync] Found ${pipelineData.length} pipeline entries to upload`);
         
+        let clientSuccessCount = 0;
         for (const c of pipelineData) {
+            // v68.1: Skip entries without a name
+            const clientName = c.name || c.clientName || c.client_name || c.visitor || '';
+            if (!clientName) continue;
+            
             const { error } = await window.supabase.from('clients').upsert({
                 id: c.id,
-                client_name: c.name || c.clientName || c.client_name, // DB uses client_name!
-                phone: c.phone,
-                email: c.email,
-                stage: c.stage || 'new',
-                property_interest: c.propertyInterest || c.property_interest,
-                max_rent: c.maxRent || c.max_rent,
-                borough_preference: c.boroughPreference || c.borough_preference,
-                referral_source: c.referralSource || c.referral_source || c.source,
-                notes: c.notes,
+                client_name: clientName, // DB uses client_name!
+                phone: c.phone || '',
+                email: c.email || '',
+                stage: c.stage || c.status || 'New',
+                property_interest: c.propertyInterest || c.property_interest || c.property || '',
+                max_rent: c.maxRent || c.max_rent || null,
+                borough_preference: c.boroughPreference || c.borough_preference || '',
+                referral_source: c.referralSource || c.referral_source || c.source || '',
+                notes: c.notes || '',
                 last_contact: c.lastContact || c.last_contact || new Date().toISOString()
             }, { onConflict: 'id' });
             
-            if (error) console.error('[HPM Sync] Client upload error:', error);
+            if (!error) clientSuccessCount++;
+            else if (error.code !== '23505') console.error('[HPM Sync] Client upload error:', error.message);
         }
-        console.log(`[HPM Sync] Uploaded ${pipelineData.length} clients/pipeline entries`);
+        console.log(`[HPM Sync] Uploaded ${clientSuccessCount}/${pipelineData.length} clients/pipeline entries`);
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -59195,28 +59302,45 @@ Write the email now:`;
     async function syncPipelineToSupabase() {
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
+        if (window._isSyncing) return; // v68.1: Prevent sync during initial load
         
         const pipeline = JSON.parse(localStorage.getItem('pipelineData') || '[]');
+        if (pipeline.length === 0) return;
+        
         console.log(`[HPM Sync] Syncing ${pipeline.length} pipeline entries to cloud...`);
         
+        let successCount = 0;
+        let errorCount = 0;
+        
         for (const c of pipeline) {
+            // v68.1: Skip entries without a name
+            const clientName = c.name || c.clientName || c.client_name || c.visitor || '';
+            if (!clientName) {
+                continue;
+            }
+            
             const { error } = await window.supabase.from('clients').upsert({
                 id: c.id,
-                client_name: c.name || c.clientName || c.client_name, // DB uses client_name!
-                phone: c.phone,
-                email: c.email,
-                stage: c.stage || 'new',
-                property_interest: c.propertyInterest || c.property_interest,
-                max_rent: c.maxRent || c.max_rent,
-                borough_preference: c.boroughPreference || c.borough_preference,
-                referral_source: c.referralSource || c.referral_source || c.source,
-                notes: c.notes,
+                client_name: clientName, // DB uses client_name!
+                phone: c.phone || '',
+                email: c.email || '',
+                stage: c.stage || c.status || 'New',
+                property_interest: c.propertyInterest || c.property_interest || c.property || '',
+                max_rent: c.maxRent || c.max_rent || null,
+                borough_preference: c.boroughPreference || c.borough_preference || '',
+                referral_source: c.referralSource || c.referral_source || c.source || '',
+                notes: c.notes || '',
                 last_contact: c.lastContact || c.last_contact || new Date().toISOString()
             }, { onConflict: 'id' });
             
-            if (error) console.error('[HPM Sync] Pipeline sync error:', error);
+            if (error) {
+                errorCount++;
+                if (errorCount <= 3) console.error('[HPM Sync] Pipeline sync error:', error.message);
+            } else {
+                successCount++;
+            }
         }
-        console.log(`[HPM Sync] ✅ Synced ${pipeline.length} pipeline entries to cloud`);
+        console.log(`[HPM Sync] ✅ Synced ${successCount}/${pipeline.length} pipeline entries to cloud` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
     }
     
     // v65.7: Sync properties to Supabase
@@ -59279,6 +59403,10 @@ Write the email now:`;
         showSyncIndicator('Syncing data...');
         
         try {
+            // v68.1: SAFETY - Get local counts FIRST
+            const localProps = JSON.parse(localStorage.getItem('propertySystemProperties') || localStorage.getItem('elevate_properties') || '[]');
+            const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            
             // 1. Download PROPERTIES from Supabase
             showSyncIndicator('Loading properties...');
             const { data: cloudProps, error: propError } = await window.supabase
@@ -59287,55 +59415,74 @@ Write the email now:`;
             
             if (propError) {
                 console.error('[HPM Sync] Properties download error:', propError);
-            } else if (cloudProps && cloudProps.length > 0) {
-                const localProps = JSON.parse(localStorage.getItem('propertySystemProperties') || localStorage.getItem('elevate_properties') || '[]');
-                const localPropsMap = new Map(localProps.map(p => [p.id, p]));
+            } else {
+                // v68.1: SAFETY CHECK - Don't let cloud overwrite if it has way fewer
+                const cloudCount = cloudProps?.length || 0;
+                const localCount = localProps.length;
                 
-                // v67.9: Track taken properties
-                const takenSet = new Set();
+                console.log(`[HPM Sync] Properties - Local: ${localCount}, Cloud: ${cloudCount}`);
                 
-                // Merge: cloud wins for existing, add new from both
-                cloudProps.forEach(cp => {
-                    localPropsMap.set(cp.id, {
-                        id: cp.id,
-                        name: cp.name,
-                        address: cp.address,
-                        postcode: cp.postcode,
-                        borough: cp.borough,
-                        rent: cp.rent,
-                        lhaRate: cp.lha_rate,
-                        bedrooms: cp.bedrooms,
-                        type: cp.type || 'Studio',
-                        status: cp.status || 'available',
-                        lat: cp.lat,
-                        lng: cp.lng,
-                        landlord: cp.landlord,
-                        notes: cp.notes,
-                        // v67.9: Include taken fields
-                        clientName: cp.client_name,
-                        takenBy: cp.taken_by || cp.client_name,
-                        takenDate: cp.taken_date,
-                        dateAdded: cp.date_added || cp.created_at
-                    });
+                // Only merge if cloud has data, otherwise keep local
+                if (cloudCount > 0) {
+                    const localPropsMap = new Map(localProps.map(p => [p.id, p]));
                     
                     // v67.9: Track taken properties
-                    if (cp.status === 'taken') {
-                        takenSet.add(cp.id);
-                    }
-                });
-                
-                const mergedProps = Array.from(localPropsMap.values());
-                
-                // v67.9: Save to BOTH storage keys for compatibility
-                localStorage.setItem('propertySystemProperties', JSON.stringify(mergedProps));
-                localStorage.setItem('elevate_properties', JSON.stringify(mergedProps));
-                localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
-                
-                // Also set window.properties for immediate use
-                window.properties = mergedProps;
-                window.takenProperties = takenSet;
-                
-                console.log(`[HPM Sync] ✅ Properties: ${mergedProps.length} (cloud: ${cloudProps.length}, taken: ${takenSet.size})`);
+                    const takenSet = new Set();
+                    
+                    // First, preserve all local taken status
+                    localProps.forEach(lp => {
+                        if (lp.status === 'taken' || lp.taken || lp.clientName || lp.takenBy) {
+                            takenSet.add(lp.id);
+                        }
+                    });
+                    
+                    // Merge: cloud updates existing, preserves local-only props
+                    cloudProps.forEach(cp => {
+                        const existing = localPropsMap.get(cp.id);
+                        localPropsMap.set(cp.id, {
+                            id: cp.id,
+                            name: cp.name,
+                            address: cp.address,
+                            postcode: cp.postcode,
+                            borough: cp.borough,
+                            rent: cp.rent,
+                            lhaRate: cp.lha_rate,
+                            bedrooms: cp.bedrooms,
+                            type: cp.type || existing?.type || 'Studio',
+                            status: cp.status || existing?.status || 'available',
+                            lat: cp.lat,
+                            lng: cp.lng,
+                            landlord: cp.landlord,
+                            notes: cp.notes,
+                            // v68.1: PRESERVE local taken status if cloud doesn't have it
+                            clientName: cp.client_name || existing?.clientName,
+                            takenBy: cp.taken_by || cp.client_name || existing?.takenBy,
+                            takenDate: cp.taken_date || existing?.takenDate,
+                            taken: (cp.status === 'taken') || existing?.taken || false,
+                            dateAdded: cp.date_added || cp.created_at || existing?.dateAdded
+                        });
+                        
+                        // v67.9: Track taken properties
+                        if (cp.status === 'taken') {
+                            takenSet.add(cp.id);
+                        }
+                    });
+                    
+                    const mergedProps = Array.from(localPropsMap.values());
+                    
+                    // v67.9: Save to BOTH storage keys for compatibility
+                    localStorage.setItem('propertySystemProperties', JSON.stringify(mergedProps));
+                    localStorage.setItem('elevate_properties', JSON.stringify(mergedProps));
+                    localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
+                    
+                    // Also set window.properties for immediate use
+                    window.properties = mergedProps;
+                    window.takenProperties = takenSet;
+                    
+                    console.log(`[HPM Sync] ✅ Properties: ${mergedProps.length} (cloud: ${cloudCount}, taken: ${takenSet.size})`);
+                } else {
+                    console.log(`[HPM Sync] ⚠️ Cloud has 0 properties, keeping ${localCount} local properties`);
+                }
             }
             
             // 2. Download VIEWINGS from Supabase
@@ -59377,6 +59524,8 @@ Write the email now:`;
                         outcome: cv.outcome,
                         outcomeNotes: cv.outcome_notes,
                         agentId: cv.agent_id,
+                        agentName: cv.agent_name, // v68.1: Get agent name from cloud
+                        agent: cv.agent_name, // v68.1: Alias for matching
                         notes: cv.notes,
                         updatedAt: cv.updated_at
                     };
