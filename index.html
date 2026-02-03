@@ -58894,43 +58894,57 @@ Write the email now:`;
     async function syncViewingsToSupabase() {
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
+        if (window._isSyncing) return; // v68.1: Don't sync during initial load
         
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        if (viewings.length === 0) {
+            console.log('[HPM Sync] No viewings to sync');
+            return;
+        }
+        
+        const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
+        
+        let successCount = 0;
+        let errorCount = 0;
         
         for (const v of viewings) {
             // v67.7: Ensure property_name is populated
-            let propName = v.propertyName || v.property;
-            let propAddress = v.propertyAddress || v.address;
+            let propName = v.propertyName || v.property || '';
+            let propAddress = v.propertyAddress || v.address || '';
             
             if ((!propName || propName === 'NULL') && v.propertyId) {
                 const prop = properties.find(p => p.id === parseInt(v.propertyId));
                 if (prop) {
-                    propName = prop.name;
-                    propAddress = propAddress || prop.address;
+                    propName = prop.name || '';
+                    propAddress = propAddress || prop.address || '';
                 }
             }
             
             const { error } = await window.supabase.from('viewings').upsert({
                 id: v.id,
-                client_name: v.clientName || v.name || v.visitor,
-                client_phone: v.phone || v.clientPhone,
-                client_email: v.email || v.clientEmail,
-                property_id: v.propertyId,
+                client_name: v.clientName || v.name || v.visitor || '',
+                client_phone: v.phone || v.clientPhone || '',
+                client_email: v.email || v.clientEmail || '',
+                property_id: v.propertyId || null,
                 property_name: propName,
                 property_address: propAddress,
-                viewing_date: v.date,
-                viewing_time: v.time,
+                viewing_date: v.date || v.viewing_date || null,
+                viewing_time: v.time || v.viewing_time || null,
                 status: v.status || 'scheduled',
-                outcome: v.outcome,
-                agent_id: v.agentId,
-                notes: v.notes,
+                outcome: v.outcome || null,
+                agent_id: v.agentId || v.agent_id || null,
+                notes: v.notes || '',
                 updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
             
-            if (error) console.error('[HPM Sync] Error:', error);
+            if (error) {
+                errorCount++;
+                if (errorCount <= 3) console.error('[HPM Sync] Viewing sync error:', error);
+            } else {
+                successCount++;
+            }
         }
-        console.log(`[HPM Sync] Synced ${viewings.length} viewings to cloud`);
+        console.log(`[HPM Sync] Synced ${successCount}/${viewings.length} viewings to cloud` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
     }
     
     async function loadViewingsFromSupabase() {
@@ -59153,7 +59167,7 @@ Write the email now:`;
         originalSetItem(key, value);
         
         // Auto-sync viewings after changes
-        if (key === 'propertyViewings' && localStorage.getItem(FIRST_SYNC_KEY) === 'true') {
+        if (key === 'propertyViewings' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing) {
             clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
                 syncViewingsToSupabase();
@@ -59161,7 +59175,7 @@ Write the email now:`;
         }
         
         // v65.7: Also auto-sync properties
-        if (key === 'elevate_properties' && localStorage.getItem(FIRST_SYNC_KEY) === 'true') {
+        if (key === 'elevate_properties' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing) {
             clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
                 syncPropertiesToSupabase();
@@ -59169,7 +59183,7 @@ Write the email now:`;
         }
         
         // v65.8: Auto-sync pipeline/clients
-        if (key === 'pipelineData' && localStorage.getItem(FIRST_SYNC_KEY) === 'true') {
+        if (key === 'pipelineData' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing) {
             clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
                 syncPipelineToSupabase();
@@ -59210,29 +59224,43 @@ Write the email now:`;
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
         
-        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
+        
+        // v68.1: Batch sync with proper null handling
+        let successCount = 0;
+        let errorCount = 0;
         
         for (const p of properties) {
             const { error } = await window.supabase.from('properties').upsert({
                 id: p.id,
-                name: p.name,
-                address: p.address,
-                postcode: p.postcode,
-                borough: p.borough,
-                rent: p.rent,
-                lha_rate: p.lhaRate,
+                name: p.name || '',
+                address: p.address || '',
+                postcode: p.postcode || '',
+                borough: p.borough || '',
+                rent: p.rent || 0,
+                lha_rate: p.lhaRate || p.lha_rate || 0,
                 bedrooms: p.bedrooms || 0,
                 status: p.status || 'available',
-                lat: p.lat,
-                lng: p.lng,
-                landlord: p.landlord,
-                notes: p.notes,
+                lat: p.lat || null,
+                lng: p.lng || null,
+                landlord: p.landlord || '',
+                notes: p.notes || '',
+                // v68.1: Provide empty string for client fields instead of null
+                client_name: p.clientName || p.client_name || '',
+                taken_by: p.takenBy || p.taken_by || '',
+                taken_date: p.takenDate || p.taken_date || null,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
             
-            if (error) console.error('[HPM Sync] Property error:', error);
+            if (error) {
+                errorCount++;
+                // v68.1: Only log first few errors to avoid spam
+                if (errorCount <= 3) console.error('[HPM Sync] Property error:', error);
+            } else {
+                successCount++;
+            }
         }
-        console.log(`[HPM Sync] Synced ${properties.length} properties to cloud`);
+        console.log(`[HPM Sync] Synced ${successCount}/${properties.length} properties to cloud` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -59243,6 +59271,9 @@ Write the email now:`;
             console.log('[HPM Sync] Supabase not available for auto-sync');
             return;
         }
+        
+        // v68.1: Prevent sync loop during initial load
+        window._isSyncing = true;
         
         console.log('[HPM Sync] 🔄 Auto-syncing from cloud...');
         showSyncIndicator('Syncing data...');
@@ -59419,6 +59450,9 @@ Write the email now:`;
             console.log('[HPM Sync] ✅ Auto-sync complete');
             hideSyncIndicator();
             
+            // v68.1: Allow future syncs now that initial load is done
+            window._isSyncing = false;
+            
             // Refresh UI components
             setTimeout(() => {
                 if (typeof updateMarkers === 'function') updateMarkers();
@@ -59431,6 +59465,7 @@ Write the email now:`;
         } catch (err) {
             console.error('[HPM Sync] Auto-sync error:', err);
             hideSyncIndicator();
+            window._isSyncing = false; // v68.1: Allow syncs even after error
         }
     }
     
