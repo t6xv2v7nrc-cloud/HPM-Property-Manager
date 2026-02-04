@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 68.3                            ║
+    ║                        Version 68.0                            ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
     ║  ──────────────────────────────────────────────────────────── ║
@@ -23274,12 +23274,31 @@
                     const property = properties.find(p => p.id === propertyId);
                     if (property) {
                         property.status = status;
+                        property.updatedAt = new Date().toISOString();
                         if (takenBy) {
                             property.takenBy = takenBy;
                             property.takenDate = new Date().toISOString();
                         }
                         savePropertiesToStorage();
                         renderPropertyList();
+                        
+                        // v68.2: SYNC TO SUPABASE
+                        if (window.supabase) {
+                            console.log('[v68.2] updatePropertyStatus syncing:', propertyId, status);
+                            window.supabase.from('properties').upsert({
+                                id: String(propertyId),
+                                status: status,
+                                taken_by: takenBy || '',
+                                taken_date: property.takenDate || null,
+                                updated_at: property.updatedAt
+                            }, { onConflict: 'id' }).then(({ error }) => {
+                                if (error) {
+                                    console.error('[v68.2] updatePropertyStatus sync error:', error.message);
+                                } else {
+                                    console.log('[v68.2] ✅ Property status synced');
+                                }
+                            });
+                        }
                     }
                 }
 
@@ -31205,6 +31224,9 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     const confirmed = confirm(`Mark all ${group.length} studios at ${mainAddress} as ${markAsTaken ? 'TAKEN' : 'AVAILABLE'}?`);
                     if (!confirmed) return;
 
+                    const newStatus = markAsTaken ? 'taken' : 'available';
+                    const updatedAt = new Date().toISOString();
+                    
                     group.forEach(prop => {
                         if (markAsTaken) {
                             takenProperties.add(prop.id);
@@ -31213,6 +31235,7 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                             takenProperties.delete(prop.id);
                             prop.status = 'available';
                         }
+                        prop.updatedAt = updatedAt;
                     });
 
                     savePropertiesToStorage();
@@ -31220,6 +31243,36 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     renderPropertiesBrowseList();
                     updateMarkers();
                     showToast('Success', `Marked ${group.length} studios as ${markAsTaken ? 'taken' : 'available'}`);
+                    
+                    // v68.2: SYNC ALL CHANGED PROPERTIES TO SUPABASE
+                    if (window.supabase) {
+                        console.log('[v68.2] Bulk syncing', group.length, 'properties to Supabase');
+                        Promise.all(group.map(prop => 
+                            window.supabase.from('properties').upsert({
+                                id: String(prop.id),
+                                name: prop.name || '',
+                                address: prop.address || '',
+                                postcode: prop.postcode || '',
+                                borough: prop.borough || '',
+                                rent: prop.rent || 0,
+                                bedrooms: prop.bedrooms || 0,
+                                type: prop.type || 'Studio',
+                                status: newStatus,
+                                lat: prop.lat || null,
+                                lng: prop.lng || null,
+                                landlord: prop.landlord || '',
+                                notes: prop.notes || '',
+                                updated_at: updatedAt
+                            }, { onConflict: 'id' })
+                        )).then(results => {
+                            const errors = results.filter(r => r.error);
+                            if (errors.length > 0) {
+                                console.error('[v68.2] Bulk sync errors:', errors.length);
+                            } else {
+                                console.log('[v68.2] ✅ Bulk synced', group.length, 'properties');
+                            }
+                        });
+                    }
                 };
 
                 // Set individual property status
@@ -31228,6 +31281,7 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     if (!prop) return;
 
                     prop.status = status;
+                    prop.updatedAt = new Date().toISOString();
 
                     if (status === 'council-lease') {
                         takenProperties.delete(propId); // Remove from taken set
@@ -31242,6 +31296,39 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     renderPropertiesBrowseList();
                     updateMarkers();
                     showToast('Updated', `${prop.name} marked as ${status}`);
+                    
+                    // v68.2: SYNC THIS SPECIFIC PROPERTY TO SUPABASE IMMEDIATELY
+                    if (window.supabase) {
+                        console.log('[v68.2] Syncing property status to Supabase:', propId, status);
+                        window.supabase.from('properties').upsert({
+                            id: String(propId),
+                            name: prop.name || '',
+                            address: prop.address || '',
+                            postcode: prop.postcode || '',
+                            borough: prop.borough || '',
+                            rent: prop.rent || 0,
+                            bedrooms: prop.bedrooms || 0,
+                            type: prop.type || 'Studio',
+                            status: status,
+                            lat: prop.lat || null,
+                            lng: prop.lng || null,
+                            landlord: prop.landlord || '',
+                            notes: prop.notes || '',
+                            client_name: prop.clientName || prop.takenBy || '',
+                            taken_by: prop.takenBy || '',
+                            taken_date: prop.takenDate || null,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' }).then(({ data, error }) => {
+                            if (error) {
+                                console.error('[v68.2] ❌ Supabase property status sync FAILED:', error.message, error);
+                                showToast('Sync Error', 'Status saved locally but failed to sync to cloud', 'error');
+                            } else {
+                                console.log('[v68.2] ✅ Property status synced to Supabase:', propId, status);
+                            }
+                        });
+                    } else {
+                        console.warn('[v68.2] Supabase not available - status saved locally only');
+                    }
                 };
 
                 // Set all studios at address as council lease
@@ -31256,8 +31343,12 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     const confirmed = confirm(`${allCouncil ? 'Remove council lease from' : 'Mark'} all ${group.length} studios at ${mainAddress}${allCouncil ? '' : ' as COUNCIL LEASED'}?\n\nThis will grey out the property and remove it from available listings.`);
                     if (!confirmed) return;
 
+                    const newStatus = allCouncil ? 'available' : 'council-lease';
+                    const updatedAt = new Date().toISOString();
+                    
                     group.forEach(prop => {
-                        prop.status = allCouncil ? 'available' : 'council-lease';
+                        prop.status = newStatus;
+                        prop.updatedAt = updatedAt;
                         if (allCouncil) {
                             takenProperties.delete(prop.id);
                         }
@@ -31268,6 +31359,30 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     renderPropertiesBrowseList();
                     updateMarkers();
                     showToast('Success', `${allCouncil ? 'Removed council lease from' : 'Marked'} ${group.length} studios at ${mainAddress}`);
+                    
+                    // v68.2: SYNC TO SUPABASE
+                    if (window.supabase) {
+                        console.log('[v68.2] Syncing council lease status for', group.length, 'properties');
+                        Promise.all(group.map(prop => 
+                            window.supabase.from('properties').upsert({
+                                id: String(prop.id),
+                                name: prop.name || '',
+                                address: prop.address || '',
+                                postcode: prop.postcode || '',
+                                borough: prop.borough || '',
+                                rent: prop.rent || 0,
+                                status: newStatus,
+                                updated_at: updatedAt
+                            }, { onConflict: 'id' })
+                        )).then(results => {
+                            const errors = results.filter(r => r.error);
+                            if (errors.length > 0) {
+                                console.error('[v68.2] Council lease sync errors:', errors.length);
+                            } else {
+                                console.log('[v68.2] ✅ Council lease status synced');
+                            }
+                        });
+                    }
                 };
 
                 // Delete all studios at an address
