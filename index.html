@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 68.0                            ║
+    ║                        Version 68.3                            ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
     ║  ──────────────────────────────────────────────────────────── ║
@@ -51138,9 +51138,6 @@ Harir Industries`;
         const propName = viewing.propertyName || viewing.property || 'Property';
         const viewingDate = viewing.date ? new Date(viewing.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Unknown date';
         const viewingTime = viewing.time || 'Unknown time';
-        
-        // v68.2: Pre-detect current status to show correct state
-        const currentStatus = (viewing.status || '').toLowerCase();
         const currentOutcome = (viewing.outcome || '').toLowerCase();
         
         const modal = document.createElement('div');
@@ -51148,82 +51145,54 @@ Harir Industries`;
         modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 80000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(12px);';
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
         
-        modal.innerHTML = `
-            <div style="background: linear-gradient(165deg, #1a1f2e 0%, #0d1117 100%); border-radius: 24px; padding: 32px; max-width: 500px; width: 92%; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 100px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto;">
-                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
-                    <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🎯</div>
-                    <div>
-                        <h2 style="margin: 0; color: white; font-size: 20px; font-weight: 700;">Viewing Outcome</h2>
-                        <p style="margin: 4px 0 0; color: rgba(255,255,255,0.5); font-size: 12px;">Record what happened</p>
-                    </div>
-                </div>
-                
-                <!-- Viewing Details Card -->
-                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; margin-bottom: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <p style="margin: 0; color: white; font-size: 16px; font-weight: 600;">${escapeHTML(clientName)}</p>
-                            <p style="margin: 4px 0 0; color: rgba(255,255,255,0.6); font-size: 13px;">${escapeHTML(propName)}</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <p style="margin: 0; color: #60a5fa; font-size: 13px; font-weight: 600;">${viewingDate}</p>
-                            <p style="margin: 4px 0 0; color: rgba(255,255,255,0.5); font-size: 12px;">⏰ ${viewingTime}</p>
-                        </div>
-                    </div>
-                    ${currentOutcome ? `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);"><span style="background: rgba(139,92,246,0.2); color: #a78bfa; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase;">Current: ${currentOutcome}</span></div>` : ''}
-                </div>
-                
-                <p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 16px; font-weight: 500;">Select outcome:</p>
-                
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button onclick="recordViewingOutcome(${viewingId}, 'signed')" style="padding: 14px 18px; background: ${currentOutcome === 'signed' ? '#16a34a' : 'rgba(34,197,94,0.12)'}; color: ${currentOutcome === 'signed' ? 'white' : '#4ade80'}; border: 1px solid ${currentOutcome === 'signed' ? '#22c55e' : 'rgba(34,197,94,0.3)'}; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.25)'" onmouseout="this.style.background='${currentOutcome === 'signed' ? '#16a34a' : 'rgba(34,197,94,0.12)}'">
-                        <span style="font-size: 18px;">✅</span>
-                        <span style="flex: 1; text-align: left;">SIGNED - Client accepted & signed!</span>
-                        <span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">+100 XP</span>
-                    </button>
-                    
-                    <button onclick="recordViewingOutcome(${viewingId}, 'interested')" style="padding: 14px 18px; background: ${currentOutcome === 'interested' ? '#2563eb' : 'rgba(59,130,246,0.12)'}; color: ${currentOutcome === 'interested' ? 'white' : '#60a5fa'}; border: 1px solid ${currentOutcome === 'interested' ? '#3b82f6' : 'rgba(59,130,246,0.3)'}; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
-                        <span style="font-size: 18px;">👍</span>
-                        <span style="flex: 1; text-align: left;">INTERESTED - Thinking about it</span>
-                        <span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">+15 XP</span>
-                    </button>
-                    
-                    <button onclick="recordViewingOutcome(${viewingId}, 'declined')" style="padding: 14px 18px; background: ${currentOutcome === 'declined' ? '#d97706' : 'rgba(245,158,11,0.12)'}; color: ${currentOutcome === 'declined' ? 'white' : '#fbbf24'}; border: 1px solid ${currentOutcome === 'declined' ? '#f59e0b' : 'rgba(245,158,11,0.3)'}; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
-                        <span style="font-size: 18px;">❌</span>
-                        <span style="flex: 1; text-align: left;">DECLINED - Not interested</span>
-                        <span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">+10 XP</span>
-                    </button>
-                    
-                    <button onclick="recordViewingOutcome(${viewingId}, 'no-show')" style="padding: 14px 18px; background: ${currentOutcome === 'no-show' ? '#dc2626' : 'rgba(239,68,68,0.12)'}; color: ${currentOutcome === 'no-show' ? 'white' : '#f87171'}; border: 1px solid ${currentOutcome === 'no-show' ? '#ef4444' : 'rgba(239,68,68,0.3)'}; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
-                        <span style="font-size: 18px;">👻</span>
-                        <span style="flex: 1; text-align: left;">NO-SHOW - Client didn't attend</span>
-                        <span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">+5 XP</span>
-                    </button>
-                    
-                    <button onclick="recordViewingOutcome(${viewingId}, 'viewed')" style="padding: 14px 18px; background: ${currentOutcome === 'viewed' || currentOutcome === 'completed' ? '#7c3aed' : 'rgba(139,92,246,0.12)'}; color: ${currentOutcome === 'viewed' || currentOutcome === 'completed' ? 'white' : '#a78bfa'}; border: 1px solid ${currentOutcome === 'viewed' || currentOutcome === 'completed' ? '#8b5cf6' : 'rgba(139,92,246,0.3)'}; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
-                        <span style="font-size: 18px;">👁️</span>
-                        <span style="flex: 1; text-align: left;">VIEWED - Just completed viewing</span>
-                        <span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">+10 XP</span>
-                    </button>
-                    
-                    <button onclick="recordViewingOutcome(${viewingId}, 'rescheduled')" style="padding: 14px 18px; background: rgba(6,182,212,0.12); color: #22d3ee; border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;">
-                        <span style="font-size: 18px;">📅</span>
-                        <span style="flex: 1; text-align: left;">RESCHEDULED - New date needed</span>
-                        <span style="font-size: 11px; opacity: 0.6; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">0 XP</span>
-                    </button>
-                    
-                    <button onclick="recordViewingOutcome(${viewingId}, 'cancelled')" style="padding: 14px 18px; background: rgba(127,29,29,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; margin-top: 8px;">
-                        <span style="font-size: 18px;">🚫</span>
-                        <span style="flex: 1; text-align: left;">CANCELLED - Viewing cancelled</span>
-                        <span style="font-size: 11px; color: #fca5a5; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">-50 XP</span>
-                    </button>
-                </div>
-                
-                <button onclick="document.getElementById('viewing-outcome-modal').remove()" style="width: 100%; margin-top: 20px; padding: 14px; background: transparent; color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                    Cancel
-                </button>
-            </div>
-        `;
+        // Build buttons array to avoid template literal issues
+        const buttons = [
+            { outcome: 'signed', emoji: '✅', label: 'SIGNED - Client accepted & signed!', xp: '+100 XP', color: '#22c55e' },
+            { outcome: 'interested', emoji: '👍', label: 'INTERESTED - Thinking about it', xp: '+15 XP', color: '#3b82f6' },
+            { outcome: 'declined', emoji: '❌', label: 'DECLINED - Not interested', xp: '+10 XP', color: '#f59e0b' },
+            { outcome: 'no-show', emoji: '👻', label: 'NO-SHOW - Client didnt attend', xp: '+5 XP', color: '#ef4444' },
+            { outcome: 'viewed', emoji: '👁️', label: 'VIEWED - Just completed viewing', xp: '+10 XP', color: '#8b5cf6' },
+            { outcome: 'rescheduled', emoji: '📅', label: 'RESCHEDULED - New date needed', xp: '0 XP', color: '#06b6d4' },
+            { outcome: 'cancelled', emoji: '🚫', label: 'CANCELLED - Viewing cancelled', xp: '-50 XP', color: '#991b1b' }
+        ];
+        
+        const buttonsHTML = buttons.map(btn => {
+            const isActive = currentOutcome === btn.outcome;
+            const bg = isActive ? btn.color : 'rgba(255,255,255,0.05)';
+            const textColor = isActive ? 'white' : 'rgba(255,255,255,0.8)';
+            return '<button onclick="recordViewingOutcome(' + viewingId + ', \'' + btn.outcome + '\')" style="padding: 14px 18px; background: ' + bg + '; color: ' + textColor + '; border: 1px solid ' + btn.color + '44; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; width: 100%;">' +
+                '<span style="font-size: 18px;">' + btn.emoji + '</span>' +
+                '<span style="flex: 1; text-align: left;">' + btn.label + '</span>' +
+                '<span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 6px;">' + btn.xp + '</span>' +
+            '</button>';
+        }).join('');
+        
+        modal.innerHTML = 
+            '<div style="background: linear-gradient(165deg, #1a1f2e 0%, #0d1117 100%); border-radius: 24px; padding: 32px; max-width: 500px; width: 92%; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 40px 100px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto;">' +
+                '<div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">' +
+                    '<div style="width: 52px; height: 52px; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🎯</div>' +
+                    '<div>' +
+                        '<h2 style="margin: 0; color: white; font-size: 20px; font-weight: 700;">Viewing Outcome</h2>' +
+                        '<p style="margin: 4px 0 0; color: rgba(255,255,255,0.5); font-size: 12px;">Record what happened</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; margin-bottom: 24px;">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: flex-start;">' +
+                        '<div>' +
+                            '<p style="margin: 0; color: white; font-size: 16px; font-weight: 600;">' + escapeHTML(clientName) + '</p>' +
+                            '<p style="margin: 4px 0 0; color: rgba(255,255,255,0.6); font-size: 13px;">' + escapeHTML(propName) + '</p>' +
+                        '</div>' +
+                        '<div style="text-align: right;">' +
+                            '<p style="margin: 0; color: #60a5fa; font-size: 13px; font-weight: 600;">' + viewingDate + '</p>' +
+                            '<p style="margin: 4px 0 0; color: rgba(255,255,255,0.5); font-size: 12px;">⏰ ' + viewingTime + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    (currentOutcome ? '<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);"><span style="background: rgba(139,92,246,0.2); color: #a78bfa; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase;">Current: ' + currentOutcome + '</span></div>' : '') +
+                '</div>' +
+                '<p style="color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 16px; font-weight: 500;">Select outcome:</p>' +
+                '<div style="display: flex; flex-direction: column; gap: 8px;">' + buttonsHTML + '</div>' +
+                '<button onclick="document.getElementById(\'viewing-outcome-modal\').remove()" style="width: 100%; margin-top: 20px; padding: 14px; background: transparent; color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer;">Cancel</button>' +
+            '</div>';
         
         document.body.appendChild(modal);
     };
