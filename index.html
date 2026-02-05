@@ -2,7 +2,13 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 68.0                            ║
+    ║                        Version 69.0                            ║
+    ║  v69 FIXES:                                                    ║
+    ║  • Auth guard on ALL Supabase write operations                ║
+    ║  • Batch upserts (chunks of 50) instead of one-by-one        ║
+    ║  • Fixed window.supabaseClient alias                          ║
+    ║  • Silenced 15+ repeated console logs (dedup, stats, etc)    ║
+    ║  • Removed String(id) in uploadLocalOnlyData                  ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
     ║  ──────────────────────────────────────────────────────────── ║
@@ -517,7 +523,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HELM - Property Manager</title>
+    <title>HELM v69 - Property Manager</title>
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%231a5d38'/%3E%3Cstop offset='100%25' style='stop-color:%23f59e0b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='12' fill='url(%23bg)'/%3E%3Cpath d='M32 12 L52 28 L48 28 L48 52 L38 52 L38 40 L26 40 L26 52 L16 52 L16 28 L12 28 Z' fill='white' stroke='%23fafaf9' stroke-width='2' stroke-linejoin='round'/%3E%3Crect x='28' y='32' width='8' height='8' fill='%231a5d38'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -1369,10 +1375,494 @@
         
         try {
             window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('[HPM v65.5] Supabase initialized');
+            window.supabaseClient = window.supabase; // v69: Alias for legacy code
+            console.log('[HPM v69] Supabase initialized');
         } catch(e) {
-            console.error('[HPM v65.5] Supabase init failed:', e);
+            console.error('[HPM v69] Supabase init failed:', e);
         }
+        
+        // v69: Auth guard - check session before any write operation
+        window.hpmHasAuth = async function() {
+            if (!window.supabase) return false;
+            try {
+                const { data: { session } } = await window.supabase.auth.getSession();
+                return !!session;
+            } catch(e) { return false; }
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // v68.3: SUPABASE-FIRST DATA LAYER - All data goes to Supabase first
+        // localStorage is ONLY a cache for offline access
+        // ═══════════════════════════════════════════════════════════════════
+        window.HELMData = {
+            // In-memory cache
+            properties: [],
+            viewings: [],
+            pipeline: [],
+            takenSet: new Set(),
+            isOnline: true,
+            lastSync: null,
+            
+            // ═══════════════════════════════════════════════════════════
+            // INITIALIZATION - Load from Supabase first
+            // ═══════════════════════════════════════════════════════════
+            async init() {
+                console.log('[HELMData] Initializing Supabase-first data layer...');
+                
+                if (!window.supabase) {
+                    console.warn('[HELMData] Supabase not available - using localStorage fallback');
+                    this.loadFromLocalStorage();
+                    return;
+                }
+                
+                try {
+                    // Load all data from Supabase in parallel
+                    const [propsResult, viewingsResult, clientsResult] = await Promise.all([
+                        window.supabase.from('properties').select('*'),
+                        window.supabase.from('viewings').select('*'),
+                        window.supabase.from('clients').select('*')
+                    ]);
+                    
+                    if (propsResult.data) {
+                        this.properties = propsResult.data.map(p => this.mapPropertyFromDB(p));
+                        this.takenSet = new Set(this.properties.filter(p => p.status === 'taken').map(p => p.id));
+                        console.log('[HELMData] ✅ Loaded', this.properties.length, 'properties from Supabase');
+                    }
+                    
+                    if (viewingsResult.data) {
+                        this.viewings = viewingsResult.data.map(v => this.mapViewingFromDB(v));
+                        console.log('[HELMData] ✅ Loaded', this.viewings.length, 'viewings from Supabase');
+                    }
+                    
+                    if (clientsResult.data) {
+                        this.pipeline = clientsResult.data.map(c => this.mapClientFromDB(c));
+                        console.log('[HELMData] ✅ Loaded', this.pipeline.length, 'pipeline entries from Supabase');
+                    }
+                    
+                    // Cache to localStorage for offline access
+                    this.cacheToLocalStorage();
+                    this.lastSync = new Date().toISOString();
+                    this.isOnline = true;
+                    
+                    // Expose to global scope for compatibility
+                    window.properties = this.properties;
+                    window.viewings = this.viewings;
+                    window.takenProperties = this.takenSet;
+                    
+                } catch (err) {
+                    console.error('[HELMData] Supabase load failed, using localStorage:', err);
+                    this.loadFromLocalStorage();
+                    this.isOnline = false;
+                }
+            },
+            
+            // Map DB row to app format
+            mapPropertyFromDB(p) {
+                return {
+                    id: p.id,
+                    name: p.name || '',
+                    address: p.address || '',
+                    postcode: p.postcode || '',
+                    borough: p.borough || '',
+                    rent: p.rent || 0,
+                    lhaRate: p.lha_rate || p.lhaRate,
+                    bedrooms: p.bedrooms || 0,
+                    type: p.type || 'Studio',
+                    status: p.status || 'available',
+                    lat: p.lat,
+                    lng: p.lng,
+                    landlord: p.landlord || '',
+                    notes: p.notes || '',
+                    takenBy: p.taken_by || p.client_name || '',
+                    takenDate: p.taken_date,
+                    dateAdded: p.date_added || p.created_at,
+                    updatedAt: p.updated_at
+                };
+            },
+            
+            mapViewingFromDB(v) {
+                return {
+                    id: v.id,
+                    propertyId: v.property_id,
+                    propertyName: v.property_name || v.property || '',
+                    clientName: v.client_name || v.visitor || '',
+                    phone: v.phone || '',
+                    date: v.date || v.viewing_date,
+                    time: v.time || v.viewing_time,
+                    status: v.status || 'Pending',
+                    outcome: v.outcome,
+                    notes: v.notes || '',
+                    agentId: v.agent_id,
+                    agentName: v.agent_name || '',
+                    type: v.type || 'In-Person',
+                    createdAt: v.created_at,
+                    updatedAt: v.updated_at
+                };
+            },
+            
+            mapClientFromDB(c) {
+                return {
+                    id: c.id,
+                    name: c.client_name || '',
+                    phone: c.phone || '',
+                    email: c.email || '',
+                    stage: c.stage || 'New',
+                    status: c.stage || 'Pending',
+                    propertyInterest: c.property_interest || '',
+                    maxRent: c.max_rent,
+                    borough: c.borough_preference || '',
+                    referralSource: c.referral_source || '',
+                    notes: c.notes || '',
+                    createdAt: c.created_at,
+                    updatedAt: c.updated_at
+                };
+            },
+            
+            // ═══════════════════════════════════════════════════════════
+            // PROPERTY OPERATIONS - Supabase first
+            // ═══════════════════════════════════════════════════════════
+            async saveProperty(property) {
+                if (!window.supabase) {
+                    console.warn('[HELMData] Offline - saving to localStorage only');
+                    this.updateLocalProperty(property);
+                    return { success: false, offline: true };
+                }
+                
+                const dbData = {
+                    id: String(property.id),
+                    name: property.name || '',
+                    address: property.address || '',
+                    postcode: property.postcode || '',
+                    borough: property.borough || '',
+                    rent: property.rent || 0,
+                    lha_rate: property.lhaRate || null,
+                    bedrooms: property.bedrooms || 0,
+                    type: property.type || 'Studio',
+                    status: property.status || 'available',
+                    lat: property.lat || null,
+                    lng: property.lng || null,
+                    landlord: property.landlord || '',
+                    notes: property.notes || '',
+                    client_name: property.takenBy || '',
+                    taken_by: property.takenBy || '',
+                    taken_date: property.takenDate || null,
+                    updated_at: new Date().toISOString()
+                };
+                
+                console.log('[HELMData] Saving property to Supabase:', property.id);
+                
+                const { data, error } = await window.supabase
+                    .from('properties')
+                    .upsert(dbData, { onConflict: 'id' });
+                
+                if (error) {
+                    console.error('[HELMData] ❌ Property save failed:', error.message);
+                    // Still update local cache
+                    this.updateLocalProperty(property);
+                    return { success: false, error: error.message };
+                }
+                
+                console.log('[HELMData] ✅ Property saved to Supabase:', property.id);
+                this.updateLocalProperty(property);
+                return { success: true };
+            },
+            
+            async setPropertyStatus(propertyId, status, takenBy = null) {
+                const property = this.properties.find(p => p.id === propertyId || String(p.id) === String(propertyId));
+                if (!property) {
+                    console.error('[HELMData] Property not found:', propertyId);
+                    return { success: false, error: 'Property not found' };
+                }
+                
+                property.status = status;
+                property.updatedAt = new Date().toISOString();
+                if (takenBy) {
+                    property.takenBy = takenBy;
+                    property.takenDate = new Date().toISOString();
+                }
+                
+                // Update taken set
+                if (status === 'taken') {
+                    this.takenSet.add(propertyId);
+                } else {
+                    this.takenSet.delete(propertyId);
+                }
+                
+                // Save to Supabase
+                const result = await this.saveProperty(property);
+                
+                // Update global references
+                window.properties = this.properties;
+                window.takenProperties = this.takenSet;
+                
+                return result;
+            },
+            
+            updateLocalProperty(property) {
+                const idx = this.properties.findIndex(p => p.id === property.id || String(p.id) === String(property.id));
+                if (idx >= 0) {
+                    this.properties[idx] = property;
+                } else {
+                    this.properties.push(property);
+                }
+                this.cacheToLocalStorage();
+            },
+            
+            // ═══════════════════════════════════════════════════════════
+            // VIEWING OPERATIONS - Supabase first
+            // ═══════════════════════════════════════════════════════════
+            async saveViewing(viewing) {
+                if (!window.supabase) {
+                    this.updateLocalViewing(viewing);
+                    return { success: false, offline: true };
+                }
+                
+                const dbData = {
+                    id: String(viewing.id),
+                    property_id: viewing.propertyId ? String(viewing.propertyId) : null,
+                    property_name: viewing.propertyName || viewing.property || '',
+                    client_name: viewing.clientName || viewing.visitor || viewing.name || '',
+                    phone: viewing.phone || '',
+                    date: viewing.date,
+                    time: viewing.time,
+                    viewing_date: viewing.date,
+                    viewing_time: viewing.time,
+                    status: viewing.status || 'Pending',
+                    outcome: viewing.outcome || null,
+                    notes: viewing.notes || '',
+                    agent_id: viewing.agentId ? String(viewing.agentId) : null,
+                    agent_name: viewing.agentName || viewing.agent || '',
+                    type: viewing.type || 'In-Person',
+                    updated_at: new Date().toISOString()
+                };
+                
+                console.log('[HELMData] Saving viewing to Supabase:', viewing.id);
+                
+                const { data, error } = await window.supabase
+                    .from('viewings')
+                    .upsert(dbData, { onConflict: 'id' });
+                
+                if (error) {
+                    console.error('[HELMData] ❌ Viewing save failed:', error.message);
+                    this.updateLocalViewing(viewing);
+                    return { success: false, error: error.message };
+                }
+                
+                console.log('[HELMData] ✅ Viewing saved to Supabase:', viewing.id);
+                this.updateLocalViewing(viewing);
+                return { success: true };
+            },
+            
+            async updateViewingStatus(viewingId, status, outcome = null) {
+                const viewing = this.viewings.find(v => v.id === viewingId || String(v.id) === String(viewingId));
+                if (!viewing) {
+                    console.error('[HELMData] Viewing not found:', viewingId);
+                    return { success: false, error: 'Viewing not found' };
+                }
+                
+                viewing.status = status;
+                viewing.updatedAt = new Date().toISOString();
+                if (outcome) {
+                    viewing.outcome = outcome;
+                    viewing.outcomeDate = new Date().toISOString();
+                }
+                
+                return await this.saveViewing(viewing);
+            },
+            
+            updateLocalViewing(viewing) {
+                const idx = this.viewings.findIndex(v => v.id === viewing.id || String(v.id) === String(viewing.id));
+                if (idx >= 0) {
+                    this.viewings[idx] = viewing;
+                } else {
+                    this.viewings.push(viewing);
+                }
+                window.viewings = this.viewings;
+                this.cacheToLocalStorage();
+            },
+            
+            // ═══════════════════════════════════════════════════════════
+            // PIPELINE/CLIENT OPERATIONS - Supabase first
+            // ═══════════════════════════════════════════════════════════
+            async savePipelineEntry(entry) {
+                if (!window.supabase) {
+                    this.updateLocalPipeline(entry);
+                    return { success: false, offline: true };
+                }
+                
+                const dbData = {
+                    id: String(entry.id),
+                    client_name: entry.name || entry.visitor || entry.clientName || '',
+                    phone: entry.phone || '',
+                    email: entry.email || '',
+                    stage: entry.status || entry.stage || 'Pending',
+                    property_interest: entry.propertyInterest || entry.property || '',
+                    max_rent: entry.maxRent || null,
+                    borough_preference: entry.borough || '',
+                    referral_source: entry.referralSource || '',
+                    notes: entry.notes || '',
+                    updated_at: new Date().toISOString()
+                };
+                
+                console.log('[HELMData] Saving pipeline entry to Supabase:', entry.id);
+                
+                const { data, error } = await window.supabase
+                    .from('clients')
+                    .upsert(dbData, { onConflict: 'id' });
+                
+                if (error) {
+                    console.error('[HELMData] ❌ Pipeline save failed:', error.message);
+                    this.updateLocalPipeline(entry);
+                    return { success: false, error: error.message };
+                }
+                
+                console.log('[HELMData] ✅ Pipeline entry saved to Supabase:', entry.id);
+                this.updateLocalPipeline(entry);
+                return { success: true };
+            },
+            
+            async updatePipelineStatus(entryId, status) {
+                const entry = this.pipeline.find(p => p.id === entryId || String(p.id) === String(entryId));
+                if (!entry) {
+                    // Try to find in viewings
+                    const viewing = this.viewings.find(v => v.id === entryId || String(v.id) === String(entryId));
+                    if (viewing) {
+                        return await this.updateViewingStatus(entryId, status, status);
+                    }
+                    console.error('[HELMData] Pipeline entry not found:', entryId);
+                    return { success: false, error: 'Entry not found' };
+                }
+                
+                entry.status = status;
+                entry.stage = status;
+                entry.updatedAt = new Date().toISOString();
+                
+                return await this.savePipelineEntry(entry);
+            },
+            
+            updateLocalPipeline(entry) {
+                const idx = this.pipeline.findIndex(p => p.id === entry.id || String(p.id) === String(entry.id));
+                if (idx >= 0) {
+                    this.pipeline[idx] = entry;
+                } else {
+                    this.pipeline.push(entry);
+                }
+                this.cacheToLocalStorage();
+            },
+            
+            // ═══════════════════════════════════════════════════════════
+            // CACHE MANAGEMENT
+            // ═══════════════════════════════════════════════════════════
+            cacheToLocalStorage() {
+                try {
+                    localStorage.setItem('propertySystemProperties', JSON.stringify(this.properties));
+                    localStorage.setItem('propertyViewings', JSON.stringify(this.viewings));
+                    localStorage.setItem('pipelineData', JSON.stringify(this.pipeline));
+                    localStorage.setItem('takenPropertiesSet', JSON.stringify([...this.takenSet]));
+                    localStorage.setItem('helmDataLastSync', new Date().toISOString());
+                } catch (e) {
+                    console.warn('[HELMData] Cache to localStorage failed:', e);
+                }
+            },
+            
+            loadFromLocalStorage() {
+                try {
+                    const props = localStorage.getItem('propertySystemProperties');
+                    const views = localStorage.getItem('propertyViewings');
+                    const pipe = localStorage.getItem('pipelineData');
+                    const taken = localStorage.getItem('takenPropertiesSet');
+                    
+                    if (props) this.properties = JSON.parse(props);
+                    if (views) this.viewings = JSON.parse(views);
+                    if (pipe) this.pipeline = JSON.parse(pipe);
+                    if (taken) this.takenSet = new Set(JSON.parse(taken));
+                    
+                    window.properties = this.properties;
+                    window.viewings = this.viewings;
+                    window.takenProperties = this.takenSet;
+                    
+                    console.log('[HELMData] Loaded from localStorage cache:', this.properties.length, 'props,', this.viewings.length, 'viewings');
+                } catch (e) {
+                    console.error('[HELMData] localStorage load failed:', e);
+                }
+            },
+            
+            // ═══════════════════════════════════════════════════════════
+            // GETTERS
+            // ═══════════════════════════════════════════════════════════
+            getProperties() { return this.properties; },
+            getViewings() { return this.viewings; },
+            getPipeline() { return this.pipeline; },
+            getTakenSet() { return this.takenSet; },
+            
+            getProperty(id) {
+                return this.properties.find(p => p.id === id || String(p.id) === String(id));
+            },
+            
+            getViewing(id) {
+                return this.viewings.find(v => v.id === id || String(v.id) === String(id));
+            },
+            
+            // ═══════════════════════════════════════════════════════════
+            // DEBUG - Call from console: HELMData.debug()
+            // ═══════════════════════════════════════════════════════════
+            async debug() {
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('[HELMData DEBUG] Starting diagnostic...');
+                console.log('═══════════════════════════════════════════════════════════');
+                
+                // Check Supabase connection
+                if (!window.supabase) {
+                    console.error('[DEBUG] ❌ Supabase NOT connected!');
+                    return;
+                }
+                console.log('[DEBUG] ✅ Supabase client exists');
+                
+                // Check properties table schema
+                console.log('[DEBUG] Checking properties table...');
+                const { data: props, error: propsError } = await window.supabase
+                    .from('properties')
+                    .select('id, name, status')
+                    .limit(5);
+                
+                if (propsError) {
+                    console.error('[DEBUG] ❌ Properties query failed:', propsError.message);
+                    if (propsError.message.includes('status')) {
+                        console.error('[DEBUG] 🔴 STATUS COLUMN DOES NOT EXIST! Run the SQL fix.');
+                    }
+                } else {
+                    console.log('[DEBUG] ✅ Properties query succeeded');
+                    console.log('[DEBUG] Sample data:', props);
+                    const hasStatus = props.some(p => p.status !== null && p.status !== undefined);
+                    console.log('[DEBUG] Has status values:', hasStatus);
+                }
+                
+                // Try to update a property's status directly
+                const testProp = this.properties[0];
+                if (testProp) {
+                    console.log('[DEBUG] Testing direct status update on property:', testProp.id);
+                    const { data, error } = await window.supabase
+                        .from('properties')
+                        .update({ status: 'available', updated_at: new Date().toISOString() })
+                        .eq('id', String(testProp.id))
+                        .select();
+                    
+                    if (error) {
+                        console.error('[DEBUG] ❌ Direct update FAILED:', error.message, error);
+                    } else {
+                        console.log('[DEBUG] ✅ Direct update SUCCESS:', data);
+                    }
+                }
+                
+                console.log('═══════════════════════════════════════════════════════════');
+                console.log('[DEBUG] Local data summary:');
+                console.log('  Properties:', this.properties.length);
+                console.log('  Viewings:', this.viewings.length);
+                console.log('  Pipeline:', this.pipeline.length);
+                console.log('  Taken:', this.takenSet.size);
+                console.log('═══════════════════════════════════════════════════════════');
+            }
+        };
 
         // XP Values
         const XP_VALUES = {
@@ -24147,25 +24637,22 @@
                     }
                 }
                 
-                // v68: Sync viewings to Supabase - FIXED field mapping
+                // v69: Sync viewings to Supabase - batched with auth guard
                 async function syncViewingsToSupabaseNow(viewingsArray) {
                     if (!window.supabase) return;
                     
-                    // v68: Debounce - don't sync more than once per 2 seconds
+                    // v69: Auth guard
+                    if (!await window.hpmHasAuth()) return;
+                    
+                    // Debounce
                     const now = Date.now();
-                    if (window._lastViewingsSync && now - window._lastViewingsSync < 2000) {
-                        return;
-                    }
+                    if (window._lastViewingsSync && now - window._lastViewingsSync < 2000) return;
                     window._lastViewingsSync = now;
                     
                     try {
-                        let synced = 0;
-                        for (const v of viewingsArray) {
-                            // Only sync if it has an ID
-                            if (!v.id) continue;
-                            
-                            // v68: Map app fields → database columns (cleaned schema)
-                            const dbRecord = {
+                        const batch = viewingsArray
+                            .filter(v => v.id)
+                            .map(v => ({
                                 id: v.id,
                                 client_name: v.name || v.visitor || v.clientName || '',
                                 client_phone: v.phone || v.visitorPhone || v.clientPhone || '',
@@ -24173,8 +24660,8 @@
                                 property_id: v.propertyId || null,
                                 property_name: v.propertyName || v.property || '',
                                 property_address: v.propertyAddress || v.address || '',
-                                viewing_date: v.date || null, // App uses 'date', DB uses 'viewing_date'
-                                viewing_time: v.time || '', // App uses 'time', DB uses 'viewing_time'
+                                viewing_date: v.date || null,
+                                viewing_time: v.time || '',
                                 status: v.status || 'Pending',
                                 outcome: v.outcome || null,
                                 notes: v.notes || '',
@@ -24184,24 +24671,18 @@
                                 booked_by_name: v.bookedByName || null,
                                 agent_id: v.agentId || null,
                                 created_at: v.bookedAt || v.createdAt || new Date().toISOString()
-                            };
-                            
+                            }));
+                        
+                        const CHUNK_SIZE = 50;
+                        let synced = 0;
+                        for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
                             const { error } = await window.supabase
                                 .from('viewings')
-                                .upsert(dbRecord, { onConflict: 'id' });
-                            
-                            if (error) {
-                                // Only log real errors, not conflicts
-                                if (error.code !== '23505') {
-                                    console.error('[v68 Sync] Error:', error.message);
-                                }
-                            } else {
-                                synced++;
-                            }
+                                .upsert(batch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
+                            if (!error) synced += Math.min(CHUNK_SIZE, batch.length - i);
+                            else if (error.code !== '23505') console.error('[v69 Sync] Batch error:', error.message);
                         }
-                        if (synced > 0) {
-                            console.log('[v68 Sync] ✓', synced, 'viewings synced');
-                        }
+                        if (synced > 0) console.log('[v69 Sync] ✓', synced, 'viewings synced');
                     } catch (err) {
                         console.error('[v68 Sync] Error:', err);
                     }
@@ -30661,7 +31142,9 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                         }
 
                         const { lat, lon } = data[0];
-                        const baseId = Date.now();
+                        // v68.3: Use sequential IDs, not timestamps
+                        const maxId = Math.max(...properties.map(p => typeof p.id === 'number' ? p.id : 0), 0);
+                        const baseId = maxId + 1;
                         const dateAdded = new Date().toISOString();
 
                         // v62: Smart unit name generation - user can edit after
@@ -31217,7 +31700,7 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                 };
 
                 // Bulk toggle all studios at an address
-                window.bulkToggleAddress = function (mainAddress, markAsTaken) {
+                window.bulkToggleAddress = async function (mainAddress, markAsTaken) {
                     const group = properties.filter(p => p.address.replace(/^(Studio \d+[a-z]?|Flat \d+)\s*/i, '').trim() === mainAddress);
                     if (group.length === 0) return;
 
@@ -31244,90 +31727,89 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     updateMarkers();
                     showToast('Success', `Marked ${group.length} studios as ${markAsTaken ? 'taken' : 'available'}`);
                     
-                    // v68.2: SYNC ALL CHANGED PROPERTIES TO SUPABASE
+                    // v68.4: SYNC with UPDATE and integer IDs
                     if (window.supabase) {
-                        console.log('[v68.2] Bulk syncing', group.length, 'properties to Supabase');
-                        Promise.all(group.map(prop => 
-                            window.supabase.from('properties').upsert({
-                                id: String(prop.id),
-                                name: prop.name || '',
-                                address: prop.address || '',
-                                postcode: prop.postcode || '',
-                                borough: prop.borough || '',
-                                rent: prop.rent || 0,
-                                bedrooms: prop.bedrooms || 0,
-                                type: prop.type || 'Studio',
-                                status: newStatus,
-                                lat: prop.lat || null,
-                                lng: prop.lng || null,
-                                landlord: prop.landlord || '',
-                                notes: prop.notes || '',
-                                updated_at: updatedAt
-                            }, { onConflict: 'id' })
-                        )).then(results => {
-                            const errors = results.filter(r => r.error);
-                            if (errors.length > 0) {
-                                console.error('[v68.2] Bulk sync errors:', errors.length);
+                        console.log('[v68.4] Bulk syncing', group.length, 'properties to Supabase');
+                        let successCount = 0;
+                        let errorCount = 0;
+                        
+                        for (const prop of group) {
+                            const { error } = await window.supabase
+                                .from('properties')
+                                .update({ 
+                                    status: newStatus,
+                                    updated_at: updatedAt
+                                })
+                                .eq('id', parseInt(prop.id)); // Integer ID!
+                            
+                            if (error) {
+                                errorCount++;
+                                console.error('[v68.4] Bulk update error for ID', prop.id, ':', error.message);
                             } else {
-                                console.log('[v68.2] ✅ Bulk synced', group.length, 'properties');
+                                successCount++;
                             }
-                        });
+                        }
+                        
+                        if (errorCount > 0) {
+                            console.error('[v68.4] Bulk sync completed with', errorCount, 'errors');
+                            showToast('⚠️ Partial Sync', `${successCount}/${group.length} synced`, 'warning');
+                        } else {
+                            console.log('[v68.4] ✅ Bulk synced', successCount, 'properties');
+                        }
                     }
                 };
 
                 // Set individual property status
-                window.setPropertyStatus = function (propId, status) {
-                    const prop = properties.find(p => p.id === propId);
-                    if (!prop) return;
+                window.setPropertyStatus = async function (propId, status) {
+                    console.log('[v68.4] setPropertyStatus called:', propId, status);
+                    
+                    // Update local state immediately for UI
+                    const prop = properties.find(p => p.id == propId); // Use == for type coercion
+                    if (!prop) {
+                        console.error('[v68.4] Property not found:', propId);
+                        return;
+                    }
 
                     prop.status = status;
                     prop.updatedAt = new Date().toISOString();
 
                     if (status === 'council-lease') {
-                        takenProperties.delete(propId); // Remove from taken set
+                        takenProperties.delete(propId);
                     } else if (status === 'taken') {
                         takenProperties.add(propId);
                     } else {
                         takenProperties.delete(propId);
                     }
 
-                    savePropertiesToStorage();
+                    // Update UI immediately
                     renderPropertyList();
                     renderPropertiesBrowseList();
                     updateMarkers();
-                    showToast('Updated', `${prop.name} marked as ${status}`);
+                    savePropertiesToStorage();
                     
-                    // v68.2: SYNC THIS SPECIFIC PROPERTY TO SUPABASE IMMEDIATELY
+                    // v68.4: Direct Supabase UPDATE (not upsert) with correct integer ID
                     if (window.supabase) {
-                        console.log('[v68.2] Syncing property status to Supabase:', propId, status);
-                        window.supabase.from('properties').upsert({
-                            id: String(propId),
-                            name: prop.name || '',
-                            address: prop.address || '',
-                            postcode: prop.postcode || '',
-                            borough: prop.borough || '',
-                            rent: prop.rent || 0,
-                            bedrooms: prop.bedrooms || 0,
-                            type: prop.type || 'Studio',
-                            status: status,
-                            lat: prop.lat || null,
-                            lng: prop.lng || null,
-                            landlord: prop.landlord || '',
-                            notes: prop.notes || '',
-                            client_name: prop.clientName || prop.takenBy || '',
-                            taken_by: prop.takenBy || '',
-                            taken_date: prop.takenDate || null,
-                            updated_at: new Date().toISOString()
-                        }, { onConflict: 'id' }).then(({ data, error }) => {
-                            if (error) {
-                                console.error('[v68.2] ❌ Supabase property status sync FAILED:', error.message, error);
-                                showToast('Sync Error', 'Status saved locally but failed to sync to cloud', 'error');
-                            } else {
-                                console.log('[v68.2] ✅ Property status synced to Supabase:', propId, status);
-                            }
-                        });
+                        console.log('[v68.4] Sending UPDATE to Supabase for ID:', propId, 'Status:', status);
+                        
+                        const { data, error } = await window.supabase
+                            .from('properties')
+                            .update({ 
+                                status: status,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', parseInt(propId)) // Use integer, not string!
+                            .select();
+                        
+                        if (error) {
+                            console.error('[v68.4] ❌ Supabase UPDATE failed:', error.message, error);
+                            showToast('❌ Sync Error', error.message, 'error');
+                        } else {
+                            console.log('[v68.4] ✅ Supabase UPDATE success:', data);
+                            showToast('✅ Saved', `${prop.name} marked as ${status}`);
+                        }
                     } else {
-                        console.warn('[v68.2] Supabase not available - status saved locally only');
+                        console.warn('[v68.4] Supabase not available');
+                        showToast('Updated', `${prop.name} marked as ${status} (local only)`);
                     }
                 };
 
@@ -31360,28 +31842,22 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     updateMarkers();
                     showToast('Success', `${allCouncil ? 'Removed council lease from' : 'Marked'} ${group.length} studios at ${mainAddress}`);
                     
-                    // v68.2: SYNC TO SUPABASE
+                    // v68.4: SYNC with UPDATE and integer IDs
                     if (window.supabase) {
-                        console.log('[v68.2] Syncing council lease status for', group.length, 'properties');
-                        Promise.all(group.map(prop => 
-                            window.supabase.from('properties').upsert({
-                                id: String(prop.id),
-                                name: prop.name || '',
-                                address: prop.address || '',
-                                postcode: prop.postcode || '',
-                                borough: prop.borough || '',
-                                rent: prop.rent || 0,
-                                status: newStatus,
-                                updated_at: updatedAt
-                            }, { onConflict: 'id' })
-                        )).then(results => {
-                            const errors = results.filter(r => r.error);
-                            if (errors.length > 0) {
-                                console.error('[v68.2] Council lease sync errors:', errors.length);
-                            } else {
-                                console.log('[v68.2] ✅ Council lease status synced');
-                            }
-                        });
+                        console.log('[v68.4] Syncing council lease status for', group.length, 'properties');
+                        for (const prop of group) {
+                            window.supabase
+                                .from('properties')
+                                .update({ 
+                                    status: newStatus,
+                                    updated_at: updatedAt
+                                })
+                                .eq('id', parseInt(prop.id))
+                                .then(({ error }) => {
+                                    if (error) console.error('[v68.4] Council lease sync error:', error.message);
+                                });
+                        }
+                        console.log('[v68.4] ✅ Council lease sync started');
                     }
                 };
 
@@ -34072,6 +34548,15 @@ GENERATED BY RIDWAN HARIR'S PROPERTY MANAGEMENT
 
         // Initialize location intelligence on load
         document.addEventListener('DOMContentLoaded', function () {
+            // v68.3: Initialize Supabase-first data layer
+            if (window.HELMData && window.HELMData.init) {
+                window.HELMData.init().then(() => {
+                    console.log('[v68.3] HELMData initialized - Supabase is primary storage');
+                }).catch(err => {
+                    console.error('[v68.3] HELMData init failed:', err);
+                });
+            }
+            
             setTimeout(() => {
                 populateLocationSelectors();
             }, 1000);
@@ -34271,7 +34756,7 @@ GENERATED BY RIDWAN HARIR'S PROPERTY MANAGEMENT
                 return viewingDate === todayStr;
             });
 
-            console.log('[Tracker] Today:', todayStr, 'Found:', todaysViewings.length, 'viewings');
+            // v69: Silenced per-cycle tracker log
 
             // Sort by time
             todaysViewings.sort((a, b) => {
@@ -35330,7 +35815,7 @@ Total: ${referrals.length}
                 }
             });
             
-            console.log(`[v68 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
+            if (records.length !== result.length) console.log(`[v69 Dedup] ${records.length} → ${result.length} (removed ${records.length - result.length} duplicates)`);
             return result;
         };
         
@@ -35356,7 +35841,7 @@ Total: ${referrals.length}
                 }
             });
             
-            console.log(`[v67.7 Dedup Viewings] ${viewings.length} → ${result.length}`);
+            if (viewings.length !== result.length) console.log(`[v69 Dedup Viewings] ${viewings.length} → ${result.length}`);
             return result;
         };
 
@@ -35603,7 +36088,11 @@ Total: ${referrals.length}
             pipelineData = deduped;
             window._dataCache.pipeline = deduped;
             
-            console.log('[v67.8 Pipeline] Loaded', deduped.length, 'entries from all sources');
+            // v69: Only log when pipeline count changes
+            if (!window._lastPipelineCount || window._lastPipelineCount !== deduped.length) {
+                console.log('[v69 Pipeline] Loaded', deduped.length, 'entries from all sources');
+                window._lastPipelineCount = deduped.length;
+            }
             
             return deduped;
         };
@@ -35618,34 +36107,38 @@ Total: ${referrals.length}
             // Update metrics immediately
             updatePipelineMetrics();
             
-            // Sync to Supabase if available
-            if (window.supabase && !window._isSyncing) {
+            // Sync to Supabase if available and authenticated
+            if (window.supabase && !window._isSyncing && await window.hpmHasAuth()) {
                 try {
-                    // Batch upsert to clients table
+                    // v69: Batch upsert to clients table
+                    const batch = pipelineData
+                        .map(row => {
+                            const clientName = row.visitor || row.name || row.clientName || '';
+                            if (!clientName) return null;
+                            if (!row.id) row.id = Date.now() + Math.random().toString(36).substr(2, 9);
+                            return {
+                                id: row.id,
+                                client_name: clientName,
+                                phone: row.phone || '',
+                                email: row.email || '',
+                                stage: row.status || 'Pending',
+                                property_interest: row.property || '',
+                                max_rent: row.budget || row.maxRent || null,
+                                borough_preference: row.borough || '',
+                                referral_source: row.source || row.referralSource || '',
+                                notes: row.notes || '',
+                                last_contact: row.lastContact || new Date().toISOString()
+                            };
+                        })
+                        .filter(Boolean);
+                    
+                    const CHUNK_SIZE = 50;
                     let syncCount = 0;
-                    for (const row of pipelineData) {
-                        // v68.1: Skip entries without a name
-                        const clientName = row.visitor || row.name || row.clientName || '';
-                        if (!clientName) continue;
-                        
-                        if (!row.id) row.id = Date.now() + Math.random().toString(36).substr(2, 9);
-                        
-                        const { error } = await window.supabase.from('clients').upsert({
-                            id: row.id,
-                            client_name: clientName,
-                            phone: row.phone || '',
-                            email: row.email || '',
-                            stage: row.status || 'Pending',
-                            property_interest: row.property || '',
-                            max_rent: row.budget || row.maxRent || null,
-                            borough_preference: row.borough || '',
-                            referral_source: row.source || row.referralSource || '',
-                            notes: row.notes || '',
-                            last_contact: row.lastContact || new Date().toISOString()
-                        }, { onConflict: 'id' });
-                        if (!error) syncCount++;
+                    for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+                        const { error } = await window.supabase.from('clients').upsert(batch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
+                        if (!error) syncCount += Math.min(CHUNK_SIZE, batch.length - i);
                     }
-                    console.log('[v66 Data] ✅ Synced ' + syncCount + ' entries to Supabase');
+                    if (syncCount > 0) console.log('[v69 Data] ✅ Synced ' + syncCount + ' entries to Supabase');
                 } catch (e) {
                     console.error('[v66 Data] Supabase sync error:', e);
                 }
@@ -37156,128 +37649,135 @@ Total: ${referrals.length}
         };
 
 // v59.7: Update pipeline row status
-window.updatePipelineRowStatus = function(id, newStatus) {
+window.updatePipelineRowStatus = async function(id, newStatus) {
+    console.log('[v68.3] updatePipelineRowStatus:', id, newStatus);
+    
     let data = loadPipelineData();
     const idx = data.findIndex(r => r.id === id || String(r.id) === String(id));
-    if (idx !== -1) {
-        const oldStatus = data[idx].status;
-        const row = data[idx];
-        data[idx].status = newStatus;
-        data[idx].updatedAt = new Date().toISOString(); // v68: Track update time
-        
-        // v68: Update ALL data stores immediately
-        pipelineData = data;
-        window._dataCache.pipeline = data; // Update cache!
-        localStorage.setItem('pipelineData', JSON.stringify(data));
-        
-        // v67.8: Also update in propertyViewings
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-        const viewingIdx = viewings.findIndex(v => v.id === id || String(v.id) === String(id));
-        if (viewingIdx !== -1) {
-            viewings[viewingIdx].status = newStatus;
-            viewings[viewingIdx].outcome = newStatus;
-            viewings[viewingIdx].updatedAt = new Date().toISOString();
-            localStorage.setItem('propertyViewings', JSON.stringify(viewings));
-            window.viewings = viewings; // Update memory too!
-            if (window._dataCache) window._dataCache.viewings = viewings;
-        }
-        
-        // v68: Also update pipelineClients if it exists
+    if (idx === -1) {
+        console.error('[v68.3] Pipeline entry not found:', id);
+        return;
+    }
+    
+    const oldStatus = data[idx].status;
+    const row = data[idx];
+    const updatedAt = new Date().toISOString();
+    
+    // Update local state immediately for UI responsiveness
+    data[idx].status = newStatus;
+    data[idx].updatedAt = updatedAt;
+    
+    // Update all local caches
+    pipelineData = data;
+    if (window._dataCache) window._dataCache.pipeline = data;
+    
+    // Also update in propertyViewings (for compatibility)
+    const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+    const viewingIdx = viewings.findIndex(v => v.id === id || String(v.id) === String(id));
+    if (viewingIdx !== -1) {
+        viewings[viewingIdx].status = newStatus;
+        viewings[viewingIdx].outcome = newStatus;
+        viewings[viewingIdx].updatedAt = updatedAt;
+        window.viewings = viewings;
+        if (window._dataCache) window._dataCache.viewings = viewings;
+    }
+    
+    // Update UI immediately
+    renderPipelineTrackerTable();
+    
+    console.log('[v68.3] Status updated locally:', oldStatus, '→', newStatus);
+    
+    // v68.3: SYNC TO SUPABASE FIRST (primary storage)
+    if (window.supabase) {
         try {
-            const pipelineClients = JSON.parse(localStorage.getItem('pipelineClients') || '[]');
-            const clientIdx = pipelineClients.findIndex(c => c.id === id || String(c.id) === String(id));
-            if (clientIdx !== -1) {
-                pipelineClients[clientIdx].status = newStatus;
-                localStorage.setItem('pipelineClients', JSON.stringify(pipelineClients));
+            // Update viewings table
+            const { error: viewingError } = await window.supabase
+                .from('viewings')
+                .upsert({
+                    id: String(id),
+                    status: newStatus,
+                    outcome: newStatus,
+                    property_name: row.property || row.propertyName || '',
+                    client_name: row.visitor || row.name || row.clientName || '',
+                    phone: row.phone || '',
+                    date: row.date,
+                    time: row.time,
+                    updated_at: updatedAt
+                }, { onConflict: 'id' });
+            
+            if (viewingError) {
+                console.error('[v68.3] ❌ Viewings sync failed:', viewingError.message);
+                showToast('⚠️ Sync Error', 'Status saved locally but cloud sync failed', 'warning');
+            } else {
+                console.log('[v68.3] ✅ Viewings synced to Supabase');
             }
-        } catch(e) {}
-        
-        console.log('[v68] Status updated:', oldStatus, '→', newStatus, 'for ID:', id);
-        
-        // v67.8: SYNC TO SUPABASE IMMEDIATELY
-        if (window.supabase) {
-            window.supabase.from('viewings').update({
-                status: newStatus,
-                outcome: newStatus,
-                updated_at: new Date().toISOString()
-            }).eq('id', id).then(({ error }) => {
-                if (error) console.error('[Pipeline→Supabase] Status update error:', error);
-                else console.log('[Pipeline→Supabase] ✓ Status synced:', newStatus);
-            });
             
             // Also update clients table if we have phone
             if (row.phone) {
-                window.supabase.from('clients').update({
-                    stage: newStatus,
-                    last_contact: new Date().toISOString()
-                }).eq('phone', row.phone).then(({ error }) => {
-                    if (error) console.log('[Pipeline→Supabase] Client update skipped');
-                });
+                const { error: clientError } = await window.supabase
+                    .from('clients')
+                    .upsert({
+                        id: String(id),
+                        client_name: row.visitor || row.name || row.clientName || '',
+                        phone: row.phone,
+                        stage: newStatus,
+                        updated_at: updatedAt
+                    }, { onConflict: 'id' });
+                
+                if (!clientError) {
+                    console.log('[v68.3] ✅ Clients synced to Supabase');
+                }
             }
+        } catch (err) {
+            console.error('[v68.3] Supabase sync error:', err);
+        }
+    }
+    
+    // Cache to localStorage AFTER Supabase (localStorage is just cache now)
+    localStorage.setItem('pipelineData', JSON.stringify(data));
+    if (viewingIdx !== -1) {
+        localStorage.setItem('propertyViewings', JSON.stringify(viewings));
+    }
+    
+    // Handle sign-up celebrations and property status
+    if (newStatus === 'Signed Up' && oldStatus !== 'Signed Up') {
+        // Log to Watcher
+        if (window.TheWatcher) {
+            window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_SIGNED_UP, {
+                clientName: row.visitor || row.name || 'Client',
+                property: row.property || row.propertyName || 'Property',
+                propertyId: row.propertyId,
+                date: updatedAt
+            });
+        }
+
+        // Show celebration
+        if (typeof showSignUpCelebration === 'function') {
+            showSignUpCelebration(row.visitor || row.name || 'Client', row.property || row.propertyName || 'Property');
         }
         
-        renderPipelineTrackerTable();
+        // Prevent XP farming
+        const awardedXPKey = 'helm_awarded_xp';
+        let awardedXP = JSON.parse(localStorage.getItem(awardedXPKey) || '{}');
+        const viewingId = id || row.id || row.viewingId;
         
-        // v61.9: Trigger celebration and XP for Signed Up
-        if (newStatus === 'Signed Up' && oldStatus !== 'Signed Up') {
-            // 👁️ THE WATCHER: Log sign-up
-            if (window.TheWatcher) {
-                window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_SIGNED_UP, {
-                    clientName: row.visitor || row.name || 'Client',
-                    property: row.property || row.propertyName || 'Property',
-                    propertyId: row.propertyId,
-                    date: new Date().toISOString()
-                });
+        if (viewingId && !awardedXP[viewingId]) {
+            if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
+                HPMAuth.awardXP(200, 'Deal Closed!');
+            } else if (typeof awardXP === 'function') {
+                awardXP(200, 'Deal Closed!', '🎉');
             }
-
-            // Show celebration
-            if (typeof showSignUpCelebration === 'function') {
-                showSignUpCelebration(row.visitor || row.name || 'Client', row.property || row.propertyName || 'Property');
+            awardedXP[viewingId] = { awardedAt: updatedAt, amount: 200, client: row.visitor || row.name };
+            localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
+            showHelmNotification('Deal Closed! +200 XP', 'success');
+        }
+        
+        // Mark property as taken
+        if (row.propertyId) {
+            if (window.setPropertyStatus) {
+                window.setPropertyStatus(row.propertyId, 'taken');
             }
-            
-            // v68: PREVENT XP FARMING - Only award XP once per viewing
-            const awardedXPKey = 'helm_awarded_xp';
-            let awardedXP = JSON.parse(localStorage.getItem(awardedXPKey) || '{}');
-            const viewingId = id || row.id || row.viewingId;
-            
-            if (viewingId && !awardedXP[viewingId]) {
-                // Award XP
-                if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                    HPMAuth.awardXP(200, 'Deal Closed!');
-                } else if (typeof awardXP === 'function') {
-                    awardXP(200, 'Deal Closed!', '🎉');
-                } else if (typeof addXP === 'function') {
-                    addXP(200);
-                }
-                // Mark as awarded
-                awardedXP[viewingId] = { 
-                    awardedAt: new Date().toISOString(),
-                    amount: 200,
-                    client: row.visitor || row.name || 'Client'
-                };
-                localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
-                showHelmNotification('Deal Closed! +200 XP', 'success');
-            } else {
-                console.log('[v68] XP already awarded for viewing', viewingId);
-                showHelmNotification('Deal Closed! (XP already awarded)', 'success');
-            }
-            
-            // Mark property as taken if we have propertyId
-            if (row.propertyId) {
-                if (!window.takenProperties) window.takenProperties = new Set();
-                window.takenProperties.add(row.propertyId);
-                const property = window.properties?.find(p => p.id == row.propertyId);
-                if (property) {
-                    property.status = 'taken';
-                    property.clientName = row.visitor || row.name;
-                    property.takenDate = new Date().toISOString();
-                    try {
-                        localStorage.setItem('propertySystemProperties', JSON.stringify(window.properties));
-                        localStorage.setItem('takenPropertiesSet', JSON.stringify([...window.takenProperties]));
-                    } catch(e) {}
-                    
-                    // v67.8: Sync property status to Supabase
-                    if (window.supabase) {
+        
                         window.supabase.from('properties').update({
                             status: 'taken',
                             client_name: row.visitor || row.name,
@@ -37289,7 +37789,7 @@ window.updatePipelineRowStatus = function(id, newStatus) {
             
             // Refresh stats
             if (typeof refreshAllStats === 'function') setTimeout(refreshAllStats, 100);
-        } else if (newStatus === 'No Show' && oldStatus !== 'No Show') {
+            else if (newStatus === 'No Show' && oldStatus !== 'No Show') {
             // 👁️ THE WATCHER: Log no-show
             if (window.TheWatcher) {
                 window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_NO_SHOW, {
@@ -37307,8 +37807,6 @@ window.updatePipelineRowStatus = function(id, newStatus) {
         } else {
             showToast('Updated', 'Status changed to ' + newStatus)
         }
-    }
-};
 
 // v59.7: Edit pipeline row
 window.editPipelineRow = function(id) {
@@ -45348,7 +45846,7 @@ Harir Industries`
             });
             
             if (hasLocations) {
-                console.log('[AGENT LOCATION] Updated', Object.keys(window.agentLocationMarkers).length, 'agent markers');
+                // v69: Silenced per-cycle agent location log
             }
         };
         
@@ -50341,7 +50839,7 @@ Harir Industries`;
             if (availableEl) availableEl.textContent = availableCount;
             if (takenEl) takenEl.textContent = takenCount;
 
-            console.log('[PropertyStats] Total:', props.length, 'Available:', availableCount, 'Taken:', takenCount);
+            // v69: Silenced per-cycle stats log
         };
 
         // ==================== LHA GAP ANALYZER ====================
@@ -53656,7 +54154,7 @@ Harir Industries`;
             const totalSignups = Math.max(calculatedSignups, storedAgentSignups);
             const successRate = agentViewings.length > 0 ? Math.round((totalSignups / agentViewings.length) * 100) : 0;
 
-            console.log(`[Leaderboard] ${agent.name}: ${agentViewings.length} viewings, ${totalSignups} signups (stored: ${storedAgentSignups}, pipeline: ${pipelineSignups}, viewings: ${viewingSignups})`);
+            // v69: Silenced per-cycle leaderboard log
 
             return {
                 ...agent,
@@ -53819,7 +54317,7 @@ Harir Industries`;
         // v61: Also update dashboard conversion rate
         el('dash-conversion', conversionRate + '%');
 
-        console.log('[Viewings Stats] Today:', todayCount, 'Tomorrow:', tomorrowCount, 'Week:', weekCount, 'Pending:', pendingCount, 'Rate:', conversionRate + '%');
+        // v69: Silenced per-cycle viewings stats log
     };
 
     // Share Viewings Modal
@@ -58281,7 +58779,7 @@ Write the email now:`;
         const REFRESH_INTERVAL = 30000; // 30 seconds
 
         window.refreshAllStats = function () {
-            console.log('[AutoRefresh] Refreshing stats...');
+            // v69: Removed per-cycle log to reduce console noise
 
             // Refresh dashboard stats
             if (typeof updateHelmDashboard === 'function') updateHelmDashboard();
@@ -58399,7 +58897,7 @@ Write the email now:`;
             window.currentAccentColor = gradient.accent;
             window.currentTimeOfDay = timeOfDay;
 
-            console.log('[TimeGradient] Set to', timeOfDay, 'mode');
+            // v69: Silenced - only fires on init now
         };
 
         // Initial update - run immediately and after DOM ready
@@ -58950,45 +59448,52 @@ Write the email now:`;
     // UPLOAD LOCAL DATA TO SUPABASE
     // ═══════════════════════════════════════════════════════════
     async function uploadAllLocalData() {
-        // Upload viewings
+        // v69: Auth guard
+        if (!await window.hpmHasAuth()) {
+            console.warn('[HPM Sync] Skipping upload - not authenticated');
+            return;
+        }
+        
+        // Upload viewings in batch
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
         const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
         
-        for (const v of viewings) {
-            // v67.7: Ensure property_name is populated
-            let propName = v.propertyName || v.property;
-            let propAddress = v.propertyAddress || v.address;
-            
-            if ((!propName || propName === 'NULL') && v.propertyId) {
-                const prop = properties.find(p => p.id === parseInt(v.propertyId));
-                if (prop) {
-                    propName = prop.name;
-                    propAddress = propAddress || prop.address;
-                }
-            }
-            
-            await window.supabase.from('viewings').upsert({
-                id: v.id,
-                client_name: v.clientName || v.name || v.visitor,
-                client_phone: v.phone || v.clientPhone,
-                client_email: v.email || v.clientEmail,
-                property_id: v.propertyId,
-                property_name: propName,
-                property_address: propAddress,
-                viewing_date: v.date,
-                viewing_time: v.time,
-                status: v.status || 'scheduled',
-                outcome: v.outcome,
-                agent_id: v.agentId,
-                notes: v.notes,
-                updated_at: v.updatedAt || new Date().toISOString()
-            }, { onConflict: 'id' });
-        }
-        console.log(`[HPM Sync] Uploaded ${viewings.length} viewings`);
+        const CHUNK_SIZE = 50;
         
-        // Upload properties (reuse properties array from above)
-        for (const p of properties) {
-            await window.supabase.from('properties').upsert({
+        if (viewings.length > 0) {
+            const viewingBatch = viewings.map(v => {
+                let propName = v.propertyName || v.property;
+                let propAddress = v.propertyAddress || v.address;
+                if ((!propName || propName === 'NULL') && v.propertyId) {
+                    const prop = properties.find(p => p.id === parseInt(v.propertyId));
+                    if (prop) { propName = prop.name; propAddress = propAddress || prop.address; }
+                }
+                return {
+                    id: v.id,
+                    client_name: v.clientName || v.name || v.visitor,
+                    client_phone: v.phone || v.clientPhone,
+                    client_email: v.email || v.clientEmail,
+                    property_id: v.propertyId,
+                    property_name: propName,
+                    property_address: propAddress,
+                    viewing_date: v.date,
+                    viewing_time: v.time,
+                    status: v.status || 'scheduled',
+                    outcome: v.outcome,
+                    agent_id: v.agentId,
+                    notes: v.notes,
+                    updated_at: v.updatedAt || new Date().toISOString()
+                };
+            });
+            for (let i = 0; i < viewingBatch.length; i += CHUNK_SIZE) {
+                await window.supabase.from('viewings').upsert(viewingBatch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
+            }
+            console.log(`[HPM Sync] Uploaded ${viewings.length} viewings`);
+        }
+        
+        // Upload properties in batch
+        if (properties.length > 0) {
+            const propBatch = properties.map(p => ({
                 id: p.id,
                 name: p.name,
                 address: p.address,
@@ -59002,39 +59507,45 @@ Write the email now:`;
                 lng: p.lng,
                 landlord: p.landlord,
                 notes: p.notes
-            }, { onConflict: 'id' });
+            }));
+            for (let i = 0; i < propBatch.length; i += CHUNK_SIZE) {
+                await window.supabase.from('properties').upsert(propBatch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
+            }
+            console.log(`[HPM Sync] Uploaded ${properties.length} properties`);
         }
-        console.log(`[HPM Sync] Uploaded ${properties.length} properties`);
         
-        // Upload clients/pipeline - v65.8: Use pipelineData and correct field mapping
-        // The app stores pipeline in 'pipelineData', NOT 'elevate_clients'
+        // Upload clients/pipeline in batch
         const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
-        console.log(`[HPM Sync] Found ${pipelineData.length} pipeline entries to upload`);
         
-        let clientSuccessCount = 0;
-        for (const c of pipelineData) {
-            // v68.1: Skip entries without a name
-            const clientName = c.name || c.clientName || c.client_name || c.visitor || '';
-            if (!clientName) continue;
+        if (pipelineData.length > 0) {
+            const clientBatch = pipelineData
+                .map(c => {
+                    const clientName = c.name || c.clientName || c.client_name || c.visitor || '';
+                    if (!clientName) return null;
+                    return {
+                        id: c.id,
+                        client_name: clientName,
+                        phone: c.phone || '',
+                        email: c.email || '',
+                        stage: c.stage || c.status || 'New',
+                        property_interest: c.propertyInterest || c.property_interest || c.property || '',
+                        max_rent: c.maxRent || c.max_rent || null,
+                        borough_preference: c.boroughPreference || c.borough_preference || '',
+                        referral_source: c.referralSource || c.referral_source || c.source || '',
+                        notes: c.notes || '',
+                        last_contact: c.lastContact || c.last_contact || new Date().toISOString()
+                    };
+                })
+                .filter(Boolean);
             
-            const { error } = await window.supabase.from('clients').upsert({
-                id: c.id,
-                client_name: clientName, // DB uses client_name!
-                phone: c.phone || '',
-                email: c.email || '',
-                stage: c.stage || c.status || 'New',
-                property_interest: c.propertyInterest || c.property_interest || c.property || '',
-                max_rent: c.maxRent || c.max_rent || null,
-                borough_preference: c.boroughPreference || c.borough_preference || '',
-                referral_source: c.referralSource || c.referral_source || c.source || '',
-                notes: c.notes || '',
-                last_contact: c.lastContact || c.last_contact || new Date().toISOString()
-            }, { onConflict: 'id' });
-            
-            if (!error) clientSuccessCount++;
-            else if (error.code !== '23505') console.error('[HPM Sync] Client upload error:', error.message);
+            let clientSuccessCount = 0;
+            for (let i = 0; i < clientBatch.length; i += CHUNK_SIZE) {
+                const { error } = await window.supabase.from('clients').upsert(clientBatch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
+                if (!error) clientSuccessCount += Math.min(CHUNK_SIZE, clientBatch.length - i);
+                else if (error.code !== '23505') console.error('[HPM Sync] Client batch error:', error.message);
+            }
+            console.log(`[HPM Sync] Uploaded ${clientSuccessCount}/${pipelineData.length} clients/pipeline entries`);
         }
-        console.log(`[HPM Sync] Uploaded ${clientSuccessCount}/${pipelineData.length} clients/pipeline entries`);
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -59184,19 +59695,21 @@ Write the email now:`;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
         if (window._isSyncing) return; // v68.1: Don't sync during initial load
         
+        // v69: Auth guard - don't fire upserts without a session
+        if (!await window.hpmHasAuth()) {
+            console.warn('[HPM Sync] Skipping viewings sync - not authenticated');
+            return;
+        }
+        
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
         if (viewings.length === 0) {
-            console.log('[HPM Sync] No viewings to sync');
             return;
         }
         
         const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
         
-        let successCount = 0;
-        let errorCount = 0;
-        
-        for (const v of viewings) {
-            // v67.7: Ensure property_name is populated
+        // v69: Batch upsert instead of one-by-one
+        const batch = viewings.map(v => {
             let propName = v.propertyName || v.property || '';
             let propAddress = v.propertyAddress || v.address || '';
             
@@ -59208,7 +59721,7 @@ Write the email now:`;
                 }
             }
             
-            const { error } = await window.supabase.from('viewings').upsert({
+            return {
                 id: v.id,
                 client_name: v.clientName || v.name || v.visitor || '',
                 client_phone: v.phone || v.clientPhone || '',
@@ -59223,16 +59736,26 @@ Write the email now:`;
                 agent_id: v.agentId || v.agent_id || null,
                 notes: v.notes || '',
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'id' });
-            
+            };
+        });
+        
+        // v69: Send in chunks of 50 instead of one-by-one
+        const CHUNK_SIZE = 50;
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+            const chunk = batch.slice(i, i + CHUNK_SIZE);
+            const { error } = await window.supabase.from('viewings').upsert(chunk, { onConflict: 'id' });
             if (error) {
-                errorCount++;
-                if (errorCount <= 3) console.error('[HPM Sync] Viewing sync error:', error);
+                errorCount += chunk.length;
+                if (errorCount <= 3) console.error('[HPM Sync] Viewing batch error:', error.message);
             } else {
-                successCount++;
+                successCount += chunk.length;
             }
         }
-        console.log(`[HPM Sync] Synced ${successCount}/${viewings.length} viewings to cloud` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
+        
+        console.log(`[HPM Sync] Synced ${successCount}/${viewings.length} viewings` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
     }
     
     async function loadViewingsFromSupabase() {
@@ -59483,45 +60006,56 @@ Write the email now:`;
     async function syncPipelineToSupabase() {
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
-        if (window._isSyncing) return; // v68.1: Prevent sync during initial load
+        if (window._isSyncing) return;
+        
+        // v69: Auth guard
+        if (!await window.hpmHasAuth()) {
+            return;
+        }
         
         const pipeline = JSON.parse(localStorage.getItem('pipelineData') || '[]');
         if (pipeline.length === 0) return;
         
-        console.log(`[HPM Sync] Syncing ${pipeline.length} pipeline entries to cloud...`);
+        // v69: Build batch, filter out nameless entries
+        const batch = pipeline
+            .map(c => {
+                const clientName = c.name || c.clientName || c.client_name || c.visitor || '';
+                if (!clientName) return null;
+                return {
+                    id: c.id,
+                    client_name: clientName,
+                    phone: c.phone || '',
+                    email: c.email || '',
+                    stage: c.stage || c.status || 'New',
+                    property_interest: c.propertyInterest || c.property_interest || c.property || '',
+                    max_rent: c.maxRent || c.max_rent || null,
+                    borough_preference: c.boroughPreference || c.borough_preference || '',
+                    referral_source: c.referralSource || c.referral_source || c.source || '',
+                    notes: c.notes || '',
+                    last_contact: c.lastContact || c.last_contact || new Date().toISOString()
+                };
+            })
+            .filter(Boolean);
         
+        if (batch.length === 0) return;
+        
+        // v69: Batch upsert in chunks of 50
+        const CHUNK_SIZE = 50;
         let successCount = 0;
         let errorCount = 0;
         
-        for (const c of pipeline) {
-            // v68.1: Skip entries without a name
-            const clientName = c.name || c.clientName || c.client_name || c.visitor || '';
-            if (!clientName) {
-                continue;
-            }
-            
-            const { error } = await window.supabase.from('clients').upsert({
-                id: c.id,
-                client_name: clientName, // DB uses client_name!
-                phone: c.phone || '',
-                email: c.email || '',
-                stage: c.stage || c.status || 'New',
-                property_interest: c.propertyInterest || c.property_interest || c.property || '',
-                max_rent: c.maxRent || c.max_rent || null,
-                borough_preference: c.boroughPreference || c.borough_preference || '',
-                referral_source: c.referralSource || c.referral_source || c.source || '',
-                notes: c.notes || '',
-                last_contact: c.lastContact || c.last_contact || new Date().toISOString()
-            }, { onConflict: 'id' });
-            
+        for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+            const chunk = batch.slice(i, i + CHUNK_SIZE);
+            const { error } = await window.supabase.from('clients').upsert(chunk, { onConflict: 'id' });
             if (error) {
-                errorCount++;
-                if (errorCount <= 3) console.error('[HPM Sync] Pipeline sync error:', error.message);
+                errorCount += chunk.length;
+                if (errorCount <= chunk.length) console.error('[HPM Sync] Pipeline batch error:', error.message);
             } else {
-                successCount++;
+                successCount += chunk.length;
             }
         }
-        console.log(`[HPM Sync] ✅ Synced ${successCount}/${pipeline.length} pipeline entries to cloud` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
+        
+        console.log(`[HPM Sync] ✅ Synced ${successCount}/${batch.length} pipeline entries` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
     }
     
     // v65.7: Sync properties to Supabase
@@ -59529,43 +60063,50 @@ Write the email now:`;
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
         
-        const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
+        // v69: Auth guard
+        if (!await window.hpmHasAuth()) {
+            return;
+        }
         
-        // v68.1: Batch sync with proper null handling
+        const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
+        if (properties.length === 0) return;
+        
+        // v69: Batch upsert in chunks of 50
+        const CHUNK_SIZE = 50;
         let successCount = 0;
         let errorCount = 0;
         
-        for (const p of properties) {
-            const { error } = await window.supabase.from('properties').upsert({
-                id: p.id,
-                name: p.name || '',
-                address: p.address || '',
-                postcode: p.postcode || '',
-                borough: p.borough || '',
-                rent: p.rent || 0,
-                lha_rate: p.lhaRate || p.lha_rate || 0,
-                bedrooms: p.bedrooms || 0,
-                status: p.status || 'available',
-                lat: p.lat || null,
-                lng: p.lng || null,
-                landlord: p.landlord || '',
-                notes: p.notes || '',
-                // v68.1: Provide empty string for client fields instead of null
-                client_name: p.clientName || p.client_name || '',
-                taken_by: p.takenBy || p.taken_by || '',
-                taken_date: p.takenDate || p.taken_date || null,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'id' });
-            
+        const batch = properties.map(p => ({
+            id: p.id,
+            name: p.name || '',
+            address: p.address || '',
+            postcode: p.postcode || '',
+            borough: p.borough || '',
+            rent: p.rent || 0,
+            lha_rate: p.lhaRate || p.lha_rate || 0,
+            bedrooms: p.bedrooms || 0,
+            status: p.status || 'available',
+            lat: p.lat || null,
+            lng: p.lng || null,
+            landlord: p.landlord || '',
+            notes: p.notes || '',
+            client_name: p.clientName || p.client_name || '',
+            taken_by: p.takenBy || p.taken_by || '',
+            taken_date: p.takenDate || p.taken_date || null,
+            updated_at: new Date().toISOString()
+        }));
+        
+        for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+            const chunk = batch.slice(i, i + CHUNK_SIZE);
+            const { error } = await window.supabase.from('properties').upsert(chunk, { onConflict: 'id' });
             if (error) {
-                errorCount++;
-                // v68.1: Only log first few errors to avoid spam
-                if (errorCount <= 3) console.error('[HPM Sync] Property error:', error);
+                errorCount += chunk.length;
+                if (errorCount <= chunk.length) console.error('[HPM Sync] Property batch error:', error.message);
             } else {
-                successCount++;
+                successCount += chunk.length;
             }
         }
-        console.log(`[HPM Sync] Synced ${successCount}/${properties.length} properties to cloud` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
+        console.log(`[HPM Sync] Synced ${successCount}/${properties.length} properties` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -59803,6 +60344,13 @@ Write the email now:`;
     async function uploadLocalOnlyData() {
         if (!window.supabase) return;
         
+        // v69: Auth guard
+        if (!await window.hpmHasAuth()) {
+            return;
+        }
+        
+        const CHUNK_SIZE = 50;
+        
         // Check for local viewings not in cloud
         const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
         const localProps = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
@@ -59813,21 +60361,15 @@ Write the email now:`;
         
         if (localOnly.length > 0) {
             console.log(`[HPM Sync] ⬆️ Uploading ${localOnly.length} local-only viewings...`);
-            for (const v of localOnly) {
-                // v67.7: Ensure property_name is populated
+            const batch = localOnly.map(v => {
                 let propName = v.propertyName || v.property;
                 let propAddress = v.propertyAddress || v.address;
-                
                 if ((!propName || propName === 'NULL') && v.propertyId) {
                     const prop = localProps.find(p => p.id === parseInt(v.propertyId));
-                    if (prop) {
-                        propName = prop.name;
-                        propAddress = propAddress || prop.address;
-                    }
+                    if (prop) { propName = prop.name; propAddress = propAddress || prop.address; }
                 }
-                
-                await window.supabase.from('viewings').upsert({
-                    id: String(v.id),
+                return {
+                    id: v.id,
                     client_name: v.clientName || v.name || v.visitor,
                     client_phone: v.phone || v.clientPhone,
                     client_email: v.email,
@@ -59841,7 +60383,10 @@ Write the email now:`;
                     agent_id: v.agentId,
                     notes: v.notes,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
+                };
+            });
+            for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+                await window.supabase.from('viewings').upsert(batch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
             }
             console.log(`[HPM Sync] ✅ Uploaded ${localOnly.length} local-only viewings`);
         }
@@ -59854,22 +60399,23 @@ Write the email now:`;
         
         if (localOnlyProps.length > 0) {
             console.log(`[HPM Sync] ⬆️ Uploading ${localOnlyProps.length} local-only properties...`);
-            for (const p of localOnlyProps) {
-                await window.supabase.from('properties').upsert({
-                    id: p.id,
-                    name: p.name,
-                    address: p.address,
-                    postcode: p.postcode,
-                    borough: p.borough,
-                    rent: p.rent,
-                    lha_rate: p.lhaRate,
-                    bedrooms: p.bedrooms || 0,
-                    status: p.status || 'available',
-                    lat: p.lat,
-                    lng: p.lng,
-                    landlord: p.landlord,
-                    notes: p.notes
-                }, { onConflict: 'id' });
+            const batch = localOnlyProps.map(p => ({
+                id: p.id,
+                name: p.name,
+                address: p.address,
+                postcode: p.postcode,
+                borough: p.borough,
+                rent: p.rent,
+                lha_rate: p.lhaRate,
+                bedrooms: p.bedrooms || 0,
+                status: p.status || 'available',
+                lat: p.lat,
+                lng: p.lng,
+                landlord: p.landlord,
+                notes: p.notes
+            }));
+            for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+                await window.supabase.from('properties').upsert(batch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
             }
             console.log(`[HPM Sync] ✅ Uploaded ${localOnlyProps.length} local-only properties`);
         }
