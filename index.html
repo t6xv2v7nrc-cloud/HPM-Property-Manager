@@ -24317,10 +24317,18 @@
                 }
                 window.formatCurrencyExact = formatCurrencyExact;
 
-                // showToast - now uses unified notification system
+                // showToast - now uses unified notification system with fallback
                 function showToast(title, message, isError = false) {
                     const type = isError ? 'error' : 'success';
-                    window.notify(title, message, type);
+                    if (typeof window.notify === 'function') {
+                        window.notify(title, message, type);
+                    } else {
+                        // Fallback for when notify isn't loaded yet
+                        console.log('[Toast]', type.toUpperCase() + ':', title, message);
+                        // Queue for later if notify not ready
+                        if (!window._toastQueue) window._toastQueue = [];
+                        window._toastQueue.push({ title, message, type });
+                    }
                 }
 
                 // Make functions globally accessible
@@ -36105,7 +36113,7 @@ Total: ${referrals.length}
             }
             
             // Update metrics immediately
-            updatePipelineMetrics();
+            if (typeof updatePipelineMetrics === 'function') updatePipelineMetrics();
             
             // Sync to Supabase if available and authenticated
             if (window.supabase && !window._isSyncing && await window.hpmHasAuth()) {
@@ -37296,7 +37304,7 @@ Total: ${referrals.length}
             if (allViewings.length === 0) {
                 showToast('No Viewings', 'No viewings found to sync', true);
                 renderPipelineTrackerTable();
-                updatePipelineTrackerStats();
+                if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
                 return;
             }
 
@@ -37352,7 +37360,7 @@ Total: ${referrals.length}
             pipelineData = existingPipeline;
             savePipelineData();
             renderPipelineTrackerTable();
-            updatePipelineTrackerStats();
+            if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
 
             if (addedCount > 0) {
                 showToast('Synced!', `Added ${addedCount} new viewing(s) to pipeline`);
@@ -37463,7 +37471,7 @@ Total: ${referrals.length}
             // WW5: Render pagination controls
             renderPipelinePagination(allData.length, totalPages);
 
-            updatePipelineTrackerStats();
+            if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
         };
 
         // WW5: Pipeline Pagination Controls
@@ -37777,36 +37785,38 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
             if (window.setPropertyStatus) {
                 window.setPropertyStatus(row.propertyId, 'taken');
             }
-        
-                        window.supabase.from('properties').update({
-                            status: 'taken',
-                            client_name: row.visitor || row.name,
-                            taken_date: new Date().toISOString()
-                        }).eq('id', row.propertyId);
-                    }
-                }
+            if (window.supabase) {
+                window.supabase.from('properties').update({
+                    status: 'taken',
+                    client_name: row.visitor || row.name,
+                    taken_date: new Date().toISOString()
+                }).eq('id', parseInt(row.propertyId));
             }
-            
-            // Refresh stats
-            if (typeof refreshAllStats === 'function') setTimeout(refreshAllStats, 100);
-            else if (newStatus === 'No Show' && oldStatus !== 'No Show') {
-            // 👁️ THE WATCHER: Log no-show
-            if (window.TheWatcher) {
-                window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_NO_SHOW, {
-                    clientName: row.visitor || row.name || 'Client',
-                    property: row.property || row.propertyName || 'Property',
-                    propertyId: row.propertyId,
-                    date: new Date().toISOString()
-                });
-            }
-            // Award XP for recording no-show
-            if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                HPMAuth.awardXP(5, 'No Show Recorded');
-            }
-            showToast('No Show', 'Client marked as no-show');
-        } else {
-            showToast('Updated', 'Status changed to ' + newStatus)
         }
+        
+        showToast('🎉 Signed Up!', (row.visitor || row.name) + ' signed up!');
+    } else if (newStatus === 'No Show' && oldStatus !== 'No Show') {
+        // THE WATCHER: Log no-show
+        if (window.TheWatcher) {
+            window.TheWatcher.log(window.TheWatcher.TYPES.CLIENT_NO_SHOW, {
+                clientName: row.visitor || row.name || 'Client',
+                property: row.property || row.propertyName || 'Property',
+                propertyId: row.propertyId,
+                date: new Date().toISOString()
+            });
+        }
+        // Award XP for recording no-show
+        if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
+            HPMAuth.awardXP(5, 'No Show Recorded');
+        }
+        showToast('No Show', 'Client marked as no-show');
+    } else {
+        showToast('Updated', 'Status changed to ' + newStatus);
+    }
+    
+    // Refresh stats
+    if (typeof refreshAllStats === 'function') setTimeout(refreshAllStats, 100);
+};
 
 // v59.7: Edit pipeline row
 window.editPipelineRow = function(id) {
@@ -38221,7 +38231,7 @@ window.mergeAllPipelineDuplicates = function() {
     console.log('[Pipeline] Merged all, saved', data.length, 'entries, removed', totalRemoved);
     
     renderPipelineTrackerTable();
-    updatePipelineTrackerStats();
+    if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
     
     // Close modal
     const modal = document.querySelector('.custom-modal-overlay');
@@ -38237,7 +38247,7 @@ window.pipelineDateFilter = '1month'; // Default to last month
 window.filterPipelineByDate = function(range) {
     window.pipelineDateFilter = range;
     renderPipelineTrackerTable();
-    updatePipelineTrackerStats();
+    if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
 };
 
 // v60.27: Get date cutoff based on filter
@@ -43887,7 +43897,7 @@ Harir Industries`
             // v59.7: Initialize pipeline tracker on view switch
             if (viewName === 'pipeline') {
                 if (typeof renderPipelineTrackerTable === 'function') renderPipelineTrackerTable();
-                if (typeof updatePipelineTrackerStats === 'function') updatePipelineTrackerStats();
+                if (typeof updatePipelineTrackerStats === 'function') if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
             }
         };
 
