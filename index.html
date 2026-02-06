@@ -3,14 +3,17 @@
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
     ║                        Version 71.0                            ║
-    ║  v71 FIXES - VIEWINGS & PIPELINE SYNC:                       ║
+    ║  v71 FIXES - VIEWINGS & PIPELINE SYNC + PROPERTY ADD:        ║
     ║  • NEW syncSingleViewing() for targeted 1-viewing sync       ║
     ║  • NEW syncSinglePipelineEntry() for targeted 1-client sync  ║
     ║  • updatePipelineRowStatus: guarded localStorage writes      ║
     ║  • updateViewingOutcome: guarded + targeted sync             ║
     ║  • editPipelineRow save: guarded + targeted sync             ║
-    ║  • Pipeline dedup on render to eliminate duplicate rows       ║
-    ║  • loadViewingsFromSupabase: merge instead of overwrite      ║
+    ║  • FIX: new property ID generation (parseInt for string IDs) ║
+    ║  • FIX: addPropertyFromTab syncs each new prop to Supabase   ║
+    ║  • FIX: savePropertiesToStorage writes to BOTH storage keys  ║
+    ║  • FIX: loadPipelineData ID-based dedup + 3s cache           ║
+    ║  • FIX: loadViewingsFromSupabase merges instead of overwrite ║
     ║  ────────────────────────────────────────────────────────     ║
     ║  v70: syncSingleProperty, sync guard, property sync fixes    ║
     ╠═══════════════════════════════════════════════════════════════╣
@@ -23562,6 +23565,10 @@
                     const taken = window.takenProperties || takenProperties || new Set();
                     const success1 = setStorageItem('propertySystemProperties', props);
                     const success2 = setStorageItem('takenPropertiesSet', [...taken]);
+                    // v71: Also write to elevate_properties so auto-sync override can detect changes
+                    window._hpmSyncingToCloud = true;
+                    try { localStorage.setItem('elevate_properties', JSON.stringify(props)); } catch(e) {}
+                    window._hpmSyncingToCloud = false;
                     window.properties = props;
                     window.takenProperties = taken;
                     if (success1 && success2) {
@@ -31258,7 +31265,8 @@ Report generated: ${new Date().toLocaleString('en-GB')}
 
                         const { lat, lon } = data[0];
                         // v68.3: Use sequential IDs, not timestamps
-                        const maxId = Math.max(...properties.map(p => typeof p.id === 'number' ? p.id : 0), 0);
+                        // v71: Handle both numeric and string IDs (Supabase returns strings)
+                        const maxId = Math.max(...properties.map(p => parseInt(p.id) || 0), 0);
                         const baseId = maxId + 1;
                         const dateAdded = new Date().toISOString();
 
@@ -31302,6 +31310,13 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                         window.properties = properties;
 
                         if (savePropertiesToStorage()) {
+                            // v71: Sync each new property to Supabase
+                            for (let i = 0; i < studioCount; i++) {
+                                const newProp = properties[properties.length - studioCount + i];
+                                if (newProp && window.syncSingleProperty) {
+                                    window.syncSingleProperty(newProp);
+                                }
+                            }
                             // 🏆 Award XP for adding property
                             awardXP(20, 'Property Added', '🏠');
 
@@ -36145,6 +36160,12 @@ Total: ${referrals.length}
 
         // Load pipeline data - v67.7: Unified with deduplication
         window.loadPipelineData = function() {
+            // v71: Cache to prevent constant dedup spam (every render/refresh calls this)
+            const now = Date.now();
+            if (window._pipelineCacheTime && (now - window._pipelineCacheTime < 3000) && pipelineData && pipelineData.length > 0) {
+                return pipelineData; // Return cached data if less than 3 seconds old
+            }
+            
             // v71: Build pipeline from all sources, deduplicate by ID first
             let allData = [];
             const seenIds = new Set();
@@ -36219,6 +36240,7 @@ Total: ${referrals.length}
             // Update cache with deduplicated data
             pipelineData = deduped;
             window._dataCache.pipeline = deduped;
+            window._pipelineCacheTime = Date.now(); // v71: Cache timestamp
             
             // v69: Only log when pipeline count changes
             if (!window._lastPipelineCount || window._lastPipelineCount !== deduped.length) {
@@ -37785,6 +37807,7 @@ Total: ${referrals.length}
 // v59.7: Update pipeline row status
 window.updatePipelineRowStatus = async function(id, newStatus) {
     console.log('[v68.3] updatePipelineRowStatus:', id, newStatus);
+    window._pipelineCacheTime = 0; // v71: Invalidate cache for fresh data
     
     let data = loadPipelineData();
     const idx = data.findIndex(r => r.id === id || String(r.id) === String(id));
