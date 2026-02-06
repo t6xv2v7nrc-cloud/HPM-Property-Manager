@@ -2,15 +2,19 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 69.0                            ║
-    ║  v69 FIXES:                                                    ║
-    ║  • Auth guard on ALL Supabase write operations                ║
-    ║  • Batch upserts (chunks of 50) instead of one-by-one        ║
-    ║  • Fixed window.supabaseClient alias                          ║
-    ║  • Silenced 15+ repeated console logs (dedup, stats, etc)    ║
-    ║  • Removed String(id) in uploadLocalOnlyData                  ║
+    ║                        Version 70.0                            ║
+    ║  v70 FIXES - SYNC LOOP KILLER:                                ║
+    ║  • REMOVED full 148-property re-upload from saveProperties   ║
+    ║  • NEW syncSingleProperty() for targeted 1-property sync     ║
+    ║  • Sync guard (_hpmSyncingToCloud) prevents cascade loops    ║
+    ║  • Real-time handlers skip during our own writes             ║
+    ║  • localStorage override guarded to prevent re-trigger       ║
+    ║  • toggleStudioStatus now syncs only changed property        ║
+    ║  • updatePropertyStatus uses targeted sync                   ║
+    ║  • markAllBuildingStudios syncs only changed properties      ║
+    ║  • Debounce increased to 5s for real-time handlers           ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  v67.7 - DATA DEDUPLICATION + PIPELINE LOGIC FIX              ║
+    ║  v69: Auth guards, batch upserts, log silencing              ║
     ║  ──────────────────────────────────────────────────────────── ║
     ║  CRITICAL FIXES:                                              ║
     ║  • DEDUPLICATION SYSTEM                                       ║
@@ -22925,11 +22929,23 @@
                 if (typeof updateMarkers === 'function') updateMarkers();
                 if (typeof updateHelmDashboard === 'function') updateHelmDashboard();
 
+                // v70: Targeted single-property sync to Supabase
+                if (typeof syncSingleProperty === 'function') {
+                    syncSingleProperty(prop).then(result => {
+                        if (!result.success && !result.offline) {
+                            showToast('⚠️ Sync Error', 'Status saved locally but cloud sync failed', 'warning');
+                        }
+                    });
+                } else if (window.syncSingleProperty) {
+                    window.syncSingleProperty(prop);
+                }
+
                 showToast(wasTaken ? 'Studio Available' : 'Studio Taken', `${prop.name} marked as ${wasTaken ? 'available' : 'taken'}`);
             };
 
             // Mark all studios in a building
             window.markAllBuildingStudios = function (address, isTaken) {
+                const changedProps = [];
                 window.properties.forEach(p => {
                     const parent = (p.address || p.name || '').replace(/Studio \d+[A-Za-z]?\s*/i, '').trim();
                     if (parent === address) {
@@ -22940,6 +22956,7 @@
                             window.takenProperties.delete(p.id);
                             p.status = 'available';
                         }
+                        changedProps.push(p);
                     }
                 });
 
@@ -22950,6 +22967,9 @@
                 if (typeof updateHelmDashboard === 'function') updateHelmDashboard();
 
                 showToast('Building Updated', `All studios at ${address} marked as ${isTaken ? 'taken' : 'available'}`);
+                // v70: Sync changed properties to Supabase
+                const syncFn = typeof syncSingleProperty === 'function' ? syncSingleProperty : window.syncSingleProperty;
+                if (syncFn) changedProps.forEach(p => syncFn(p));
             };
 
             // Share building
@@ -23545,56 +23565,52 @@
                     window.properties = props;
                     window.takenProperties = taken;
                     if (success1 && success2) {
-                        console.log('[SAVE] Saved', props.length, 'properties and', taken.size, 'taken properties');
+                        console.log('[SAVE] Saved', props.length, 'properties');
                     }
                     
-                    // v67.9: SYNC ALL PROPERTIES TO SUPABASE
-                    if (window.supabase && props.length > 0) {
-                        syncPropertiesToSupabase(props);
-                    }
+                    // v70: REMOVED full re-upload of all properties on every save
+                    // Individual property changes are synced via syncSingleProperty()
                     
                     return success1 && success2;
                 }
                 
-                // v67.9: Sync properties to Supabase
-                async function syncPropertiesToSupabase(props) {
-                    if (!window.supabase) return;
-                    
+                // v70: Targeted single-property sync to Supabase
+                async function syncSingleProperty(prop) {
+                    if (!window.supabase) return { success: false, offline: true };
                     try {
-                        for (const p of props) {
-                            const { error } = await window.supabase.from('properties').upsert({
-                                id: p.id,
-                                name: p.name,
-                                address: p.address,
-                                postcode: p.postcode,
-                                borough: p.borough,
-                                rent: p.rent,
-                                lha_rate: p.lhaRate || p.lha_rate,
-                                bedrooms: p.bedrooms || 0,
-                                type: p.type || 'Studio',
-                                status: p.status || 'available',
-                                lat: p.lat,
-                                lng: p.lng,
-                                landlord: p.landlord,
-                                notes: p.notes,
-                                client_name: p.clientName || p.takenBy,
-                                taken_by: p.takenBy,
-                                taken_date: p.takenDate,
-                                date_added: p.dateAdded || new Date().toISOString()
-                            }, { onConflict: 'id' });
-                            
-                            if (error && error.code !== '23505') { // Ignore duplicate key errors
-                                console.error('[Supabase] Property sync error:', error.message);
-                            }
+                        const { error } = await window.supabase.from('properties').upsert({
+                            id: String(prop.id),
+                            name: prop.name || '',
+                            address: prop.address || '',
+                            postcode: prop.postcode || '',
+                            borough: prop.borough || '',
+                            rent: prop.rent || 0,
+                            lha_rate: prop.lhaRate || prop.lha_rate || null,
+                            bedrooms: prop.bedrooms || 0,
+                            type: prop.type || 'Studio',
+                            status: prop.status || 'available',
+                            lat: prop.lat || null,
+                            lng: prop.lng || null,
+                            landlord: prop.landlord || '',
+                            notes: prop.notes || '',
+                            client_name: prop.clientName || prop.takenBy || '',
+                            taken_by: prop.takenBy || '',
+                            taken_date: prop.takenDate || null,
+                            date_added: prop.dateAdded || new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' });
+                        if (error) {
+                            console.error('[v70] Property sync error:', prop.id, error.message);
+                            return { success: false, error: error.message };
                         }
-                        console.log('[Supabase] ✓ Synced', props.length, 'properties');
+                        console.log('[v70] ✅ Property synced:', prop.id, prop.status);
+                        return { success: true };
                     } catch (err) {
-                        console.error('[Supabase] Property sync error:', err);
+                        console.error('[v70] Property sync error:', err);
+                        return { success: false, error: err.message };
                     }
                 }
-                
-                // Expose for global use
-                window.syncPropertiesToSupabase = syncPropertiesToSupabase;
+                window.syncSingleProperty = syncSingleProperty;
 
                 // v62: NO HARDCODED DATA - All data from localStorage only
                 const defaultProperties = [];
@@ -23772,22 +23788,11 @@
                         savePropertiesToStorage();
                         renderPropertyList();
                         
-                        // v68.2: SYNC TO SUPABASE
-                        if (window.supabase) {
-                            console.log('[v68.2] updatePropertyStatus syncing:', propertyId, status);
-                            window.supabase.from('properties').upsert({
-                                id: String(propertyId),
-                                status: status,
-                                taken_by: takenBy || '',
-                                taken_date: property.takenDate || null,
-                                updated_at: property.updatedAt
-                            }, { onConflict: 'id' }).then(({ error }) => {
-                                if (error) {
-                                    console.error('[v68.2] updatePropertyStatus sync error:', error.message);
-                                } else {
-                                    console.log('[v68.2] ✅ Property status synced');
-                                }
-                            });
+                        // v70: Use targeted sync
+                        if (typeof syncSingleProperty === 'function') {
+                            syncSingleProperty(property);
+                        } else if (window.syncSingleProperty) {
+                            window.syncSingleProperty(property);
                         }
                     }
                 }
@@ -24777,10 +24782,18 @@
                     document.getElementById('property-taken-by').value = property.takenBy || '';
 
                     // Set date field - convert ISO to YYYY-MM-DD format
-                    if (property.dateAdded) {
-                        const date = new Date(property.dateAdded);
-                        document.getElementById('property-date').value = date.toISOString().split('T')[0];
-                    } else {
+                    try {
+                        if (property.dateAdded) {
+                            const date = new Date(property.dateAdded);
+                            if (!isNaN(date.getTime())) {
+                                document.getElementById('property-date').value = date.toISOString().split('T')[0];
+                            } else {
+                                document.getElementById('property-date').value = new Date().toISOString().split('T')[0];
+                            }
+                        } else {
+                            document.getElementById('property-date').value = new Date().toISOString().split('T')[0];
+                        }
+                    } catch(e) {
                         document.getElementById('property-date').value = new Date().toISOString().split('T')[0];
                     }
 
@@ -25063,6 +25076,11 @@
                     }
 
                     savePropertiesToStorage();
+                    // v70: Targeted sync for the edited/new property
+                    if (editingPropertyId) {
+                        const editedProp = properties.find(p => p.id === editingPropertyId);
+                        if (editedProp && typeof syncSingleProperty === 'function') syncSingleProperty(editedProp);
+                    }
                     closePropertyModal();
                     if (helmUIActive && helmCurrentView === 'property-manager') {
                         helmRenderPropertiesList();
@@ -59464,6 +59482,9 @@ Write the email now:`;
             return;
         }
         
+        // v70: Set sync guard to prevent real-time handler cascade
+        window._hpmSyncingToCloud = true;
+        
         // Upload viewings in batch
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
         const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
@@ -59556,6 +59577,8 @@ Write the email now:`;
             }
             console.log(`[HPM Sync] Uploaded ${clientSuccessCount}/${pipelineData.length} clients/pipeline entries`);
         }
+        // v70: Release sync guard
+        window._hpmSyncingToCloud = false;
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -59703,13 +59726,14 @@ Write the email now:`;
     async function syncViewingsToSupabase() {
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
-        if (window._isSyncing) return; // v68.1: Don't sync during initial load
+        if (window._isSyncing) return;
+        if (window._hpmSyncingToCloud) return; // v70: prevent re-entrance
         
-        // v69: Auth guard - don't fire upserts without a session
         if (!await window.hpmHasAuth()) {
-            console.warn('[HPM Sync] Skipping viewings sync - not authenticated');
             return;
         }
+        
+        window._hpmSyncingToCloud = true;
         
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
         if (viewings.length === 0) {
@@ -59766,6 +59790,7 @@ Write the email now:`;
         }
         
         console.log(`[HPM Sync] Synced ${successCount}/${viewings.length} viewings` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
+        window._hpmSyncingToCloud = false;
     }
     
     async function loadViewingsFromSupabase() {
@@ -59803,7 +59828,10 @@ Write the email now:`;
             notes: v.notes
         }));
         
+        // v70: Guard to prevent localStorage override from re-triggering sync
+        window._hpmSyncingToCloud = true;
         localStorage.setItem('propertyViewings', JSON.stringify(viewings));
+        window._hpmSyncingToCloud = false;
         console.log(`[HPM Sync] Loaded ${viewings.length} viewings from cloud`);
         
         // Refresh UI
@@ -59819,7 +59847,8 @@ Write the email now:`;
     // v67.9: Debounce tracking for real-time updates
     let lastViewingsReload = 0;
     let lastPropertiesReload = 0;
-    const SYNC_DEBOUNCE_MS = 3000; // Only reload once per 3 seconds
+    const SYNC_DEBOUNCE_MS = 5000; // v70: Increased to 5 seconds to prevent cascade
+    window._hpmSyncingToCloud = false; // v70: Flag to prevent reload during our own writes
     
     function subscribeToViewings() {
         if (!window.supabase) return;
@@ -59829,6 +59858,8 @@ Write the email now:`;
             .on('postgres_changes', 
                 { event: '*', schema: 'public', table: 'viewings' },
                 (payload) => {
+                    // v70: Skip if WE are the ones writing to Supabase
+                    if (window._hpmSyncingToCloud) return;
                     // v67.9: Debounce to prevent sync loop
                     const now = Date.now();
                     if (now - lastViewingsReload < SYNC_DEBOUNCE_MS) {
@@ -59850,6 +59881,8 @@ Write the email now:`;
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'properties' },
                 (payload) => {
+                    // v70: Skip if WE are the ones writing to Supabase
+                    if (window._hpmSyncingToCloud) return;
                     // v67.9: Debounce to prevent sync loop
                     const now = Date.now();
                     if (now - lastPropertiesReload < SYNC_DEBOUNCE_MS) {
@@ -59909,9 +59942,12 @@ Write the email now:`;
                     };
                 });
                 
+                // v70: Guard to prevent localStorage override from re-triggering sync
+                window._hpmSyncingToCloud = true;
                 localStorage.setItem('propertySystemProperties', JSON.stringify(props));
                 localStorage.setItem('elevate_properties', JSON.stringify(props));
                 localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
+                window._hpmSyncingToCloud = false;
                 window.properties = props;
                 window.takenProperties = takenSet;
                 
@@ -59934,6 +59970,8 @@ Write the email now:`;
             console.error('[Sync] Supabase not connected');
             return;
         }
+        
+        window._hpmSyncingToCloud = true; // v70: Prevent cascade
         
         const props = window.properties || JSON.parse(localStorage.getItem('propertySystemProperties') || '[]');
         const taken = window.takenProperties || new Set(JSON.parse(localStorage.getItem('takenPropertiesSet') || '[]'));
@@ -59964,6 +60002,7 @@ Write the email now:`;
         }
         
         console.log(`[Sync] ✓ Force synced ${synced} properties (${errors} errors)`);
+        window._hpmSyncingToCloud = false; // v70
         if (typeof showHelmNotification === 'function') {
             showHelmNotification(`Synced ${synced} properties to cloud`, errors > 0 ? 'warning' : 'success');
         }
@@ -59988,7 +60027,7 @@ Write the email now:`;
         originalSetItem(key, value);
         
         // Auto-sync viewings after changes
-        if (key === 'propertyViewings' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing) {
+        if (key === 'propertyViewings' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing && !window._hpmSyncingToCloud) {
             clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
                 syncViewingsToSupabase();
@@ -59996,7 +60035,7 @@ Write the email now:`;
         }
         
         // v65.7: Also auto-sync properties
-        if (key === 'elevate_properties' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing) {
+        if (key === 'elevate_properties' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing && !window._hpmSyncingToCloud) {
             clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
                 syncPropertiesToSupabase();
@@ -60004,7 +60043,7 @@ Write the email now:`;
         }
         
         // v65.8: Auto-sync pipeline/clients
-        if (key === 'pipelineData' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing) {
+        if (key === 'pipelineData' && localStorage.getItem(FIRST_SYNC_KEY) === 'true' && !window._isSyncing && !window._hpmSyncingToCloud) {
             clearTimeout(syncTimeout);
             syncTimeout = setTimeout(() => {
                 syncPipelineToSupabase();
@@ -60017,11 +60056,13 @@ Write the email now:`;
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
         if (window._isSyncing) return;
+        if (window._hpmSyncingToCloud) return; // v70: prevent re-entrance
         
-        // v69: Auth guard
         if (!await window.hpmHasAuth()) {
             return;
         }
+        
+        window._hpmSyncingToCloud = true;
         
         const pipeline = JSON.parse(localStorage.getItem('pipelineData') || '[]');
         if (pipeline.length === 0) return;
@@ -60066,17 +60107,20 @@ Write the email now:`;
         }
         
         console.log(`[HPM Sync] ✅ Synced ${successCount}/${batch.length} pipeline entries` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
+        window._hpmSyncingToCloud = false;
     }
     
     // v65.7: Sync properties to Supabase
     async function syncPropertiesToSupabase() {
         if (!window.supabase) return;
         if (localStorage.getItem('hpm_sync_action') === 'skip') return;
+        if (window._hpmSyncingToCloud) return; // v70: prevent re-entrance
         
-        // v69: Auth guard
         if (!await window.hpmHasAuth()) {
             return;
         }
+        
+        window._hpmSyncingToCloud = true;
         
         const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
         if (properties.length === 0) return;
@@ -60117,6 +60161,7 @@ Write the email now:`;
             }
         }
         console.log(`[HPM Sync] Synced ${successCount}/${properties.length} properties` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
+        window._hpmSyncingToCloud = false;
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -60130,6 +60175,7 @@ Write the email now:`;
         
         // v68.1: Prevent sync loop during initial load
         window._isSyncing = true;
+        window._hpmSyncingToCloud = true; // v70: Also prevent real-time handler cascade
         
         console.log('[HPM Sync] 🔄 Auto-syncing from cloud...');
         showSyncIndicator('Syncing data...');
@@ -60203,9 +60249,12 @@ Write the email now:`;
                     const mergedProps = Array.from(localPropsMap.values());
                     
                     // v67.9: Save to BOTH storage keys for compatibility
+                    // v70: Guard to prevent localStorage override cascade
+                    window._hpmSyncingToCloud = true;
                     localStorage.setItem('propertySystemProperties', JSON.stringify(mergedProps));
                     localStorage.setItem('elevate_properties', JSON.stringify(mergedProps));
                     localStorage.setItem('takenPropertiesSet', JSON.stringify([...takenSet]));
+                    window._hpmSyncingToCloud = false;
                     
                     // Also set window.properties for immediate use
                     window.properties = mergedProps;
@@ -60333,6 +60382,7 @@ Write the email now:`;
             
             // v68.1: Allow future syncs now that initial load is done
             window._isSyncing = false;
+            window._hpmSyncingToCloud = false; // v70
             
             // Refresh UI components
             setTimeout(() => {
@@ -60347,6 +60397,7 @@ Write the email now:`;
             console.error('[HPM Sync] Auto-sync error:', err);
             hideSyncIndicator();
             window._isSyncing = false; // v68.1: Allow syncs even after error
+            window._hpmSyncingToCloud = false; // v70
         }
     }
     
