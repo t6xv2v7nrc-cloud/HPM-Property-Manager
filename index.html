@@ -20368,6 +20368,90 @@
                     </div>
 
                     <!-- Viewing Deduplicator Pro Card -->
+
+                    <!-- v72: WEEKLY VIEWINGS REPORT -->
+                    <div class="bento-card" style="margin-top: 20px; margin-bottom: 20px; position: relative; overflow: hidden;">
+                        <!-- Accent top border -->
+                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #6c5ce7, #4da6ff, #00d68f); opacity: 0.7;"></div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                            <div>
+                                <h3 style="margin: 0 0 6px; color: white; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+                                    <span class="material-symbols-rounded" style="color: #a78bfa; font-size: 24px;">date_range</span>
+                                    Weekly Viewings Report
+                                </h3>
+                                <p style="margin: 0; color: rgba(255,255,255,0.55); font-size: 12px;">Week-by-week breakdown of all viewing activity</p>
+                            </div>
+                            <span class="bento-badge" style="background: rgba(108,92,231,0.15); color: #a78bfa;">Report</span>
+                        </div>
+
+                        <!-- Week Navigation -->
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                            <button onclick="weeklyReportNav(-1)" class="bento-pill" style="padding: 6px 10px; font-size: 12px;">
+                                <span class="material-symbols-rounded" style="font-size: 16px;">chevron_left</span>
+                            </button>
+                            <div id="weekly-report-range" style="flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: #c4b5fd; letter-spacing: 0.3px;">This Week</div>
+                            <button onclick="weeklyReportNav(1)" class="bento-pill" style="padding: 6px 10px; font-size: 12px;">
+                                <span class="material-symbols-rounded" style="font-size: 16px;">chevron_right</span>
+                            </button>
+                            <button onclick="generateWeeklyReport()" class="bento-pill" style="padding: 6px 12px; font-size: 11px; background: rgba(108,92,231,0.12); border-color: rgba(108,92,231,0.25); color: #c4b5fd;">
+                                <span class="material-symbols-rounded" style="font-size: 14px;">refresh</span> Refresh
+                            </button>
+                        </div>
+
+                        <!-- Weekly Stats Summary -->
+                        <div id="weekly-stats-grid" class="bento-grid bento-grid-4" style="gap: 10px; margin-bottom: 16px;">
+                            <div class="bento-stat-mini" style="background: rgba(77,166,255,0.08); border-color: rgba(77,166,255,0.15);">
+                                <div id="weekly-stat-total" class="bento-stat-value" style="color: #4da6ff;">0</div>
+                                <div class="bento-stat-label">Total</div>
+                            </div>
+                            <div class="bento-stat-mini" style="background: rgba(0,214,143,0.08); border-color: rgba(0,214,143,0.15);">
+                                <div id="weekly-stat-signups" class="bento-stat-value" style="color: #00d68f;">0</div>
+                                <div class="bento-stat-label">Sign Ups</div>
+                            </div>
+                            <div class="bento-stat-mini" style="background: rgba(255,107,107,0.08); border-color: rgba(255,107,107,0.15);">
+                                <div id="weekly-stat-noshows" class="bento-stat-value" style="color: #ff6b6b;">0</div>
+                                <div class="bento-stat-label">No Shows</div>
+                            </div>
+                            <div class="bento-stat-mini" style="background: rgba(255,181,71,0.08); border-color: rgba(255,181,71,0.15);">
+                                <div id="weekly-stat-rate" class="bento-stat-value" style="color: #ffb547;">0%</div>
+                                <div class="bento-stat-label">Conversion</div>
+                            </div>
+                        </div>
+
+                        <!-- Day-by-Day Breakdown -->
+                        <div id="weekly-day-breakdown" style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1.2px;">Day-by-Day Breakdown</label>
+                            <div id="weekly-days-container" style="display: flex; flex-direction: column; gap: 6px;">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Weekly Summary Text -->
+                        <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.04);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Weekly Summary</span>
+                                <button onclick="copyWeeklyReport()" class="bento-pill" style="padding: 5px 10px; font-size: 10px;">
+                                    <span class="material-symbols-rounded" style="font-size: 13px;">content_copy</span> Copy
+                                </button>
+                            </div>
+                            <div id="weekly-report-text" style="white-space: pre-wrap; font-size: 12.5px; color: rgba(255,255,255,0.85); line-height: 1.75;">
+                                Click Refresh to generate your weekly viewings report...
+                            </div>
+                        </div>
+
+                        <!-- Export Buttons -->
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="emailWeeklyReport()" class="bento-pill" style="flex: 1; padding: 12px; justify-content: center;">
+                                <span class="material-symbols-rounded" style="font-size: 16px;">mail</span> Email Report
+                            </button>
+                            <button onclick="copyWeeklyReport()" class="bento-pill" style="flex: 1; padding: 12px; justify-content: center;">
+                                <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span> Copy Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Viewing Deduplicator Pro Card -->
                     <div class="bento-card" style="margin-top: 20px; background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(139,92,246,0.1) 100%); border-color: rgba(139,92,246,0.3);">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
                             <div>
@@ -59166,6 +59250,308 @@ Write the email now:`;
     };
 
     console.log('[HPM v65.5] Viewing Deduplicator Pro ready - access via Write section');
+
+    // ═══════════════════════════════════════════════════════════════════
+    // v72: WEEKLY VIEWINGS REPORT
+    // ═══════════════════════════════════════════════════════════════════
+    (function() {
+        // State: which week offset we're viewing (0 = current week)
+        window._weeklyReportOffset = 0;
+        
+        // Get Monday-Sunday range for a given offset (0=this week, -1=last week, etc.)
+        function getWeekRange(offset) {
+            const now = new Date();
+            const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + diffToMonday + (offset * 7));
+            monday.setHours(0, 0, 0, 0);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            sunday.setHours(23, 59, 59, 999);
+            return { start: monday, end: sunday };
+        }
+        
+        function formatDate(d) {
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return d.getDate() + ' ' + months[d.getMonth()];
+        }
+        
+        function formatDayFull(d) {
+            const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            return days[d.getDay()];
+        }
+        
+        function formatDateShort(d) {
+            const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            return days[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1);
+        }
+        
+        // Parse a viewing date string into a Date object
+        function parseViewingDate(v) {
+            const dateStr = v.date || v.viewing_date || '';
+            if (!dateStr) return null;
+            // Try YYYY-MM-DD, DD/MM/YYYY, etc.
+            let d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                // Try DD/MM/YYYY
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    d = new Date(parts[2], parts[1]-1, parts[0]);
+                }
+            }
+            return isNaN(d.getTime()) ? null : d;
+        }
+        
+        // Get all viewings (from localStorage)
+        function getAllViewings() {
+            try {
+                return JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            } catch(e) { return []; }
+        }
+        
+        // Categorize a viewing outcome/status
+        function categorizeStatus(v) {
+            const s = (v.status || v.outcome || '').toLowerCase();
+            if (s.includes('sign') || s.includes('taken') || s.includes('won') || s.includes('approved') || s.includes('accepted')) return 'signup';
+            if (s.includes('no show') || s.includes('no-show') || s.includes('noshow') || s.includes('dns')) return 'noshow';
+            if (s.includes('cancel') || s.includes('cancelled')) return 'cancelled';
+            if (s.includes('reject') || s.includes('not suitable') || s.includes('declined') || s.includes('lost')) return 'rejected';
+            if (s.includes('pending') || s.includes('scheduled') || s.includes('confirmed') || s === '') return 'pending';
+            if (s.includes('viewed') || s.includes('attended') || s.includes('showed') || s.includes('completed')) return 'viewed';
+            return 'other';
+        }
+        
+        window.weeklyReportNav = function(direction) {
+            window._weeklyReportOffset += direction;
+            // Don't go into the future
+            if (window._weeklyReportOffset > 0) window._weeklyReportOffset = 0;
+            generateWeeklyReport();
+        };
+        
+        window.generateWeeklyReport = function() {
+            const offset = window._weeklyReportOffset || 0;
+            const range = getWeekRange(offset);
+            const allViewings = getAllViewings();
+            
+            // Filter viewings to this week
+            const weekViewings = allViewings.filter(v => {
+                const d = parseViewingDate(v);
+                return d && d >= range.start && d <= range.end;
+            });
+            
+            // Update header
+            const rangeLabel = document.getElementById('weekly-report-range');
+            if (rangeLabel) {
+                const label = offset === 0 ? 'This Week' : offset === -1 ? 'Last Week' : formatDate(range.start) + ' — ' + formatDate(range.end);
+                rangeLabel.textContent = label + '  (' + formatDate(range.start) + ' – ' + formatDate(range.end) + ')';
+            }
+            
+            // Stats
+            let totalCount = weekViewings.length;
+            let signups = 0, noshows = 0, cancelled = 0, viewed = 0, pending = 0, rejected = 0;
+            
+            weekViewings.forEach(v => {
+                const cat = categorizeStatus(v);
+                if (cat === 'signup') signups++;
+                else if (cat === 'noshow') noshows++;
+                else if (cat === 'cancelled') cancelled++;
+                else if (cat === 'viewed') viewed++;
+                else if (cat === 'pending') pending++;
+                else if (cat === 'rejected') rejected++;
+            });
+            
+            const convRate = totalCount > 0 ? Math.round((signups / totalCount) * 100) : 0;
+            
+            // Update stat cards
+            const el = id => document.getElementById(id);
+            if (el('weekly-stat-total')) el('weekly-stat-total').textContent = totalCount;
+            if (el('weekly-stat-signups')) el('weekly-stat-signups').textContent = signups;
+            if (el('weekly-stat-noshows')) el('weekly-stat-noshows').textContent = noshows;
+            if (el('weekly-stat-rate')) el('weekly-stat-rate').textContent = convRate + '%';
+            
+            // Day-by-day breakdown
+            const daysContainer = document.getElementById('weekly-days-container');
+            if (daysContainer) {
+                let daysHTML = '';
+                for (let i = 0; i < 7; i++) {
+                    const dayDate = new Date(range.start);
+                    dayDate.setDate(range.start.getDate() + i);
+                    
+                    const dayViewings = weekViewings.filter(v => {
+                        const d = parseViewingDate(v);
+                        return d && d.toDateString() === dayDate.toDateString();
+                    });
+                    
+                    const daySignups = dayViewings.filter(v => categorizeStatus(v) === 'signup').length;
+                    const dayNoShows = dayViewings.filter(v => categorizeStatus(v) === 'noshow').length;
+                    const dayViewed = dayViewings.filter(v => categorizeStatus(v) === 'viewed').length;
+                    const dayPending = dayViewings.filter(v => categorizeStatus(v) === 'pending').length;
+                    const isToday = dayDate.toDateString() === new Date().toDateString();
+                    const isFuture = dayDate > new Date();
+                    const hasData = dayViewings.length > 0;
+                    
+                    const barWidth = totalCount > 0 ? Math.max(4, (dayViewings.length / Math.max(...[1,2,3,4,5,6,0].map(j => {
+                        const dd = new Date(range.start);
+                        dd.setDate(range.start.getDate() + j);
+                        return weekViewings.filter(v => { const d = parseViewingDate(v); return d && d.toDateString() === dd.toDateString(); }).length;
+                    }))) * 100) : 0;
+                    
+                    daysHTML += '<div style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: ' + (isToday ? 'rgba(108,92,231,0.08)' : 'rgba(255,255,255,0.015)') + '; border: 1px solid ' + (isToday ? 'rgba(108,92,231,0.15)' : 'rgba(255,255,255,0.03)') + ';">';
+                    daysHTML += '<div style="width: 72px; flex-shrink: 0;">';
+                    daysHTML += '<div style="font-size: 11px; font-weight: 600; color: ' + (isToday ? '#c4b5fd' : 'rgba(255,255,255,0.7)') + ';">' + formatDateShort(dayDate) + '</div>';
+                    daysHTML += '</div>';
+                    
+                    // Bar chart
+                    daysHTML += '<div style="flex: 1; height: 22px; background: rgba(255,255,255,0.03); border-radius: 6px; overflow: hidden; position: relative;">';
+                    if (hasData) {
+                        daysHTML += '<div style="height: 100%; width: ' + barWidth + '%; background: linear-gradient(90deg, rgba(108,92,231,0.4), rgba(77,166,255,0.3)); border-radius: 6px; transition: width 0.5s ease;"></div>';
+                    }
+                    daysHTML += '</div>';
+                    
+                    // Count
+                    daysHTML += '<div style="width: 32px; text-align: right; font-size: 13px; font-weight: 700; color: ' + (hasData ? '#eaecf5' : 'rgba(255,255,255,0.2)') + ';">' + dayViewings.length + '</div>';
+                    
+                    // Mini status dots
+                    daysHTML += '<div style="display: flex; gap: 4px; width: 80px; justify-content: flex-end;">';
+                    if (daySignups > 0) daysHTML += '<span style="font-size: 10px; color: #00d68f; font-weight: 600;">' + daySignups + '✓</span>';
+                    if (dayNoShows > 0) daysHTML += '<span style="font-size: 10px; color: #ff6b6b; font-weight: 600;">' + dayNoShows + '✗</span>';
+                    if (dayViewed > 0) daysHTML += '<span style="font-size: 10px; color: #4da6ff; font-weight: 600;">' + dayViewed + '👁</span>';
+                    if (dayPending > 0) daysHTML += '<span style="font-size: 10px; color: #ffb547; font-weight: 600;">' + dayPending + '⏳</span>';
+                    if (!hasData && !isFuture) daysHTML += '<span style="font-size: 10px; color: rgba(255,255,255,0.2);">—</span>';
+                    if (isFuture && !hasData) daysHTML += '<span style="font-size: 10px; color: rgba(255,255,255,0.15);">upcoming</span>';
+                    daysHTML += '</div>';
+                    
+                    daysHTML += '</div>';
+                }
+                daysContainer.innerHTML = daysHTML;
+            }
+            
+            // Generate summary text
+            const reportText = document.getElementById('weekly-report-text');
+            if (reportText) {
+                if (totalCount === 0) {
+                    reportText.textContent = 'No viewings recorded for this week (' + formatDate(range.start) + ' – ' + formatDate(range.end) + ').';
+                    return;
+                }
+                
+                // Find busiest day
+                let busiestDay = '', busiestCount = 0;
+                for (let i = 0; i < 7; i++) {
+                    const dd = new Date(range.start);
+                    dd.setDate(range.start.getDate() + i);
+                    const cnt = weekViewings.filter(v => { const d = parseViewingDate(v); return d && d.toDateString() === dd.toDateString(); }).length;
+                    if (cnt > busiestCount) { busiestCount = cnt; busiestDay = formatDayFull(dd); }
+                }
+                
+                // Properties with most viewings
+                const propCounts = {};
+                weekViewings.forEach(v => {
+                    const prop = v.property || v.propertyName || v.property_name || 'Unknown';
+                    propCounts[prop] = (propCounts[prop] || 0) + 1;
+                });
+                const topProps = Object.entries(propCounts).sort((a,b) => b[1] - a[1]).slice(0, 3);
+                
+                // Build individual day summaries
+                let daySummaries = '';
+                for (let i = 0; i < 7; i++) {
+                    const dd = new Date(range.start);
+                    dd.setDate(range.start.getDate() + i);
+                    const dayV = weekViewings.filter(v => { const d = parseViewingDate(v); return d && d.toDateString() === dd.toDateString(); });
+                    if (dayV.length === 0) continue;
+                    
+                    const daySU = dayV.filter(v => categorizeStatus(v) === 'signup').length;
+                    const dayNS = dayV.filter(v => categorizeStatus(v) === 'noshow').length;
+                    const dayVw = dayV.filter(v => categorizeStatus(v) === 'viewed').length;
+                    const dayCn = dayV.filter(v => categorizeStatus(v) === 'cancelled').length;
+                    const dayPn = dayV.filter(v => categorizeStatus(v) === 'pending').length;
+                    
+                    daySummaries += '\n' + formatDayFull(dd) + ' ' + formatDate(dd) + '  —  ' + dayV.length + ' viewing' + (dayV.length !== 1 ? 's' : '');
+                    const parts = [];
+                    if (daySU > 0) parts.push(daySU + ' sign-up' + (daySU !== 1 ? 's' : ''));
+                    if (dayVw > 0) parts.push(dayVw + ' viewed');
+                    if (dayNS > 0) parts.push(dayNS + ' no-show' + (dayNS !== 1 ? 's' : ''));
+                    if (dayCn > 0) parts.push(dayCn + ' cancelled');
+                    if (dayPn > 0) parts.push(dayPn + ' pending');
+                    if (parts.length > 0) daySummaries += ' (' + parts.join(', ') + ')';
+                    
+                    // List each viewing on this day
+                    dayV.forEach(v => {
+                        const name = v.visitor || v.name || v.clientName || v.client_name || 'Unknown';
+                        const prop = v.property || v.propertyName || v.property_name || '';
+                        const time = v.time || v.viewing_time || '';
+                        const status = v.status || v.outcome || 'Pending';
+                        daySummaries += '\n   • ' + time + ' — ' + name + (prop ? ' @ ' + prop : '') + '  [' + status + ']';
+                    });
+                    daySummaries += '\n';
+                }
+                
+                let summary = '═══ WEEKLY VIEWINGS REPORT ═══\n';
+                summary += formatDate(range.start) + ' – ' + formatDate(range.end) + '\n\n';
+                summary += '📊 OVERVIEW\n';
+                summary += 'Total Viewings: ' + totalCount + '\n';
+                summary += 'Sign Ups: ' + signups + '  |  Viewed: ' + viewed + '  |  No Shows: ' + noshows + '  |  Cancelled: ' + cancelled + '  |  Pending: ' + pending + '\n';
+                summary += 'Conversion Rate: ' + convRate + '%\n';
+                summary += 'Busiest Day: ' + busiestDay + ' (' + busiestCount + ' viewings)\n';
+                
+                if (topProps.length > 0) {
+                    summary += '\n🏠 MOST VIEWED PROPERTIES\n';
+                    topProps.forEach((p, i) => {
+                        summary += (i+1) + '. ' + p[0] + ' (' + p[1] + ' viewing' + (p[1] !== 1 ? 's' : '') + ')\n';
+                    });
+                }
+                
+                summary += '\n📅 DAILY BREAKDOWN';
+                summary += daySummaries;
+                
+                // Performance note
+                if (convRate >= 30) {
+                    summary += '\n✅ Strong conversion rate this week. Keep up the momentum!';
+                } else if (convRate >= 15) {
+                    summary += '\n📈 Decent conversion rate. Look for opportunities to improve follow-ups.';
+                } else if (totalCount > 0) {
+                    summary += '\n⚠️ Low conversion this week. Consider reviewing property matching and client preparation.';
+                }
+                
+                if (noshows > 3) {
+                    summary += '\n⚠️ High no-show rate (' + noshows + '). Consider implementing confirmation calls/texts before viewings.';
+                }
+                
+                reportText.textContent = summary;
+            }
+        };
+        
+        window.copyWeeklyReport = function() {
+            const text = document.getElementById('weekly-report-text')?.textContent || '';
+            if (text && navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    if (window.showMercuryToast) showMercuryToast('Copied!', 'Weekly report copied to clipboard', 'success');
+                });
+            }
+        };
+        
+        window.emailWeeklyReport = function() {
+            const text = document.getElementById('weekly-report-text')?.textContent || '';
+            const range = getWeekRange(window._weeklyReportOffset || 0);
+            const subject = encodeURIComponent('Weekly Viewings Report — ' + formatDate(range.start) + ' to ' + formatDate(range.end));
+            const body = encodeURIComponent(text);
+            window.open('mailto:?subject=' + subject + '&body=' + body);
+        };
+        
+        // Auto-generate on first visit to Write section
+        const origSwitch = window.helmSwitchView;
+        if (origSwitch) {
+            window.helmSwitchView = function(view) {
+                origSwitch(view);
+                if (view === 'email-writer' && !window._weeklyReportGenerated) {
+                    window._weeklyReportGenerated = true;
+                    setTimeout(() => generateWeeklyReport(), 300);
+                }
+            };
+        }
+        
+        console.log('[HPM v72] Weekly Viewings Report ready - access via Write section');
+    })();
 
     // v63: Export all HPM data for sync between machines
     window.exportAllDataForSync = function() {
