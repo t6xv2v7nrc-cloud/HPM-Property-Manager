@@ -2,17 +2,17 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 70.0                            ║
-    ║  v70 FIXES - SYNC LOOP KILLER:                                ║
-    ║  • REMOVED full 148-property re-upload from saveProperties   ║
-    ║  • NEW syncSingleProperty() for targeted 1-property sync     ║
-    ║  • Sync guard (_hpmSyncingToCloud) prevents cascade loops    ║
-    ║  • Real-time handlers skip during our own writes             ║
-    ║  • localStorage override guarded to prevent re-trigger       ║
-    ║  • toggleStudioStatus now syncs only changed property        ║
-    ║  • updatePropertyStatus uses targeted sync                   ║
-    ║  • markAllBuildingStudios syncs only changed properties      ║
-    ║  • Debounce increased to 5s for real-time handlers           ║
+    ║                        Version 71.0                            ║
+    ║  v71 FIXES - VIEWINGS & PIPELINE SYNC:                       ║
+    ║  • NEW syncSingleViewing() for targeted 1-viewing sync       ║
+    ║  • NEW syncSinglePipelineEntry() for targeted 1-client sync  ║
+    ║  • updatePipelineRowStatus: guarded localStorage writes      ║
+    ║  • updateViewingOutcome: guarded + targeted sync             ║
+    ║  • editPipelineRow save: guarded + targeted sync             ║
+    ║  • Pipeline dedup on render to eliminate duplicate rows       ║
+    ║  • loadViewingsFromSupabase: merge instead of overwrite      ║
+    ║  ────────────────────────────────────────────────────────     ║
+    ║  v70: syncSingleProperty, sync guard, property sync fixes    ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  v69: Auth guards, batch upserts, log silencing              ║
     ║  ──────────────────────────────────────────────────────────── ║
@@ -23612,6 +23612,86 @@
                 }
                 window.syncSingleProperty = syncSingleProperty;
 
+                // v71: Targeted single-viewing sync to Supabase
+                async function syncSingleViewing(viewing) {
+                    if (!window.supabase) return { success: false, offline: true };
+                    if (!viewing || !viewing.id) return { success: false, error: 'No viewing ID' };
+                    try {
+                        window._hpmSyncingToCloud = true;
+                        const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
+                        let propName = viewing.propertyName || viewing.property || '';
+                        let propAddress = viewing.propertyAddress || viewing.address || '';
+                        if ((!propName || propName === 'NULL') && viewing.propertyId) {
+                            const prop = properties.find(p => p.id === parseInt(viewing.propertyId));
+                            if (prop) { propName = prop.name || ''; propAddress = propAddress || prop.address || ''; }
+                        }
+                        const { error } = await window.supabase.from('viewings').upsert({
+                            id: String(viewing.id),
+                            client_name: viewing.clientName || viewing.name || viewing.visitor || '',
+                            client_phone: viewing.phone || viewing.clientPhone || '',
+                            client_email: viewing.email || viewing.clientEmail || '',
+                            property_id: viewing.propertyId || null,
+                            property_name: propName,
+                            property_address: propAddress,
+                            viewing_date: viewing.date || viewing.viewing_date || null,
+                            viewing_time: viewing.time || viewing.viewing_time || null,
+                            status: viewing.status || 'scheduled',
+                            outcome: viewing.outcome || viewing.status || null,
+                            agent_id: viewing.agentId || viewing.agent_id || null,
+                            notes: viewing.notes || '',
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' });
+                        window._hpmSyncingToCloud = false;
+                        if (error) {
+                            console.error('[v71] Viewing sync error:', viewing.id, error.message);
+                            return { success: false, error: error.message };
+                        }
+                        console.log('[v71] ✅ Viewing synced:', viewing.id, viewing.status);
+                        return { success: true };
+                    } catch (err) {
+                        window._hpmSyncingToCloud = false;
+                        console.error('[v71] Viewing sync error:', err);
+                        return { success: false, error: err.message };
+                    }
+                }
+                window.syncSingleViewing = syncSingleViewing;
+
+                // v71: Targeted single-pipeline-entry sync to Supabase clients table
+                async function syncSinglePipelineEntry(entry) {
+                    if (!window.supabase) return { success: false, offline: true };
+                    if (!entry || !entry.id) return { success: false, error: 'No entry ID' };
+                    const clientName = entry.visitor || entry.name || entry.clientName || entry.client_name || '';
+                    if (!clientName) return { success: false, error: 'No client name' };
+                    try {
+                        window._hpmSyncingToCloud = true;
+                        const { error } = await window.supabase.from('clients').upsert({
+                            id: String(entry.id),
+                            client_name: clientName,
+                            phone: entry.phone || '',
+                            email: entry.email || '',
+                            stage: entry.status || entry.stage || 'Pending',
+                            property_interest: entry.property || entry.propertyInterest || entry.property_interest || '',
+                            max_rent: entry.budget || entry.maxRent || entry.max_rent || null,
+                            borough_preference: entry.borough || entry.boroughPreference || entry.borough_preference || '',
+                            referral_source: entry.source || entry.referralSource || entry.referral_source || '',
+                            notes: entry.notes || '',
+                            last_contact: entry.lastContact || entry.last_contact || new Date().toISOString()
+                        }, { onConflict: 'id' });
+                        window._hpmSyncingToCloud = false;
+                        if (error) {
+                            console.error('[v71] Pipeline sync error:', entry.id, error.message);
+                            return { success: false, error: error.message };
+                        }
+                        console.log('[v71] ✅ Pipeline entry synced:', entry.id, entry.status);
+                        return { success: true };
+                    } catch (err) {
+                        window._hpmSyncingToCloud = false;
+                        console.error('[v71] Pipeline sync error:', err);
+                        return { success: false, error: err.message };
+                    }
+                }
+                window.syncSinglePipelineEntry = syncSinglePipelineEntry;
+
                 // v62: NO HARDCODED DATA - All data from localStorage only
                 const defaultProperties = [];
 
@@ -24635,7 +24715,10 @@
                     try {
                         // Update both local and global references
                         window.viewings = viewings;
+                        // v71: Guard localStorage write to prevent override triggering full re-upload
+                        window._hpmSyncingToCloud = true;
                         setStorageItem('propertyViewings', viewings);
+                        window._hpmSyncingToCloud = false;
                         updateViewingsCounts();
                         
                         // v67.9: SYNC TO SUPABASE IMMEDIATELY
@@ -24645,6 +24728,7 @@
                         
                         return true;
                     } catch (e) {
+                        window._hpmSyncingToCloud = false;
                         showToast('Error', 'Failed to save!', true);
                         return false;
                     }
@@ -24657,11 +24741,15 @@
                     // v69: Auth guard
                     if (!await window.hpmHasAuth()) return;
                     
+                    // v71: Prevent cascade from real-time events during upload
+                    if (window._hpmSyncingToCloud) return;
+                    
                     // Debounce
                     const now = Date.now();
                     if (window._lastViewingsSync && now - window._lastViewingsSync < 2000) return;
                     window._lastViewingsSync = now;
                     
+                    window._hpmSyncingToCloud = true;
                     try {
                         const batch = viewingsArray
                             .filter(v => v.id)
@@ -24699,6 +24787,7 @@
                     } catch (err) {
                         console.error('[v68 Sync] Error:', err);
                     }
+                    window._hpmSyncingToCloud = false;
                 }
                 
                 window.syncViewingsToSupabaseNow = syncViewingsToSupabaseNow;
@@ -36056,29 +36145,46 @@ Total: ${referrals.length}
 
         // Load pipeline data - v67.7: Unified with deduplication
         window.loadPipelineData = function() {
-            // Build comprehensive pipeline from ALL sources
+            // v71: Build pipeline from all sources, deduplicate by ID first
             let allData = [];
+            const seenIds = new Set();
             
-            // Source 1: Memory cache
+            // Helper: add records, skipping duplicate IDs (first occurrence wins)
+            function addRecords(records) {
+                if (!Array.isArray(records)) return;
+                records.forEach(r => {
+                    if (r && r.id && !seenIds.has(String(r.id))) {
+                        seenIds.add(String(r.id));
+                        allData.push(r);
+                    } else if (r && !r.id) {
+                        // No ID - add but generate one
+                        r.id = Date.now() + Math.random().toString(36).substr(2, 9);
+                        seenIds.add(String(r.id));
+                        allData.push(r);
+                    }
+                });
+            }
+            
+            // Source 1: Memory cache (highest priority - most recent)
             if (window._dataCache?.pipeline?.length > 0) {
-                allData = allData.concat(window._dataCache.pipeline);
+                addRecords(window._dataCache.pipeline);
             }
             
             // Source 2: In-memory pipelineData
             if (pipelineData && pipelineData.length > 0) {
-                allData = allData.concat(pipelineData);
+                addRecords(pipelineData);
             }
             
             // Source 3: localStorage pipelineData
             try {
                 const stored1 = JSON.parse(localStorage.getItem('pipelineData') || '[]');
-                if (stored1.length > 0) allData = allData.concat(stored1);
+                if (stored1.length > 0) addRecords(stored1);
             } catch(e) {}
             
             // Source 4: localStorage pipelineClients
             try {
                 const stored2 = JSON.parse(localStorage.getItem('pipelineClients') || '[]');
-                if (stored2.length > 0) allData = allData.concat(stored2);
+                if (stored2.length > 0) addRecords(stored2);
             } catch(e) {}
             
             // v67.8: Source 5: propertyViewings (WHERE SUPABASE DATA GOES!)
@@ -36101,13 +36207,13 @@ Total: ${referrals.length}
                         agentId: v.agentId || v.agent_id,
                         propertyId: v.propertyId || v.property_id
                     }));
-                    allData = allData.concat(viewingsPipeline);
+                    addRecords(viewingsPipeline);
                 }
             } catch(e) {
                 console.error('[loadPipelineData] Error loading viewings:', e);
             }
             
-            // DEDUPLICATE before returning - use phone as key
+            // v71: Additional phone-based dedup for entries with same phone but different IDs
             const deduped = window.deduplicateByPhone ? window.deduplicateByPhone(allData) : allData;
             
             // Update cache with deduplicated data
@@ -36134,7 +36240,8 @@ Total: ${referrals.length}
             if (typeof updatePipelineMetrics === 'function') updatePipelineMetrics();
             
             // Sync to Supabase if available and authenticated
-            if (window.supabase && !window._isSyncing && await window.hpmHasAuth()) {
+            if (window.supabase && !window._isSyncing && !window._hpmSyncingToCloud && await window.hpmHasAuth()) {
+                window._hpmSyncingToCloud = true;
                 try {
                     // v69: Batch upsert to clients table
                     const batch = pipelineData
@@ -36168,6 +36275,7 @@ Total: ${referrals.length}
                 } catch (e) {
                     console.error('[v66 Data] Supabase sync error:', e);
                 }
+                window._hpmSyncingToCloud = false;
             }
         }
 
@@ -37760,10 +37868,13 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
     }
     
     // Cache to localStorage AFTER Supabase (localStorage is just cache now)
+    // v71: Guard to prevent localStorage override from triggering full re-upload
+    window._hpmSyncingToCloud = true;
     localStorage.setItem('pipelineData', JSON.stringify(data));
     if (viewingIdx !== -1) {
         localStorage.setItem('propertyViewings', JSON.stringify(viewings));
     }
+    window._hpmSyncingToCloud = false;
     
     // Handle sign-up celebrations and property status
     if (newStatus === 'Signed Up' && oldStatus !== 'Signed Up') {
@@ -37953,8 +38064,20 @@ window.savePipelineEdit = function(id) {
     
     // Save
     pipelineData = data;
+    // v71: Guard localStorage write to prevent full re-upload cascade
+    window._hpmSyncingToCloud = true;
     localStorage.setItem('pipelineData', JSON.stringify(data));
+    window._hpmSyncingToCloud = false;
     console.log('[Pipeline] Saved edit, total entries:', data.length);
+    
+    // v71: Targeted sync for the edited entry only
+    if (window.syncSinglePipelineEntry) {
+        window.syncSinglePipelineEntry(data[idx]);
+    }
+    // Also sync as viewing if it has a viewing ID
+    if (window.syncSingleViewing && data[idx]) {
+        window.syncSingleViewing(data[idx]);
+    }
     
     // Close modal
     document.querySelector('.custom-modal-overlay')?.remove();
@@ -38171,7 +38294,10 @@ window.mergePipelineGroup = function(groupIndex) {
     
     // Save to localStorage
     pipelineData = data;
+    // v71: Guard to prevent full re-upload cascade
+    window._hpmSyncingToCloud = true;
     localStorage.setItem('pipelineData', JSON.stringify(data));
+    window._hpmSyncingToCloud = false;
     console.log('[Pipeline] Merged and saved', data.length, 'entries');
     
     renderPipelineTrackerTable();
@@ -53640,18 +53766,14 @@ Harir Industries`;
 
         viewing.status = newStatus;
         viewing.outcome = newStatus; // v67.8: Also set outcome
+        // v71: Guard localStorage write to prevent full re-upload cascade
+        window._hpmSyncingToCloud = true;
         setStorageItem('propertyViewings', viewings);
+        window._hpmSyncingToCloud = false;
 
-        // v67.8: IMMEDIATE SUPABASE SYNC
-        if (window.supabase) {
-            window.supabase.from('viewings').update({
-                status: newStatus,
-                outcome: newStatus,
-                updated_at: new Date().toISOString()
-            }).eq('id', viewingId).then(({ error }) => {
-                if (error) console.error('[Sync] updateViewingOutcome error:', error);
-                else console.log('[Sync] ✓ Status updated in Supabase:', newStatus);
-            });
+        // v71: Targeted single-viewing sync (replaces old .update() which fails if row doesn't exist)
+        if (window.syncSingleViewing) {
+            window.syncSingleViewing(viewing);
         }
 
         // Refresh displays
@@ -59808,7 +59930,7 @@ Write the email now:`;
         }
         
         // v67.7: Use fallbacks - Supabase may have data in different columns
-        const viewings = data.map(v => ({
+        const cloudViewings = data.map(v => ({
             id: v.id,
             name: v.client_name,
             clientName: v.client_name,
@@ -59825,14 +59947,23 @@ Write the email now:`;
             status: v.status,
             outcome: v.outcome,
             agentId: v.agent_id,
-            notes: v.notes
+            notes: v.notes,
+            updatedAt: v.updated_at
         }));
+        
+        // v71: Merge with local data instead of overwriting
+        // Cloud data wins for entries that exist in both (it's the most recently synced)
+        // Local-only entries are preserved (they may not have been synced yet)
+        const localViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const cloudIds = new Set(cloudViewings.map(v => String(v.id)));
+        const localOnly = localViewings.filter(v => !cloudIds.has(String(v.id)));
+        const merged = [...cloudViewings, ...localOnly];
         
         // v70: Guard to prevent localStorage override from re-triggering sync
         window._hpmSyncingToCloud = true;
-        localStorage.setItem('propertyViewings', JSON.stringify(viewings));
+        localStorage.setItem('propertyViewings', JSON.stringify(merged));
         window._hpmSyncingToCloud = false;
-        console.log(`[HPM Sync] Loaded ${viewings.length} viewings from cloud`);
+        console.log(`[HPM Sync] Loaded ${cloudViewings.length} cloud + ${localOnly.length} local-only = ${merged.length} viewings`);
         
         // Refresh UI
         if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
