@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 72.0                            ║
+    ║                        Version 74.4                            ║
     ║  v72 FIXES + VISUAL OVERHAUL:                                ║
     ║  • OBSIDIAN THEME: Premium dark glassmorphic redesign        ║
     ║  • New fonts: DM Sans + Instrument Sans (replaces Inter)     ║
@@ -531,8 +531,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23a78bfa'/%3E%3Cstop offset='100%25' stop-color='%236c5ce7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='system-ui' font-weight='700' font-size='36' fill='white' opacity='0.95'%3EH%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="data:image/png;base64,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">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
@@ -689,6 +688,433 @@
         @keyframes ob-fade-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes ob-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+    <!-- ═══ v74.4: COMPLETE THEME SYSTEM ═══ -->
+    <style id="helm-theme-v744">
+    /* ═══════════════════════════════════════════════════════════════
+       v74.4 LIGHT MODE — Login Card Glass Aesthetic
+       Matching: rgba bg, barely-there borders, blur, rounded 20px
+       ═══════════════════════════════════════════════════════════════ */
+    html[data-theme="light"]{
+        --ob-bg-base:#edeef2;--ob-bg-surface:rgba(255,255,255,0.45);--ob-bg-elevated:rgba(255,255,255,0.55);
+        --ob-bg-hover:rgba(0,0,0,0.03);--ob-bg-active:rgba(0,0,0,0.05);
+        --ob-border-subtle:rgba(0,0,0,0.05);--ob-border-default:rgba(0,0,0,0.08);
+        --ob-border-strong:rgba(0,0,0,0.12);--ob-border-focus:rgba(30,58,95,0.25);
+        --ob-text-primary:#1a1e2e;--ob-text-secondary:#4b5268;
+        --ob-text-tertiary:#8b92a8;--ob-text-disabled:#b8bece;
+        --ob-accent:#1e3a5f;--ob-accent-muted:rgba(30,58,95,0.08);
+        --ob-accent-subtle:rgba(30,58,95,0.04);--ob-accent-glow:rgba(30,58,95,0.12);
+        --hm-bg-base:#edeef2;--hm-bg-elevated:rgba(255,255,255,0.55);--hm-bg-surface:rgba(255,255,255,0.45);
+        --hm-bg-surface-hover:rgba(0,0,0,0.03);--hm-bg-overlay:rgba(0,0,0,0.2);
+        --hm-text-primary:#1a1e2e;--hm-text-secondary:#4b5268;
+        --hm-text-tertiary:#8b92a8;--hm-text-muted:#b8bece;
+        --hm-accent:#1e3a5f;--hm-accent-hover:#2a4d7a;
+        --hm-accent-subtle:rgba(30,58,95,0.06);--hm-accent-glow:rgba(30,58,95,0.15);
+        --hm-success:#059669;--hm-warning:#d97706;--hm-error:#dc2626;--hm-info:#2563eb;
+        --hm-border-subtle:1px solid rgba(0,0,0,0.05);
+        color-scheme:light;
+    }
+    /* ─── Base Surfaces ─── */
+    html[data-theme="light"] body,
+    html[data-theme="light"] #helm-ui-shell,
+    html[data-theme="light"] .helm-view,
+    html[data-theme="light"] .helm-body,
+    html[data-theme="light"] #helm-view-dashboard{background:#edeef2!important;color:#1a1e2e!important}
+    html[data-theme="light"] #helm-ui-shell:not(.helm-map-active){background:#edeef2!important}
+
+    /* ─── Welcome ─── */
+    html[data-theme="light"] .helm-welcome-overlay{background:linear-gradient(165deg,#e4e5ea 0%,#d8dae0 50%,#c8cad2 100%)!important}
+    html[data-theme="light"] .helm-welcome-overlay *{color:#1a1e2e!important}
+    html[data-theme="light"] .helm-welcome-overlay small{color:#8b92a8!important}
+
+    /* ─── Header ─── */
+    html[data-theme="light"] .helm-header{background:rgba(255,255,255,0.55)!important;backdrop-filter:blur(40px) saturate(180%)!important;-webkit-backdrop-filter:blur(40px) saturate(180%)!important;border-bottom:1px solid rgba(0,0,0,0.05)!important;box-shadow:none!important}
+    html[data-theme="light"] .helm-header *{color:#4b5268}
+    html[data-theme="light"] .helm-header .material-symbols-rounded{color:#8b92a8!important}
+    html[data-theme="light"] .helm-header .stat-value{color:#1a1e2e!important}
+    html[data-theme="light"] .helm-header .stat-label{color:#8b92a8!important}
+    html[data-theme="light"] .helm-logo span,html[data-theme="light"] .helm-logo-monograph span{color:#1a1e2e!important}
+
+    /* ─── Bottom Nav ─── */
+    html[data-theme="light"] .helm-bottom-nav{background:rgba(255,255,255,0.6)!important;backdrop-filter:blur(40px)!important;-webkit-backdrop-filter:blur(40px)!important;border-top:1px solid rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] .helm-bottom-nav span{color:#b8bece!important}
+    html[data-theme="light"] .helm-bottom-nav .active span,html[data-theme="light"] .helm-bottom-nav a.active span{color:#1e3a5f!important}
+
+    /* ─── BENTO CARDS — Glass matching login card ─── */
+    html[data-theme="light"] .bento-card,
+    html[data-theme="light"] .ob-card,
+    html[data-theme="light"] .ob-card-elevated,
+    html[data-theme="light"] .dash-panel{
+        background:rgba(255,255,255,0.45)!important;
+        backdrop-filter:blur(40px) saturate(180%)!important;
+        -webkit-backdrop-filter:blur(40px) saturate(180%)!important;
+        border:1px solid rgba(255,255,255,0.5)!important;
+        border-radius:20px!important;
+        box-shadow:0 2px 8px rgba(0,0,0,0.03)!important;
+    }
+    html[data-theme="light"] .bento-card:hover{border-color:rgba(255,255,255,0.7)!important;box-shadow:0 4px 16px rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] .bento-card-stat{background:rgba(255,255,255,0.35)!important;border-radius:20px!important}
+    html[data-theme="light"] .bento-title{color:#1a1e2e!important}
+    html[data-theme="light"] .bento-subtitle,html[data-theme="light"] .bento-label{color:#8b92a8!important}
+    html[data-theme="light"] .bento-value,html[data-theme="light"] .bento-value-sm{color:#1a1e2e!important}
+    html[data-theme="light"] .bento-card .material-symbols-rounded{color:#8b92a8!important}
+    html[data-theme="light"] .bento-list-item{border-bottom-color:rgba(0,0,0,0.04)!important;color:#4b5268!important}
+    html[data-theme="light"] .bento-badge{background:rgba(30,58,95,0.06)!important;color:#1e3a5f!important}
+    html[data-theme="light"] .bento-pill{background:rgba(0,0,0,0.03)!important;border:1px solid rgba(0,0,0,0.06)!important;color:#4b5268!important;border-radius:10px!important}
+    html[data-theme="light"] .bento-pill:hover{background:rgba(0,0,0,0.06)!important}
+    html[data-theme="light"] .bento-stat-mini{background:rgba(255,255,255,0.35)!important;border:1px solid rgba(0,0,0,0.04)!important;border-radius:14px!important}
+    html[data-theme="light"] .bento-stat-label{color:#8b92a8!important}
+    html[data-theme="light"] .bento-grid>div{color:#4b5268!important}
+
+    /* ─── INPUTS — Login card style ─── */
+    html[data-theme="light"] input,
+    html[data-theme="light"] select,
+    html[data-theme="light"] textarea,
+    html[data-theme="light"] .bento-input{
+        background:rgba(0,0,0,0.03)!important;
+        border:1px solid rgba(0,0,0,0.08)!important;
+        border-radius:10px!important;
+        color:#1a1e2e!important;
+        font-family:inherit!important;
+    }
+    html[data-theme="light"] input::placeholder,
+    html[data-theme="light"] textarea::placeholder{color:rgba(0,0,0,0.25)!important}
+    html[data-theme="light"] input:focus,
+    html[data-theme="light"] select:focus,
+    html[data-theme="light"] textarea:focus{
+        border-color:rgba(30,58,95,0.3)!important;
+        box-shadow:none!important;
+        outline:none!important;
+    }
+    html[data-theme="light"] label{color:#4b5268!important}
+
+    /* ─── Search ─── */
+    html[data-theme="light"] .search-bar,
+    html[data-theme="light"] [class*="search"] input,
+    html[data-theme="light"] #geocoder-search{background:rgba(0,0,0,0.03)!important;border:1px solid rgba(0,0,0,0.06)!important;color:#1a1e2e!important;border-radius:10px!important}
+
+    /* ─── Stat Colors ─── */
+    html[data-theme="light"] #helm-fin-available{color:#059669!important}
+    html[data-theme="light"] #helm-fin-occupied{color:#d97706!important}
+    html[data-theme="light"] #helm-fin-annual,html[data-theme="light"] #dash-units-available{color:#2563eb!important}
+    html[data-theme="light"] #dash-conversion-card,html[data-theme="light"] #dash-occupancy-rate,html[data-theme="light"] #dash-lb-xp{color:#1e3a5f!important}
+    html[data-theme="light"] #dash-units-occupied{color:#d97706!important}
+    html[data-theme="light"] #dash-lb-name,html[data-theme="light"] #dash-conversion{color:#1a1e2e!important}
+    html[data-theme="light"] #dash-lb-stats{color:#8b92a8!important}
+    html[data-theme="light"] #dash-signed-count{color:#059669!important}
+    html[data-theme="light"] #dash-noshow-count{color:#dc2626!important}
+    html[data-theme="light"] #dash-viewed-count{color:#6366f1!important}
+    html[data-theme="light"] #dash-pending-count{color:#d97706!important}
+
+    /* ─── Pipeline ─── */
+    html[data-theme="light"] #v73-pipeline-header{background:rgba(255,255,255,0.45)!important;border:1px solid rgba(0,0,0,0.05)!important;backdrop-filter:blur(40px)!important;border-radius:20px!important}
+    html[data-theme="light"] .v73-pipeline-row{background:transparent!important}
+    html[data-theme="light"] .v73-pipeline-row:hover{background:rgba(0,0,0,0.02)!important}
+    html[data-theme="light"] .v73-pipeline-row td{color:#1a1e2e!important;border-bottom:1px solid rgba(0,0,0,0.04)!important}
+    html[data-theme="light"] .v73-action-btn{background:rgba(0,0,0,0.03)!important;border:1px solid rgba(0,0,0,0.06)!important;border-radius:10px!important}
+    html[data-theme="light"] .v73-action-btn .material-symbols-rounded{color:#8b92a8!important}
+    html[data-theme="light"] .v73-action-btn:hover{background:rgba(0,0,0,0.06)!important}
+    html[data-theme="light"] .pipeline-stat-value{color:#1a1e2e!important}
+    html[data-theme="light"] .pipeline-stat-label{color:#8b92a8!important}
+
+    /* ─── Viewing Cards ─── */
+    html[data-theme="light"] .v24-viewing-card{background:rgba(255,255,255,0.45)!important;border:1px solid rgba(255,255,255,0.5)!important;border-left:3px solid #1e3a5f!important;backdrop-filter:blur(40px)!important;border-radius:16px!important}
+    html[data-theme="light"] .v24-viewing-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] .v24-viewing-card.today-card{background:rgba(239,246,255,0.5)!important;border-left-color:#2563eb!important}
+    html[data-theme="light"] .v24-viewing-card.past-card{border-left-color:rgba(0,0,0,0.1)!important}
+    html[data-theme="light"] .v24-card-title{color:#1a1e2e!important}
+    html[data-theme="light"] .v24-card-info{color:#4b5268!important}
+    html[data-theme="light"] .v24-card-info strong{color:#1e3a5f!important}
+    html[data-theme="light"] .v24-viewings-title{color:#1a1e2e!important}
+    html[data-theme="light"] .v24-viewings-subtitle{color:#8b92a8!important}
+    html[data-theme="light"] .v24-card-badge.today{background:rgba(37,99,235,0.08)!important;color:#2563eb!important;border-radius:8px!important}
+    html[data-theme="light"] .v24-card-badge.past{background:rgba(0,0,0,0.04)!important;color:#8b92a8!important;border-radius:8px!important}
+
+    /* ─── Tables ─── */
+    html[data-theme="light"] thead th,html[data-theme="light"] thead td{background:rgba(0,0,0,0.02)!important;color:#8b92a8!important;border-bottom:1px solid rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] tbody tr:hover{background:rgba(0,0,0,0.02)!important}
+    html[data-theme="light"] tbody td{color:#4b5268!important}
+
+    /* ─── Command Center ─── */
+    html[data-theme="light"] .cc-panel{background:rgba(255,255,255,0.75)!important;border:1px solid rgba(255,255,255,0.5)!important;box-shadow:0 20px 60px rgba(0,0,0,0.1)!important;backdrop-filter:blur(40px)!important;border-radius:24px!important}
+    html[data-theme="light"] .cc-greet,html[data-theme="light"] .cc-w-title{color:#1a1e2e!important}
+    html[data-theme="light"] .cc-date,html[data-theme="light"] .cc-period{color:#b8bece!important}
+    html[data-theme="light"] .cc-widget{background:rgba(0,0,0,0.02)!important;border:1px solid rgba(0,0,0,0.05)!important;border-radius:16px!important}
+    html[data-theme="light"] .cc-sched-client{color:#1a1e2e!important}
+    html[data-theme="light"] .cc-sched-prop{color:#8b92a8!important}
+    html[data-theme="light"] .cc-sched-time{color:#1e3a5f!important}
+    html[data-theme="light"] .cc-hbtn{background:rgba(0,0,0,0.03)!important;border:1px solid rgba(0,0,0,0.06)!important;color:#4b5268!important;border-radius:10px!important}
+    html[data-theme="light"] .cc-team-nm,html[data-theme="light"] .cc-pipe-stats{color:#4b5268!important}
+    html[data-theme="light"] .cc-act-btn{background:rgba(0,0,0,0.03)!important;border:1px solid rgba(0,0,0,0.06)!important;color:#4b5268!important;border-radius:10px!important}
+    html[data-theme="light"] .cc-act-btn:hover{background:rgba(0,0,0,0.06)!important}
+    html[data-theme="light"] .cc-perf-lbl,html[data-theme="light"] .cc-set-title{color:#8b92a8!important}
+    html[data-theme="light"] .cc-set-row{border-bottom-color:rgba(0,0,0,0.04)!important}
+    html[data-theme="light"] .cc-tog{background:rgba(0,0,0,0.08)!important;border-radius:20px!important}
+    html[data-theme="light"] .cc-tog.on{background:rgba(30,58,95,0.15)!important}
+    html[data-theme="light"] .cc-tog-k{background:#b8bece!important}
+    html[data-theme="light"] .cc-tog.on .cc-tog-k{background:#1e3a5f!important}
+    html[data-theme="light"] .cc-bg{background:rgba(0,0,0,0.12)!important;backdrop-filter:blur(8px)!important}
+    html[data-theme="light"] .cc-empty{color:#b8bece!important}
+
+    /* ─── Sidebar + Toolbar ─── */
+    html[data-theme="light"] .sidebar,html[data-theme="light"] .helm-sidebar,html[data-theme="light"] #property-sidebar{background:rgba(255,255,255,0.6)!important;backdrop-filter:blur(40px)!important;border-color:rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] .map-toolbar,html[data-theme="light"] #map-filter-bar{background:rgba(255,255,255,0.55)!important;border:1px solid rgba(0,0,0,0.05)!important;backdrop-filter:blur(40px)!important;border-radius:16px!important}
+
+    /* ─── Toasts ─── */
+    html[data-theme="light"] .hm-toast{background:rgba(255,255,255,0.7)!important;border:1px solid rgba(255,255,255,0.5)!important;box-shadow:0 4px 20px rgba(0,0,0,0.06)!important;backdrop-filter:blur(40px)!important;border-radius:16px!important}
+    html[data-theme="light"] .hm-toast-title{color:#1a1e2e!important}
+    html[data-theme="light"] .hm-toast-message{color:#4b5268!important}
+
+    /* ─── Buttons ─── */
+    html[data-theme="light"] .v24-card-btn{color:#fff!important;border-radius:10px!important}
+    html[data-theme="light"] .v24-card-btn.pipeline{background:#1e3a5f!important}
+    html[data-theme="light"] .viewings-tab-btn{background:rgba(0,0,0,0.03)!important;color:#8b92a8!important;border-radius:10px!important}
+    html[data-theme="light"] .viewings-tab-btn.active{background:#1e3a5f!important;color:#fff!important}
+    html[data-theme="light"] .filter-btn{background:rgba(0,0,0,0.03)!important;color:#8b92a8!important;border:1px solid rgba(0,0,0,0.06)!important;border-radius:10px!important}
+    html[data-theme="light"] .filter-btn.active{background:#1e3a5f!important;color:#fff!important}
+    html[data-theme="light"] .bento-btn-primary{border-radius:10px!important}
+
+    /* ─── Agents ─── */
+    html[data-theme="light"] .agent-card{background:rgba(255,255,255,0.35)!important;border:1px solid rgba(0,0,0,0.04)!important;border-radius:16px!important}
+    html[data-theme="light"] #agent-notif-badge{background:#1e3a5f!important}
+
+    /* ─── Misc ─── */
+    html[data-theme="light"] .empty-state{color:#8b92a8!important}
+    html[data-theme="light"] .floating-menu,html[data-theme="light"] .helm-floating-menu{background:rgba(255,255,255,0.7)!important;border:1px solid rgba(255,255,255,0.5)!important;box-shadow:0 8px 32px rgba(0,0,0,0.08)!important;backdrop-filter:blur(40px)!important;border-radius:20px!important}
+    html[data-theme="light"] .tools-grid .tool-card,html[data-theme="light"] .write-card{background:rgba(255,255,255,0.45)!important;border:1px solid rgba(255,255,255,0.5)!important;border-radius:20px!important}
+    html[data-theme="light"] #hpm-login-screen{background:linear-gradient(165deg,#e4e5ea 0%,#d8dae0 50%,#c8cad2 100%)!important}
+    html[data-theme="light"] #hpm-login-screen *{color:#1a1e2e}
+    html[data-theme="light"] #dash-recent-activity *{color:#4b5268!important}
+    html[data-theme="light"] .team-leaderboard-widget{background:transparent!important}
+    html[data-theme="light"] #dash-donut-ring{stroke:#1e3a5f!important}
+    html[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:10px}
+    html[data-theme="light"] ::-webkit-scrollbar-track{background:transparent}
+    html[data-theme="light"] .quick-stats-bar *{color:#4b5268!important}
+
+    /* ─── Modals ─── */
+    html[data-theme="light"] .modal-content{background:rgba(255,255,255,0.8)!important;border:1px solid rgba(255,255,255,0.5)!important;backdrop-filter:blur(40px)!important;border-radius:20px!important}
+    html[data-theme="light"] .modal-header{background:rgba(0,0,0,0.02)!important;border-bottom:1px solid rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] .modal-header h2{color:#1a1e2e!important}
+    html[data-theme="light"] .modal-body{color:#4b5268!important}
+    html[data-theme="light"] .modal{background:rgba(0,0,0,0.15)!important;backdrop-filter:blur(8px)!important}
+
+    /* ─── User Menu ─── */
+    html[data-theme="light"] #hpm-user-menu{background:rgba(255,255,255,0.75)!important;border:1px solid rgba(255,255,255,0.5)!important;box-shadow:0 12px 40px rgba(0,0,0,0.08)!important;backdrop-filter:blur(40px)!important;border-radius:20px!important}
+    html[data-theme="light"] #hpm-user-menu *{color:#4b5268!important}
+    html[data-theme="light"] #hpm-user-menu button:hover{background:rgba(0,0,0,0.03)!important}
+
+    /* ─── Theme Toggle ─── */
+    html[data-theme="light"] #helm-theme-toggle{background:rgba(0,0,0,0.03)!important;border-radius:10px!important}
+    html[data-theme="light"] #helm-theme-toggle .material-symbols-rounded{color:#8b92a8!important}
+    html[data-theme="light"] #helm-agent-notif-bell .material-symbols-rounded{color:#8b92a8!important}
+
+    /* ─── Studio Bubbles — Clean flat for light ─── */
+    html[data-theme="light"] .studio-bubble{background:rgba(255,255,255,0.4)!important;box-shadow:none!important;border:1.5px solid rgba(0,0,0,0.08)!important;border-radius:12px!important}
+    html[data-theme="light"] .studio-bubble span{text-shadow:none!important}
+    html[data-theme="light"] .studio-bubble > div{display:none!important}
+    html[data-theme="light"] .studio-bubble[title*="AVAILABLE"]{background:rgba(5,150,105,0.06)!important;border-color:rgba(5,150,105,0.2)!important}
+    html[data-theme="light"] .studio-bubble[title*="AVAILABLE"] span:first-of-type{color:#059669!important}
+    html[data-theme="light"] .studio-bubble[title*="AVAILABLE"] span:last-of-type{color:#059669!important}
+    html[data-theme="light"] .studio-bubble[title*="TAKEN"]{background:rgba(220,38,38,0.06)!important;border-color:rgba(220,38,38,0.2)!important}
+    html[data-theme="light"] .studio-bubble[title*="TAKEN"] span:first-of-type{color:#dc2626!important}
+    html[data-theme="light"] .studio-bubble[title*="TAKEN"] span:last-of-type{color:#dc2626!important}
+
+    /* ─── Dark mode studio polish ─── */
+    html:not([data-theme="light"]) .studio-bubble{border-radius:12px!important;box-shadow:0 2px 8px rgba(0,0,0,0.25)!important}
+    html:not([data-theme="light"]) .studio-bubble:hover{transform:scale(1.08) translateY(-1px)!important}
+
+    /* ─── CATCH-ALL: Inline style overrides ─── */
+    html[data-theme="light"] [style*="color: rgba(255,255,255"]{color:#4b5268!important}
+    html[data-theme="light"] [style*="color:rgba(255,255,255"]{color:#4b5268!important}
+    html[data-theme="light"] [style*="color: white"]{color:#1a1e2e!important}
+    html[data-theme="light"] [style*="color:white"]{color:#1a1e2e!important}
+    /* Preserve white on colored action buttons */
+    html[data-theme="light"] .v24-card-btn *,
+    html[data-theme="light"] .bento-btn-primary *,
+    html[data-theme="light"] .auth-btn,
+    html[data-theme="light"] button[style*="background: linear-gradient"] *,
+    html[data-theme="light"] button[style*="background:#1e3a5f"] *,
+    html[data-theme="light"] button[style*="background:#2563eb"] *,
+    html[data-theme="light"] button[style*="background: #22c55e"] *{color:white!important}
+    /* Inline dark backgrounds → glass */
+    html[data-theme="light"] [style*="background: rgba(0,0,0,0.2)"]{background:rgba(0,0,0,0.02)!important}
+    html[data-theme="light"] [style*="background:rgba(0,0,0,0.2)"]{background:rgba(0,0,0,0.02)!important}
+    html[data-theme="light"] [style*="background: rgba(0,0,0,0.25)"]{background:rgba(0,0,0,0.02)!important}
+    html[data-theme="light"] [style*="background: linear-gradient(135deg, rgba(15,23,42"]{background:rgba(255,255,255,0.35)!important}
+    /* Inline white borders → subtle */
+    html[data-theme="light"] [style*="border-bottom: 1px solid rgba(255,255,255"]{border-bottom-color:rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] [style*="border-top: 1px solid rgba(255,255,255"]{border-top-color:rgba(0,0,0,0.05)!important}
+    html[data-theme="light"] [style*="border: 1px solid rgba(255,255,255"]{border-color:rgba(0,0,0,0.05)!important}
+    /* ─── Bento icon backgrounds ─── */
+    html[data-theme="light"] .bento-icon{background:rgba(0,0,0,0.03)!important}
+
+    /* ═══════════════════════════════════════════════════════════════
+       DARK MODE — Glass Card Overhaul
+       Match login card: rgba(255,255,255,0.02) bg, blur(40px), 20px radius
+       ═══════════════════════════════════════════════════════════════ */
+    html:not([data-theme="light"]) .bento-card,
+    html:not([data-theme="light"]) .ob-card,
+    html:not([data-theme="light"]) .dash-panel{
+        background:rgba(255,255,255,0.03)!important;
+        backdrop-filter:blur(40px) saturate(180%)!important;
+        -webkit-backdrop-filter:blur(40px) saturate(180%)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+        box-shadow:none!important;
+    }
+    html:not([data-theme="light"]) .bento-card:hover{
+        border-color:rgba(255,255,255,0.1)!important;
+        box-shadow:0 4px 20px rgba(0,0,0,0.2)!important;
+    }
+    html:not([data-theme="light"]) .bento-card-stat{
+        background:rgba(255,255,255,0.02)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+    }
+    /* Color variant cards — glass with tinted border, NOT solid bg */
+    html:not([data-theme="light"]) .bento-card-blue{
+        background:linear-gradient(135deg,rgba(255,255,255,0.02) 0%,rgba(59,130,246,0.06) 100%)!important;
+        border-color:rgba(59,130,246,0.15)!important;
+    }
+    html:not([data-theme="light"]) .bento-card-green{
+        background:linear-gradient(135deg,rgba(255,255,255,0.02) 0%,rgba(34,197,94,0.06) 100%)!important;
+        border-color:rgba(34,197,94,0.15)!important;
+    }
+    html:not([data-theme="light"]) .bento-card-purple{
+        background:linear-gradient(135deg,rgba(255,255,255,0.02) 0%,rgba(139,92,246,0.06) 100%)!important;
+        border-color:rgba(139,92,246,0.15)!important;
+    }
+    html:not([data-theme="light"]) .bento-card-amber{
+        background:linear-gradient(135deg,rgba(255,255,255,0.02) 0%,rgba(251,191,36,0.06) 100%)!important;
+        border-color:rgba(251,191,36,0.15)!important;
+    }
+    html:not([data-theme="light"]) .bento-card-red{
+        background:linear-gradient(135deg,rgba(255,255,255,0.02) 0%,rgba(239,68,68,0.06) 100%)!important;
+        border-color:rgba(239,68,68,0.15)!important;
+    }
+    /* Timetable + Date nav + Viewings command area cards */
+    html:not([data-theme="light"]) .viewings-timetable-header,
+    html:not([data-theme="light"]) .viewings-tab-content .bento-card,
+    html:not([data-theme="light"]) #viewings-content-timetable .bento-card{
+        background:rgba(255,255,255,0.02)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+    }
+    /* Dark toasts — glass not solid */
+    html:not([data-theme="light"]) .hm-toast{
+        background:rgba(255,255,255,0.04)!important;
+        backdrop-filter:blur(40px) saturate(180%)!important;
+        border:1px solid rgba(255,255,255,0.08)!important;
+        border-radius:16px!important;
+        box-shadow:0 8px 32px rgba(0,0,0,0.3)!important;
+    }
+    /* Dark mode inputs — match login */
+    html:not([data-theme="light"]) input,
+    html:not([data-theme="light"]) select,
+    html:not([data-theme="light"]) textarea{
+        background:rgba(255,255,255,0.03)!important;
+        border:1px solid rgba(255,255,255,0.08)!important;
+        border-radius:10px!important;
+    }
+    html:not([data-theme="light"]) input:focus,
+    html:not([data-theme="light"]) select:focus,
+    html:not([data-theme="light"]) textarea:focus{
+        border-color:rgba(167,139,250,0.30)!important;
+    }
+    /* Dark mode Command Center — glass */
+    html:not([data-theme="light"]) .cc-panel{
+        background:rgba(15,17,23,0.85)!important;
+        backdrop-filter:blur(40px) saturate(180%)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:24px!important;
+    }
+    html:not([data-theme="light"]) .cc-widget{
+        background:rgba(255,255,255,0.02)!important;
+        border:1px solid rgba(255,255,255,0.05)!important;
+        border-radius:16px!important;
+    }
+    html:not([data-theme="light"]) .cc-act-btn,
+    html:not([data-theme="light"]) .cc-hbtn{
+        background:rgba(255,255,255,0.03)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:10px!important;
+    }
+    /* Dark mode floating menus + sidebar — glass */
+    html:not([data-theme="light"]) .floating-menu,
+    html:not([data-theme="light"]) .helm-floating-menu{
+        background:rgba(15,17,23,0.85)!important;
+        backdrop-filter:blur(40px)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+    }
+    html:not([data-theme="light"]) #hpm-user-menu{
+        background:rgba(15,17,23,0.9)!important;
+        backdrop-filter:blur(40px)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+        box-shadow:0 12px 40px rgba(0,0,0,0.4)!important;
+    }
+    /* Dark mode pipeline header — glass */
+    html:not([data-theme="light"]) #v73-pipeline-header{
+        background:rgba(255,255,255,0.02)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        backdrop-filter:blur(40px)!important;
+        border-radius:20px!important;
+    }
+    /* Dark mode viewing cards — glass */
+    html:not([data-theme="light"]) .v24-viewing-card{
+        background:rgba(255,255,255,0.02)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        backdrop-filter:blur(40px)!important;
+        border-radius:16px!important;
+    }
+    /* Dark mode action buttons — glass */
+    html:not([data-theme="light"]) .v73-action-btn{
+        background:rgba(255,255,255,0.03)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:10px!important;
+    }
+    /* Dark mode modals — glass */
+    html:not([data-theme="light"]) .modal-content{
+        background:rgba(15,17,23,0.9)!important;
+        backdrop-filter:blur(40px)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+    }
+    html:not([data-theme="light"]) .modal{
+        background:rgba(0,0,0,0.4)!important;
+        backdrop-filter:blur(8px)!important;
+    }
+    /* Bento pills / tabs — glass */
+    html:not([data-theme="light"]) .bento-pill,
+    html:not([data-theme="light"]) .viewings-tab-btn,
+    html:not([data-theme="light"]) .filter-btn{
+        background:rgba(255,255,255,0.03)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:10px!important;
+    }
+    html:not([data-theme="light"]) .viewings-tab-btn.active{
+        background:var(--ob-accent,#a78bfa)!important;
+        border-color:transparent!important;
+        color:#fff!important;
+    }
+    html:not([data-theme="light"]) .bento-btn{
+        border-radius:10px!important;
+    }
+    /* Agent cards — glass */
+    html:not([data-theme="light"]) .agent-card{
+        background:rgba(255,255,255,0.02)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:16px!important;
+    }
+    /* Tools cards */
+    html:not([data-theme="light"]) .tools-grid .tool-card,
+    html:not([data-theme="light"]) .write-card{
+        background:rgba(255,255,255,0.03)!important;
+        border:1px solid rgba(255,255,255,0.06)!important;
+        border-radius:20px!important;
+    }
+    </style>
+
 
     <style>
         #helm-ui-shell { display: none !important; }
@@ -19104,6 +19530,15 @@
 
             <div class="helm-nav">
                 <!-- v72.1: Alert System -->
+                <!-- v74.2: Command Center trigger -->
+                <div onclick="window.showCmdCenter && showCmdCenter()"
+                     style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,0.3);transition:all 0.2s;"
+                     onmouseover="this.style.background='rgba(255,255,255,0.04)';this.style.color='rgba(255,255,255,0.55)'"
+                     onmouseout="this.style.background='';this.style.color='rgba(255,255,255,0.3)'"
+                     title="Command Center">
+                    <span class="material-symbols-rounded" style="font-size:20px">widgets</span>
+                </div>
+                <button id="helm-theme-toggle" onclick="cycleHelmTheme()" title="Theme: Dark" style="width:36px;height:36px;border:none;background:rgba(255,255,255,0.04);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-rounded" style="font-size:18px;color:rgba(255,255,255,0.5);">dark_mode</span></button>
                 <div id="helm-agent-notif-bell" onclick="window._agentNotifs.togglePanel()"
                             style="position:relative;cursor:pointer;padding:8px;border-radius:10px;transition:all 0.3s;"
                             onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'"
@@ -19150,19 +19585,7 @@
             <div id="helm-view-dashboard" class="helm-view active" style="background: var(--ob-bg-base, #0a0e1a);">
                 <div style="padding: 24px 32px; width: 100%;">
 
-                    <!-- v73 Sync Status Bar -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span id="v73-sync-dot" style="width:7px;height:7px;border-radius:50%;background:#ffb547;box-shadow:0 0 6px rgba(255,181,71,0.4);transition:all 0.5s;"></span>
-                            <span id="v73-sync-label" style="font-size:10px;color:rgba(255,255,255,0.3);font-family:'DM Sans',system-ui;font-weight:500;">Syncing...</span>
-                        </div>
-                        <button id="v73-sync-btn" onclick="window._v73Sync.syncNow()"
-                            style="padding:7px 14px;background:rgba(255,255,255,0.03);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:10px;color:rgba(255,255,255,0.5);cursor:pointer;font-weight:600;font-size:10px;display:flex;align-items:center;gap:6px;transition:all 0.3s;font-family:'DM Sans',system-ui;"
-                            onmouseover="this.style.borderColor='rgba(108,92,231,0.25)';this.style.color='#a78bfa'" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)';this.style.color='rgba(255,255,255,0.5)'">
-                            <span class="material-symbols-rounded" id="v73-sync-icon" style="font-size:14px;">sync</span>
-                            <span id="v73-sync-btn-text">Sync Data</span>
-                        </button>
-                    </div>
+                    <!-- v74.4: Sync status bar removed — sync happens automatically on enter -->
 
                     <!-- Top Stats Row - 5 Bento Cards -->
                     <div class="bento-grid bento-grid-5" style="margin-bottom: 20px;">
@@ -19244,28 +19667,28 @@
                         <div class="bento-card">
                             <div class="bento-section-header">
                                 <div class="bento-title">
-                                    <span class="material-symbols-rounded" style="color: #fbbf24;">emoji_events</span>
+                                    <span class="material-symbols-rounded" style="color: rgba(255,255,255,0.25);">emoji_events</span>
                                     Leaderboard
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 6px;">
                                     <span
-                                        style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite;"></span>
+                                        style="width: 5px; height: 5px; background: rgba(167,139,250,0.4); border-radius: 50%;"></span>
                                     <span class="bento-subtitle">Live</span>
                                 </div>
                             </div>
                             <div class="bento-scroll" id="dash-leaderboard" style="min-height: 140px;">
                                 <div class="bento-list-item">
                                     <div
-                                        style="width: 28px; height: 28px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #1a1a1a;">
+                                        style="width: 24px; height: 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.35);">
                                         1</div>
                                     <div id="dash-lb-avatar"
-                                        style="width: 32px; height: 32px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px;">
+                                        style="width: 32px; height: 32px; background: var(--ob-accent-muted, rgba(167,139,250,0.15)); border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #a78bfa; font-weight: 700; font-size: 11px;">
                                         ?</div>
                                     <div style="flex: 1;">
                                         <div style="color: white; font-weight: 600; font-size: 13px;" id="dash-lb-name">Loading...</div>
                                         <div style="color: rgba(255,255,255,0.5); font-size: 11px;" id="dash-lb-stats">-</div>
                                     </div>
-                                    <div style="color: #22c55e; font-weight: 700; font-size: 13px;" id="dash-lb-xp">0 XP</div>
+                                    <div style="color: #a78bfa; font-weight: 600; font-size: 12px; opacity: 0.7;" id="dash-lb-xp">0 XP</div>
                                 </div>
                             </div>
                             <!-- Pipeline Mini -->
@@ -19277,7 +19700,7 @@
                                 </div>
                                 <div class="pipeline-mini"
                                     style="display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.05);">
-                                    <div class="seg" id="pipe-new" style="flex: 3; background: #3b82f6;"></div>
+                                    <div class="seg" id="pipe-new" style="flex: 3; background: rgba(167,139,250,0.5);"></div>
                                     <div class="seg" id="pipe-viewing" style="flex: 2; background: #8b5cf6;"></div>
                                     <div class="seg" id="pipe-app" style="flex: 1; background: #f59e0b;"></div>
                                     <div class="seg" id="pipe-done" style="flex: 1; background: #22c55e;"></div>
@@ -19303,7 +19726,7 @@
                         <div class="bento-card">
                             <div class="bento-section-header">
                                 <div class="bento-title">
-                                    <span class="material-symbols-rounded" style="color: #6c5ce7;">bar_chart</span>
+                                    <span class="material-symbols-rounded" style="color: rgba(255,255,255,0.25);">bar_chart</span>
                                     Weekly Viewings
                                 </div>
                                 <span id="dash-chart-total" class="bento-subtitle">0 this week</span>
@@ -19356,7 +19779,23 @@
                         </div>
                         <div class="bento-card bento-card-stat bento-card-purple">
                             <div class="bento-value-sm" id="dash-conversion-card" style="color: #a78bfa;">0%</div>
-                            <div class="bento-label">Conversion Rate</div>
+                            <div class="bento-label">Sign-up Rate</div>
+                        </div>
+                    </div>
+
+                    <!-- v74.3: Occupancy Stats Row -->
+                    <div class="bento-grid bento-grid-3" style="margin-bottom: 20px;">
+                        <div class="bento-card bento-card-stat">
+                            <div class="bento-value-sm" id="dash-occupancy-rate" style="color: #00d68f;">0%</div>
+                            <div class="bento-label">Occupancy Rate</div>
+                        </div>
+                        <div class="bento-card bento-card-stat">
+                            <div class="bento-value-sm" id="dash-units-occupied" style="color: #fbbf24;">0 / 0</div>
+                            <div class="bento-label">Units Occupied</div>
+                        </div>
+                        <div class="bento-card bento-card-stat">
+                            <div class="bento-value-sm" id="dash-units-available" style="color: #4da6ff;">0</div>
+                            <div class="bento-label">Available Units</div>
                         </div>
                     </div>
 
@@ -19503,9 +19942,9 @@
                         <select id="v73-pipeline-date-filter" onchange="window._v73Pipeline.onDateFilter(this.value)"
                             style="padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:11px;color:white;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',system-ui;min-width:130px;">
                             <option value="all">All Time</option>
-                            <option value="today">Today</option>
+                            <option value="today" selected>Today</option>
                             <option value="1week">This Week</option>
-                            <option value="1month" selected>This Month</option>
+                            <option value="1month">This Month</option>
                             <option value="3months">3 Months</option>
                             <option value="6months">6 Months</option>
                         </select>
@@ -20757,89 +21196,7 @@
                         </div>
                     </div>
 
-                    <!-- Viewing Deduplicator Pro Card -->
-
-                    <!-- v72: WEEKLY VIEWINGS REPORT -->
-                    <div class="bento-card" style="margin-top: 20px; margin-bottom: 20px; position: relative; overflow: hidden;">
-                        <!-- Accent top border -->
-                        <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #6c5ce7, #4da6ff, #00d68f); opacity: 0.7;"></div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                            <div>
-                                <h3 style="margin: 0 0 6px; color: white; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                                    <span class="material-symbols-rounded" style="color: #a78bfa; font-size: 24px;">date_range</span>
-                                    Weekly Viewings Report
-                                </h3>
-                                <p style="margin: 0; color: rgba(255,255,255,0.55); font-size: 12px;">Week-by-week breakdown of all viewing activity</p>
-                            </div>
-                            <span class="bento-badge" style="background: rgba(108,92,231,0.15); color: #a78bfa;">Report</span>
-                        </div>
-
-                        <!-- Week Navigation -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                            <button onclick="weeklyReportNav(-1)" class="bento-pill" style="padding: 6px 10px; font-size: 12px;">
-                                <span class="material-symbols-rounded" style="font-size: 16px;">chevron_left</span>
-                            </button>
-                            <div id="weekly-report-range" style="flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: #c4b5fd; letter-spacing: 0.3px;">This Week</div>
-                            <button onclick="weeklyReportNav(1)" class="bento-pill" style="padding: 6px 10px; font-size: 12px;">
-                                <span class="material-symbols-rounded" style="font-size: 16px;">chevron_right</span>
-                            </button>
-                            <button onclick="generateWeeklyReport()" class="bento-pill" style="padding: 6px 12px; font-size: 11px; background: rgba(108,92,231,0.12); border-color: rgba(108,92,231,0.25); color: #c4b5fd;">
-                                <span class="material-symbols-rounded" style="font-size: 14px;">refresh</span> Refresh
-                            </button>
-                        </div>
-
-                        <!-- Weekly Stats Summary -->
-                        <div id="weekly-stats-grid" class="bento-grid bento-grid-4" style="gap: 10px; margin-bottom: 16px;">
-                            <div class="bento-stat-mini" style="background: rgba(77,166,255,0.08); border-color: rgba(77,166,255,0.15);">
-                                <div id="weekly-stat-total" class="bento-stat-value" style="color: #4da6ff;">0</div>
-                                <div class="bento-stat-label">Total</div>
-                            </div>
-                            <div class="bento-stat-mini" style="background: rgba(0,214,143,0.08); border-color: rgba(0,214,143,0.15);">
-                                <div id="weekly-stat-signups" class="bento-stat-value" style="color: #00d68f;">0</div>
-                                <div class="bento-stat-label">Sign Ups</div>
-                            </div>
-                            <div class="bento-stat-mini" style="background: rgba(255,107,107,0.08); border-color: rgba(255,107,107,0.15);">
-                                <div id="weekly-stat-noshows" class="bento-stat-value" style="color: #ff6b6b;">0</div>
-                                <div class="bento-stat-label">No Shows</div>
-                            </div>
-                            <div class="bento-stat-mini" style="background: rgba(255,181,71,0.08); border-color: rgba(255,181,71,0.15);">
-                                <div id="weekly-stat-rate" class="bento-stat-value" style="color: #ffb547;">0%</div>
-                                <div class="bento-stat-label">Conversion</div>
-                            </div>
-                        </div>
-
-                        <!-- Day-by-Day Breakdown -->
-                        <div id="weekly-day-breakdown" style="margin-bottom: 16px;">
-                            <label style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1.2px;">Day-by-Day Breakdown</label>
-                            <div id="weekly-days-container" style="display: flex; flex-direction: column; gap: 6px;">
-                                <!-- Populated by JS -->
-                            </div>
-                        </div>
-
-                        <!-- Weekly Summary Text -->
-                        <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.04);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Weekly Summary</span>
-                                <button onclick="copyWeeklyReport()" class="bento-pill" style="padding: 5px 10px; font-size: 10px;">
-                                    <span class="material-symbols-rounded" style="font-size: 13px;">content_copy</span> Copy
-                                </button>
-                            </div>
-                            <div id="weekly-report-text" style="white-space: pre-wrap; font-size: 12.5px; color: rgba(255,255,255,0.85); line-height: 1.75;">
-                                Click Refresh to generate your weekly viewings report...
-                            </div>
-                        </div>
-
-                        <!-- Export Buttons -->
-                        <div style="display: flex; gap: 10px;">
-                            <button onclick="emailWeeklyReport()" class="bento-pill" style="flex: 1; padding: 12px; justify-content: center;">
-                                <span class="material-symbols-rounded" style="font-size: 16px;">mail</span> Email Report
-                            </button>
-                            <button onclick="copyWeeklyReport()" class="bento-pill" style="flex: 1; padding: 12px; justify-content: center;">
-                                <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span> Copy Report
-                            </button>
-                        </div>
-                    </div>
+                    <!-- v74.4: Viewing Deduplicator Pro Card removed -->
 
                     <!-- Viewing Deduplicator Pro Card -->
                     <div class="bento-card" style="margin-top: 20px; background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(139,92,246,0.1) 100%); border-color: rgba(139,92,246,0.3);">
@@ -21195,102 +21552,9 @@
                         </div>
                     </div>
 
-                    <!-- v63: Multi-Machine Sync Card -->
-                    <div class="bento-card" style="margin-top: 20px; background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(59,130,246,0.1) 100%); border-color: rgba(59,130,246,0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-                            <div>
-                                <h3 style="margin: 0 0 8px; color: white; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                                    <span class="material-symbols-rounded" style="color: #60a5fa; font-size: 22px;">sync</span>
-                                    Multi-Machine Sync
-                                </h3>
-                                <p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 12px;">Sync viewing data between computers</p>
-                            </div>
-                            <span class="bento-badge" style="background: rgba(59,130,246,0.2); color: #60a5fa;">Coming Soon</span>
-                        </div>
-                        
-                        <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 14px; margin-bottom: 12px;">
-                            <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0 0 12px; line-height: 1.5;">
-                                <strong style="color: #60a5fa;">Current Solution:</strong> Use the <strong>Viewing Deduplicator Pro</strong> in the Write section to merge data from multiple machines.
-                            </p>
-                            <div style="display: flex; gap: 8px;">
-                                <button onclick="helmSwitchView('email-writer')" class="bento-pill" style="padding: 10px 14px; background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.4); color: #60a5fa;">
-                                    <span class="material-symbols-rounded" style="font-size: 16px;">compare_arrows</span>
-                                    Open Deduplicator
-                                </button>
-                                <button onclick="exportAllDataForSync()" class="bento-pill" style="padding: 10px 14px;">
-                                    <span class="material-symbols-rounded" style="font-size: 16px;">download</span>
-                                    Export All Data
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 12px;">
-                            <p style="color: rgba(255,255,255,0.7); font-size: 11px; margin: 0; display: flex; align-items: flex-start; gap: 8px;">
-                                <span class="material-symbols-rounded" style="color: #fbbf24; font-size: 16px; flex-shrink: 0;">lightbulb</span>
-                                <span><strong style="color: #fbbf24;">Future Feature:</strong> Local network sync using WebRTC or shared server. For now, use Export → Transfer file → Import on the other machine.</span>
-                            </p>
-                        </div>
-                    </div>
+                    <!-- v74.4: Multi-Machine Sync Card removed -->
                     
-                    <!-- v63.8: Security Settings Card -->
-                    <div class="bento-card" style="margin-top: 20px; background: linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(239,68,68,0.1) 100%); border-color: rgba(239,68,68,0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-                            <div>
-                                <h3 style="margin: 0 0 8px; color: white; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                                    <span class="material-symbols-rounded" style="color: #f87171; font-size: 22px;">security</span>
-                                    Security Settings
-                                </h3>
-                                <p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 12px;">Lock screen, PIN code, and session timeout</p>
-                            </div>
-                            <span class="bento-badge" style="background: rgba(34,197,94,0.2); color: #4ade80;">Active</span>
-                        </div>
-                        
-                        <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 16px; margin-bottom: 12px;">
-                            <!-- Current Status -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                <div>
-                                    <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Auto-Lock After</div>
-                                    <div style="color: white; font-size: 18px; font-weight: 600;">15 minutes</div>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Current PIN</div>
-                                    <div style="color: #4ade80; font-size: 18px; font-weight: 600;">****</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Change PIN -->
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 8px;">Change Lock PIN</label>
-                                <div style="display: flex; gap: 8px;">
-                                    <input type="password" id="new-pin-input" placeholder="Enter new 4-6 digit PIN" maxlength="6"
-                                        style="flex: 1; padding: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: white; font-size: 14px;">
-                                    <button onclick="changeLockPin()" class="bento-pill" style="padding: 12px 18px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none;">
-                                        <span class="material-symbols-rounded" style="font-size: 16px;">save</span>
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Quick Actions -->
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button onclick="lockScreen()" class="bento-pill" style="padding: 10px 14px; background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); color: #f87171;">
-                                    <span class="material-symbols-rounded" style="font-size: 16px;">lock</span>
-                                    Lock Now
-                                </button>
-                                <button onclick="location.reload()" class="bento-pill" style="padding: 10px 14px;">
-                                    <span class="material-symbols-rounded" style="font-size: 16px;">refresh</span>
-                                    Refresh App
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; padding: 12px;">
-                            <p style="color: rgba(255,255,255,0.7); font-size: 11px; margin: 0; display: flex; align-items: flex-start; gap: 8px;">
-                                <span class="material-symbols-rounded" style="color: #60a5fa; font-size: 16px; flex-shrink: 0;">info</span>
-                                <span>Screen will automatically lock after 15 minutes of inactivity. Default PIN is <strong>1234</strong>. Change it above for better security.</span>
-                            </p>
-                        </div>
-                    </div>
+                    <!-- v74.4: Security Settings Card removed -->
                 </div>
             </div>
 
@@ -43720,6 +43984,11 @@ Harir Industries`
             } else {
                 console.log('[HELM] ERROR: Welcome overlay not found!');
             }
+            // v74.3: Trigger sync on enter so data is fresh immediately
+            if (window.HPMSync && typeof window.HPMSync.syncNow === 'function') {
+                console.log('[HELM v74.3] Triggering sync on enter...');
+                setTimeout(() => window.HPMSync.syncNow(), 200);
+            }
         };
 
         // Reset welcome screen when showing HELM and update stats
@@ -45084,13 +45353,17 @@ Harir Industries`
             const now = new Date();
 
             const pendingOutcomes = viewings.filter(v => {
-                if (v.status === 'completed' || v.outcome) return false;
+                // v74.3: Exclude all terminal statuses — these already have outcomes
+                const s = (v.status || '').toLowerCase().replace(/[-_]/g, ' ');
+                const terminal = ['signed up', 'signed', 'no show', 'noshow', 'completed',
+                    'not interested', 'declined', 'cancelled', 'canceled', 'ineligible', 'viewed'];
+                if (terminal.includes(s) || v.outcome) return false;
 
                 const viewingDateTime = new Date(`${v.date}T${v.time || '10:00'}`);
                 const hoursSince = (now - viewingDateTime) / (1000 * 60 * 60);
 
-                // If viewing was 2+ hours ago and no outcome recorded
-                return hoursSince >= 2;
+                // Only pending/confirmed viewings that are 4+ hours past their time
+                return hoursSince >= 4 && (s === 'pending' || s === 'confirmed' || s === 'scheduled' || s === '');
             });
 
             if (pendingOutcomes.length > 0) {
@@ -50125,10 +50398,13 @@ Harir Industries`;
                 });
             }
 
-            // Pending outcomes (past viewings without outcome)
+            // v74.3: Pending outcomes — only genuinely unresolved viewings
             const pendingOutcome = viewings.filter(v => {
                 const vDate = new Date(v.date);
-                return vDate < today && v.status === 'scheduled';
+                const s = (v.status || '').toLowerCase().replace(/[-_]/g, ' ');
+                const resolved = ['signed up', 'signed', 'no show', 'noshow', 'completed',
+                    'not interested', 'declined', 'cancelled', 'viewed', 'ineligible'];
+                return vDate < today && !resolved.includes(s) && !v.outcome;
             }).length;
             if (pendingOutcome > 0) {
                 items.push({
@@ -52274,7 +52550,7 @@ Harir Industries`;
         const state = {
             data: [],
             filtered: [],
-            filters: { status: 'all', search: '', dateRange: '1month' },
+            filters: { status: 'all', search: '', dateRange: 'today' },
             sort: { column: 'date', dir: 'desc' },
             page: 1,
             perPage: 25,
@@ -52338,6 +52614,22 @@ Harir Industries`;
         function applyFilters() {
             let d = state.data.map(v => ({ ...v, status: normalizeStatus(v.status) }));
             
+            // v74.2: Compute date-only filtered set FIRST (for stats to use)
+            let dateOnly = d;
+            if (state.filters.dateRange !== 'all') {
+                const _now = new Date();
+                let _cut = new Date();
+                switch(state.filters.dateRange) {
+                    case 'today': _cut = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()); break;
+                    case '1week': _cut.setDate(_cut.getDate() - 7); break;
+                    case '1month': _cut.setMonth(_cut.getMonth() - 1); break;
+                    case '3months': _cut.setMonth(_cut.getMonth() - 3); break;
+                    case '6months': _cut.setMonth(_cut.getMonth() - 6); break;
+                }
+                dateOnly = d.filter(v => v.date >= _cut.toISOString().split('T')[0]);
+            }
+            state.dateFiltered = dateOnly;
+            
             // Status filter
             if (state.filters.status !== 'all' && state.filters.status !== '_conversion') {
                 d = d.filter(v => v.status === state.filters.status);
@@ -52399,7 +52691,9 @@ Harir Industries`;
         }
 
         function updateStats() {
-            const all = state.data.map(v => ({ ...v, status: normalizeStatus(v.status) }));
+            // v74.2: Stats respect date filter
+            const source = state.dateFiltered || state.data;
+            const all = source.map(v => ({ ...v, status: normalizeStatus(v.status) }));
             const total = all.length;
             const pending = all.filter(v => v.status === 'Pending' || v.status === 'Confirmed').length;
             const viewed = all.filter(v => v.status === 'Viewed').length;
@@ -52673,20 +52967,50 @@ Harir Industries`;
             changeStatus: changeStatus,
             showDetails: showDetails,
             quickNote: function(id) {
-                const idx = state.data.findIndex(v => v.id === id);
-                if (idx === -1) return;
-                const currentNote = state.data[idx].notes || '';
-                const newNote = prompt('Notes for ' + (state.data[idx].client || 'this viewing') + ':', currentNote);
-                if (newNote === null) return; // Cancelled
-                state.data[idx].notes = newNote;
-                // Save back to source
-                const src = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-                const srcIdx = src.findIndex(v => v.id === id);
-                if (srcIdx !== -1) {
-                    src[srcIdx].notes = newNote;
-                    localStorage.setItem('propertyViewings', JSON.stringify(src));
+                const idx = state.data.findIndex(v => String(v.id) === String(id));
+                if (idx === -1) { console.warn('[quickNote] ID not found:', id); return; }
+                const entry = state.data[idx];
+                const currentNote = entry.notes || '';
+                const client = entry.client || entry.clientName || 'this viewing';
+
+                // v74.3: Proper modal instead of prompt()
+                const existing = document.getElementById('helm-note-modal');
+                if (existing) existing.remove();
+
+                const modal = document.createElement('div');
+                modal.id = 'helm-note-modal';
+                modal.style.cssText = 'position:fixed;inset:0;z-index:90000;display:flex;align-items:center;justify-content:center;font-family:var(--ob-font,"DM Sans",system-ui,sans-serif)';
+                modal.innerHTML = `
+                    <div onclick="document.getElementById('helm-note-modal').remove()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px)"></div>
+                    <div style="position:relative;z-index:1;width:92%;max-width:400px;background:rgba(12,16,28,0.97);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+                        <div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.85);margin-bottom:4px">Notes for ${client}</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.2);margin-bottom:16px">${entry.property || ''}</div>
+                        <textarea id="helm-note-input" rows="4" style="width:100%;padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:white;font-size:13px;font-family:inherit;resize:vertical;outline:none;box-sizing:border-box" placeholder="Add notes about this viewing...">${currentNote.replace(/</g,'&lt;')}</textarea>
+                        <div style="display:flex;gap:8px;margin-top:16px">
+                            <button onclick="document.getElementById('helm-note-modal').remove()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.5);cursor:pointer;font-family:inherit;font-size:13px;font-weight:500">Cancel</button>
+                            <button onclick="window._v73Pipeline._saveNote('${id}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:#a78bfa;color:white;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600">Save</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                setTimeout(() => document.getElementById('helm-note-input')?.focus(), 100);
+            },
+            _saveNote: function(id) {
+                const input = document.getElementById('helm-note-input');
+                if (!input) return;
+                const newNote = input.value;
+                const idx = state.data.findIndex(v => String(v.id) === String(id));
+                if (idx !== -1) {
+                    state.data[idx].notes = newNote;
+                    const src = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                    const srcIdx = src.findIndex(v => String(v.id) === String(id));
+                    if (srcIdx !== -1) {
+                        src[srcIdx].notes = newNote;
+                        localStorage.setItem('propertyViewings', JSON.stringify(src));
+                    }
+                    render();
                 }
-                render();
+                document.getElementById('helm-note-modal')?.remove();
             },
             refresh: function() {
                 loadData();
@@ -56777,13 +57101,19 @@ Harir Industries`;
             return vDate >= today;
         }).length;
 
-        // Calculate conversion rate from signed-up viewings
-        const totalCompleted = viewings.filter(v =>
-            v.status === 'signed-up' || v.status === 'completed' ||
-            v.status === 'not-interested' || v.status === 'no-show'
-        ).length;
-        const signups = viewings.filter(v => v.status === 'signed-up').length;
-        const conversionRate = totalCompleted > 0 ? Math.round((signups / totalCompleted) * 100) : 0;
+        // v74.3: Conversion rate = sign-ups / total conducted viewings
+        // "Conducted" = any viewing that actually happened (Signed Up, No Show, Viewed, Completed)
+        // Excludes: Pending, Confirmed, Cancelled (haven't happened yet)
+        const conducted = viewings.filter(v => {
+            const s = (v.status || '').toLowerCase().replace(/[-_]/g, ' ');
+            return s === 'signed up' || s === 'signed' || s === 'no show' || s === 'noshow' ||
+                   s === 'viewed' || s === 'completed' || s === 'not interested' || s === 'declined';
+        }).length;
+        const signups = viewings.filter(v => {
+            const s = (v.status || '').toLowerCase().replace(/[-_]/g, ' ');
+            return s === 'signed up' || s === 'signed';
+        }).length;
+        const conversionRate = conducted > 0 ? Math.round((signups / conducted) * 100) : 0;
 
         const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
         el('helm-viewings-today', todayCount);
@@ -56793,6 +57123,25 @@ Harir Industries`;
         el('helm-conversion-rate', conversionRate + '%');
         // v61: Also update dashboard conversion rate
         el('dash-conversion', conversionRate + '%');
+        el('dash-conversion-card', conversionRate + '%');
+
+        // v74.3: Occupancy rate calculation
+        try {
+            const props = JSON.parse(localStorage.getItem('propertySystemProperties') || '[]');
+            let totalUnits = 0;
+            let occupiedUnits = 0;
+            props.forEach(p => {
+                const studios = p.studioData?.total || p.maxOccupancy || p.occupancy || 1;
+                const occupied = p.studioData?.studios ? p.studioData.studios.filter(s => s.status === 'occupied' || s.status === 'let' || s.tenantName).length : 0;
+                totalUnits += studios;
+                occupiedUnits += Math.min(occupied, studios);
+            });
+            const availableUnits = totalUnits - occupiedUnits;
+            const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+            el('dash-occupancy-rate', occupancyRate + '%');
+            el('dash-units-occupied', occupiedUnits + ' / ' + totalUnits);
+            el('dash-units-available', availableUnits);
+        } catch(e) { console.error('[v74.3] Occupancy calc error:', e); }
 
         // v69: Silenced per-cycle viewings stats log
     };
@@ -60427,478 +60776,258 @@ Write the email now:`;
     })();
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // v61.0 - DAILY BRIEFING FLOW
-    // After landing on a new day: Yesterday's stats → Agent setup → Weather context
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // v74.2 — COMMAND CENTER (replaces v61 Daily Briefing)
+    // Single-screen briefing with customizable widget cards
     // ═══════════════════════════════════════════════════════════════════════════════
 
-    (function () {
+    (function() {
         'use strict';
 
-        const briefingStyles = document.createElement('style');
-        briefingStyles.textContent = `
-        #hpm-daily-briefing {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, #0a0f1c 0%, #0d1424 50%, #0f172a 100%);
-            z-index: 69999;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            padding: 20px;
-        }
-        #hpm-daily-briefing.active { display: flex; animation: fadeIn 0.3s ease; }
-        
-        .briefing-card {
-            width: 100%;
-            max-width: 500px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 24px;
-            padding: 32px;
-            backdrop-filter: blur(20px);
-        }
-        
-        .briefing-header {
-            text-align: center;
-            margin-bottom: 28px;
-        }
-        
-        .briefing-header h2 {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0 0 8px;
-            color: white;
-        }
-        
-        .briefing-header p {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.5);
-            margin: 0;
-        }
-        
-        .briefing-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-        
-        .briefing-stat {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .briefing-stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: white;
-        }
-        
-        .briefing-stat-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.5);
-            margin-top: 4px;
-        }
-        
-        .briefing-section {
-            margin-bottom: 24px;
-        }
-        
-        .briefing-section-title {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.5);
-            margin-bottom: 12px;
-        }
-        
-        .briefing-agents-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        
-        .briefing-agent-btn {
-            padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .briefing-agent-btn:hover {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.4);
-        }
-        
-        .briefing-agent-btn.selected {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            border-color: #3b82f6;
-        }
-        
-        .briefing-weather-display {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-        }
-        
-        .briefing-weather-icon {
-            font-size: 48px;
-        }
-        
-        .briefing-weather-info h4 {
-            margin: 0 0 4px;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .briefing-weather-info p {
-            margin: 0;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .briefing-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
-        }
-        
-        .briefing-btn {
-            flex: 1;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s ease;
-        }
-        
-        .briefing-btn-skip {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-        
-        .briefing-btn-continue {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
-        }
-        
-        .briefing-btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .briefing-step-indicator {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-        
-        .briefing-step-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .briefing-step-dot.active {
-            background: #3b82f6;
-        }
-        
-        .briefing-step-dot.completed {
-            background: #22c55e;
-        }
-    `;
-        document.head.appendChild(briefingStyles);
-
-        // Briefing Modal
-        const briefingModal = document.createElement('div');
-        briefingModal.id = 'hpm-daily-briefing';
-        briefingModal.innerHTML = '<div class="briefing-card" id="briefing-content"></div>';
-        document.body.appendChild(briefingModal);
-
-        let briefingStep = 0;
-        let selectedAgentCount = 0;
-        let todayWeather = { icon: '☀️', desc: 'Clear', temp: '--' };
-
-        window.showDailyBriefing = function () {
-            briefingStep = 0;
-            document.getElementById('hpm-daily-briefing').classList.add('active');
-            renderBriefingStep();
+        const WIDGETS = {
+            schedule: { id: 'schedule', label: "Today's Schedule", icon: 'event_note', default: true, order: 0 },
+            performance: { id: 'performance', label: 'Performance', icon: 'trending_up', default: true, order: 1 },
+            pipeline: { id: 'pipeline', label: 'Pipeline Snapshot', icon: 'filter_alt', default: true, order: 2 },
+            team: { id: 'team', label: 'Team', icon: 'groups', default: true, order: 3 },
+            quickActions: { id: 'quickActions', label: 'Quick Actions', icon: 'bolt', default: true, order: 4 },
+            weather: { id: 'weather', label: 'Weather', icon: 'cloud', default: false, order: 5 },
         };
 
-        window.closeDailyBriefing = function () {
-            document.getElementById('hpm-daily-briefing').classList.remove('active');
-            localStorage.setItem('lastBriefingDate', new Date().toISOString().split('T')[0]);
-        };
+        function getPrefs() { try { return JSON.parse(localStorage.getItem('helm_cc_prefs') || '{}'); } catch { return {}; } }
+        function savePrefs(p) { localStorage.setItem('helm_cc_prefs', JSON.stringify(p)); }
+        function isOn(id) { const p = getPrefs(); return p[id] !== undefined ? p[id] : (WIDGETS[id]?.default ?? true); }
+        function toggleW(id) { const p = getPrefs(); p[id] = !isOn(id); savePrefs(p); renderCC(); }
 
-        window.nextBriefingStep = function () {
-            briefingStep++;
-            if (briefingStep > 2) {
-                window.closeDailyBriefing();
-            } else {
-                renderBriefingStep();
-            }
-        };
+        function getViewings() { try { return JSON.parse(localStorage.getItem('propertyViewings') || '[]'); } catch { return []; } }
+        function getPipeline() { return window.loadPipelineData ? window.loadPipelineData() : []; }
+        function today() { return new Date().toISOString().split('T')[0]; }
+        function weekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d.toISOString().split('T')[0]; }
+        function greeting() { const h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
+        function userName() { return window.HPMAuth?.userProfile?.display_name || window.HPMAuth?.userProfile?.full_name?.split(' ')[0] || ''; }
 
-        window.selectAgentCount = function (count) {
-            selectedAgentCount = count;
-            document.querySelectorAll('.briefing-agent-btn').forEach((btn, i) => {
-                btn.classList.toggle('selected', i + 1 === count);
-            });
-        };
-
-        // v74.1: Toggle individual agent availability for today
-        window._todayAvailableAgents = new Set();
-        window.toggleBriefingAgent = function (agentId) {
-            if (window._todayAvailableAgents.has(agentId)) {
-                window._todayAvailableAgents.delete(agentId);
-            } else {
-                window._todayAvailableAgents.add(agentId);
-            }
-            // Update button visuals
-            document.querySelectorAll('.briefing-individual-agent').forEach(btn => {
-                const id = parseInt(btn.dataset.agentId);
-                if (window._todayAvailableAgents.has(id)) {
-                    btn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
-                    btn.style.borderColor = '#3b82f6';
-                    btn.querySelector('.agent-check')?.classList.add('checked');
-                } else {
-                    btn.style.background = 'rgba(255,255,255,0.05)';
-                    btn.style.borderColor = 'rgba(255,255,255,0.1)';
-                    btn.querySelector('.agent-check')?.classList.remove('checked');
-                }
-            });
-            // Update count display
-            const countEl = document.getElementById('briefing-agent-count');
-            if (countEl) countEl.textContent = window._todayAvailableAgents.size + ' agent' + (window._todayAvailableAgents.size !== 1 ? 's' : '') + ' selected';
-        };
-
-        function renderBriefingStep() {
-            const content = document.getElementById('briefing-content');
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-            // Get yesterday's stats
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-            const pipeline = window.loadPipelineData ? window.loadPipelineData() : [];
-
-            const yesterdayViewings = viewings.filter(v => v.date === yesterdayStr);
-            const yesterdaySignups = pipeline.filter(p => {
-                const added = p.dateAdded ? p.dateAdded.split('T')[0] : '';
-                return added === yesterdayStr && p.status === 'Signed Up';
-            });
-            const yesterdayNoShows = pipeline.filter(p => {
-                const added = p.dateAdded ? p.dateAdded.split('T')[0] : '';
-                return added === yesterdayStr && p.status === 'No Show';
-            });
-
-            let html = '';
-
-            // Step indicator
-            html += '<div class="briefing-step-indicator">';
-            for (let i = 0; i < 3; i++) {
-                let cls = '';
-                if (i < briefingStep) cls = 'completed';
-                else if (i === briefingStep) cls = 'active';
-                html += `<div class="briefing-step-dot ${cls}"></div>`;
-            }
-            html += '</div>';
-
-            if (briefingStep === 0) {
-                // Step 1: Yesterday's Summary
-                const userName = window.HPMAuth?.userProfile?.display_name || 
-                                 window.HPMAuth?.userProfile?.full_name?.split(' ')[0] || 
-                                 'there';
-                html += `
-                <div class="briefing-header">
-                    <h2>Good ${getTimeOfDay()}, ${userName}</h2>
-                    <p>Here's how yesterday went</p>
+        // ─── Widget Renderers ───
+        function wSchedule() {
+            const v = getViewings().filter(x => x.date === today()).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+            if (!v.length) return '<div class="cc-empty"><span class="material-symbols-rounded" style="font-size:28px;opacity:0.15">event_available</span><span>No viewings scheduled today</span></div>';
+            return v.slice(0,5).map(x => `
+                <div class="cc-sched-row">
+                    <div class="cc-sched-time">${(x.time||'--:--').substring(0,5)}</div>
+                    <div class="cc-sched-detail">
+                        <div class="cc-sched-client">${x.client || x.clientName || 'Unknown'}</div>
+                        <div class="cc-sched-prop">${(x.property || x.propertyAddress || '').substring(0,40)}</div>
+                    </div>
+                    <div class="cc-sched-badge cc-s-${(x.status||'pending').toLowerCase().replace(/\s/g,'-')}">${x.status || 'Pending'}</div>
                 </div>
-                <div class="briefing-stats-grid">
-                    <div class="briefing-stat">
-                        <div class="briefing-stat-value" style="color:#60a5fa">${yesterdayViewings.length}</div>
-                        <div class="briefing-stat-label">Viewings</div>
-                    </div>
-                    <div class="briefing-stat">
-                        <div class="briefing-stat-value" style="color:#22c55e">${yesterdaySignups.length}</div>
-                        <div class="briefing-stat-label">Sign-ups</div>
-                    </div>
-                    <div class="briefing-stat">
-                        <div class="briefing-stat-value" style="color:#f87171">${yesterdayNoShows.length}</div>
-                        <div class="briefing-stat-label">No-shows</div>
-                    </div>
-                    <div class="briefing-stat">
-                        <div class="briefing-stat-value" style="color:#fbbf24">${yesterdayViewings.length > 0 ? Math.round((yesterdaySignups.length / yesterdayViewings.length) * 100) : 0}%</div>
-                        <div class="briefing-stat-label">Conversion</div>
-                    </div>
+            `).join('') + (v.length > 5 ? `<div class="cc-more">+${v.length-5} more</div>` : '');
+        }
+
+        function wPerformance() {
+            const v = getViewings(), p = getPipeline(), ws = weekStart(), td = today();
+            const wv = v.filter(x => x.date >= ws && x.date <= td);
+            const wSigned = p.filter(x => { const d = (x.dateAdded||'').split('T')[0]; return d >= ws && d <= td && x.status === 'Signed Up'; });
+            const wNo = p.filter(x => { const d = (x.dateAdded||'').split('T')[0]; return d >= ws && d <= td && x.status === 'No Show'; });
+            const rate = wv.length > 0 ? Math.round((wSigned.length / wv.length) * 100) : 0;
+            return `
+                <div class="cc-perf-grid">
+                    <div class="cc-perf-stat"><div class="cc-perf-val" style="color:#4da6ff">${wv.length}</div><div class="cc-perf-lbl">viewings</div></div>
+                    <div class="cc-perf-stat"><div class="cc-perf-val" style="color:#00d68f">${wSigned.length}</div><div class="cc-perf-lbl">sign-ups</div></div>
+                    <div class="cc-perf-stat"><div class="cc-perf-val" style="color:#ff6b6b">${wNo.length}</div><div class="cc-perf-lbl">no-shows</div></div>
+                    <div class="cc-perf-stat"><div class="cc-perf-val" style="color:#a78bfa">${rate}%</div><div class="cc-perf-lbl">conversion</div></div>
                 </div>
-                <div class="briefing-actions">
-                    <button class="briefing-btn briefing-btn-skip" onclick="window.closeDailyBriefing()">Skip</button>
-                    <button class="briefing-btn briefing-btn-continue" onclick="window.nextBriefingStep()">Continue</button>
+                <div class="cc-period">This week · ${ws.slice(5)} → ${td.slice(5)}</div>`;
+        }
+
+        function wPipeline() {
+            const p = getPipeline(), t = p.length;
+            const pend = p.filter(x => x.status === 'Pending' || x.status === 'Confirmed').length;
+            const view = p.filter(x => x.status === 'Viewed').length;
+            const sign = p.filter(x => x.status === 'Signed Up').length;
+            const nosh = p.filter(x => x.status === 'No Show').length;
+            const bar = (n, c) => `<div style="flex:${t>0?(n/t*100):0};background:${c};height:6px;border-radius:3px;min-width:${n>0?'4px':'0'}"></div>`;
+            return `
+                <div class="cc-pipe-bar">${bar(pend,'#ffb547')}${bar(view,'#a78bfa')}${bar(sign,'#00d68f')}${bar(nosh,'#ff6b6b')}</div>
+                <div class="cc-pipe-stats">
+                    <span><b style="color:#ffb547">${pend}</b> pending</span>
+                    <span><b style="color:#a78bfa">${view}</b> viewed</span>
+                    <span><b style="color:#00d68f">${sign}</b> signed</span>
+                    <span><b style="color:#ff6b6b">${nosh}</b> no-show</span>
                 </div>
-            `;
-            } else if (briefingStep === 1) {
-                // Step 2: Agent Setup - v74.1: Show actual agents to toggle
-                const agents = typeof loadAgents === 'function' ? loadAgents() : JSON.parse(localStorage.getItem('helmAgents') || '[]');
-                // Pre-select all agents by default
-                if (window._todayAvailableAgents.size === 0) {
-                    agents.forEach(a => window._todayAvailableAgents.add(a.id));
-                }
-                const agentButtons = agents.map(a => {
-                    const isAvail = window._todayAvailableAgents.has(a.id);
-                    const areas = (a.coverageAreas || []).map(ar => ar.charAt(0).toUpperCase()).join('') || '';
-                    return `<button class="briefing-individual-agent" data-agent-id="${a.id}"
-                        onclick="window.toggleBriefingAgent(${a.id})"
-                        style="padding:14px 16px;background:${isAvail ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'rgba(255,255,255,0.05)'};border:2px solid ${isAvail ? '#3b82f6' : 'rgba(255,255,255,0.1)'};border-radius:12px;color:white;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:10px;min-width:140px;">
-                        <div style="width:36px;height:36px;background:${a.color || '#6366f1'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${a.initials || a.name?.substring(0,2) || '?'}</div>
-                        <div style="text-align:left;">
-                            <div style="font-size:13px;font-weight:600;">${a.name || 'Agent'}</div>
-                            <div style="font-size:10px;color:rgba(255,255,255,0.5);">${areas ? areas + ' London' : 'No area set'}</div>
+                <div class="cc-period">${t} total in pipeline</div>`;
+        }
+
+        function wTeam() {
+            const profiles = window.HPMAuth?.allUsers || [];
+            if (!profiles.length) return '<div class="cc-empty"><span class="material-symbols-rounded" style="font-size:28px;opacity:0.15">person_add</span><span>No team members loaded</span></div>';
+            return profiles.slice(0,5).map(u => {
+                const ini = (u.display_name || u.full_name || '?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+                return `<div class="cc-team-row"><div class="cc-team-av" style="background:${u.avatar_color||'#a78bfa'}">${ini}</div><div class="cc-team-nm">${u.display_name || u.full_name || 'Agent'}</div></div>`;
+            }).join('');
+        }
+
+        function wActions() {
+            return `<div class="cc-act-grid">
+                <button class="cc-act-btn" onclick="window.closeCmdCenter(); setTimeout(()=>switchView&&switchView('pipeline'),300)"><span class="material-symbols-rounded">add_circle</span><span>Add Client</span></button>
+                <button class="cc-act-btn" onclick="window.closeCmdCenter(); setTimeout(()=>switchView&&switchView('viewings'),300)"><span class="material-symbols-rounded">calendar_month</span><span>Viewings</span></button>
+                <button class="cc-act-btn" onclick="window.closeCmdCenter(); setTimeout(()=>switchView&&switchView('property-manager'),300)"><span class="material-symbols-rounded">apartment</span><span>Properties</span></button>
+                <button class="cc-act-btn" onclick="window.closeCmdCenter(); setTimeout(()=>{if(window.HPMSync)HPMSync.syncNow();},300)"><span class="material-symbols-rounded">sync</span><span>Sync</span></button>
+            </div>`;
+        }
+
+        function wWeather() {
+            if (!window._ccW) {
+                fetch('https://wttr.in/London?format=j1').then(r=>r.json()).then(d=>{
+                    const c = d.current_condition?.[0]||{};
+                    window._ccW = { t: c.temp_C||'--', d: c.weatherDesc?.[0]?.value||'Unknown', f: c.FeelsLikeC||'--', h: c.humidity||'--' };
+                    const el = document.querySelector('[data-widget="weather"] .cc-w-body');
+                    if (el) el.innerHTML = wWeather();
+                }).catch(()=>{});
+                return '<div class="cc-empty"><span style="opacity:0.25">Loading weather...</span></div>';
+            }
+            return `<div class="cc-weather"><div class="cc-weather-t">${window._ccW.t}°C</div><div><div style="color:rgba(255,255,255,0.8)">${window._ccW.d}</div><div style="font-size:10px;color:rgba(255,255,255,0.25)">Feels like ${window._ccW.f}°C · ${window._ccW.h}% humidity</div></div></div>`;
+        }
+
+        const renderers = { schedule: wSchedule, performance: wPerformance, pipeline: wPipeline, team: wTeam, quickActions: wActions, weather: wWeather };
+
+        function renderSettings() {
+            return Object.values(WIDGETS).sort((a,b)=>a.order-b.order).map(w => `
+                <label class="cc-set-row" onclick="event.stopPropagation()">
+                    <span class="material-symbols-rounded" style="font-size:18px;opacity:0.35;margin-right:10px">${w.icon}</span>
+                    <span style="flex:1;font-size:13px;color:rgba(255,255,255,0.75)">${w.label}</span>
+                    <div class="cc-tog ${isOn(w.id)?'on':''}" onclick="event.preventDefault();window._ccToggle('${w.id}')"><div class="cc-tog-k"></div></div>
+                </label>
+            `).join('');
+        }
+
+        function renderCC() {
+            const el = document.getElementById('helm-command-center');
+            if (!el) return;
+            const n = userName(), g = greeting(), s = window._ccSettings || false;
+            const enabled = Object.values(WIDGETS).filter(w=>isOn(w.id)).sort((a,b)=>a.order-b.order);
+
+            el.innerHTML = `
+                <div class="cc-bg" onclick="window.closeCmdCenter()"></div>
+                <div class="cc-panel">
+                    <div class="cc-head">
+                        <div>
+                            <div class="cc-greet">Good ${g}${n?', '+n:''}</div>
+                            <div class="cc-date">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
                         </div>
-                        <span class="agent-check ${isAvail ? 'checked' : ''}" style="margin-left:auto;width:20px;height:20px;border-radius:6px;border:2px solid ${isAvail ? '#60a5fa' : 'rgba(255,255,255,0.2)'};background:${isAvail ? '#3b82f6' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;">${isAvail ? '✓' : ''}</span>
-                    </button>`;
-                }).join('');
-
-                html += `
-                <div class="briefing-header">
-                    <h2>Today's Team</h2>
-                    <p>Select which agents are working today</p>
-                </div>
-                <div class="briefing-section">
-                    <div style="display:flex;flex-direction:column;gap:8px;">
-                        ${agentButtons}
-                    </div>
-                    <div id="briefing-agent-count" style="text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,0.4);">${window._todayAvailableAgents.size} agent${window._todayAvailableAgents.size !== 1 ? 's' : ''} selected</div>
-                </div>
-                <div class="briefing-actions">
-                    <button class="briefing-btn briefing-btn-skip" onclick="window.nextBriefingStep()">Skip</button>
-                    <button class="briefing-btn briefing-btn-continue" onclick="window.saveTodayAgents(); window.nextBriefingStep()">Set Team</button>
-                </div>
-            `;
-            } else if (briefingStep === 2) {
-                // Step 3: Weather Context
-                html += `
-                <div class="briefing-header">
-                    <h2>Today's Conditions</h2>
-                    <p>${today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                </div>
-                <div class="briefing-section">
-                    <div class="briefing-weather-display">
-                        <span class="briefing-weather-icon" id="briefing-weather-icon">☀️</span>
-                        <div class="briefing-weather-info">
-                            <h4 id="briefing-weather-desc">Loading weather...</h4>
-                            <p id="briefing-weather-temp">--°C in London</p>
+                        <div style="display:flex;gap:8px">
+                            <button class="cc-hbtn ${s?'on':''}" onclick="event.stopPropagation();window._ccSettings=!window._ccSettings;renderCC()" title="Customise">
+                                <span class="material-symbols-rounded">${s?'close':'tune'}</span>
+                            </button>
+                            <button class="cc-hbtn" onclick="window.closeCmdCenter()" title="Close">
+                                <span class="material-symbols-rounded">arrow_forward</span>
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="briefing-actions">
-                    <button class="briefing-btn briefing-btn-continue" onclick="window.closeDailyBriefing()" style="width:100%">Let's Go</button>
-                </div>
-            `;
-
-                // Fetch weather
-                setTimeout(fetchBriefingWeather, 100);
-            }
-
-            content.innerHTML = html;
+                    ${s ? `
+                        <div class="cc-settings">
+                            <div class="cc-set-title">Customise your briefing</div>
+                            ${renderSettings()}
+                            <div class="cc-set-hint">Changes save automatically</div>
+                        </div>
+                    ` : `
+                        <div class="cc-widgets">
+                            ${enabled.map(w=>`
+                                <div class="cc-widget" data-widget="${w.id}">
+                                    <div class="cc-w-head"><span class="material-symbols-rounded cc-w-ico">${w.icon}</span><span class="cc-w-title">${w.label}</span></div>
+                                    <div class="cc-w-body">${renderers[w.id]?renderers[w.id]():''}</div>
+                                </div>
+                            `).join('')}
+                            ${!enabled.length?'<div class="cc-empty" style="grid-column:1/-1;padding:40px"><span>No widgets enabled. Tap <b>tune</b> to customise.</span></div>':''}
+                        </div>
+                    `}
+                </div>`;
         }
 
-        function getTimeOfDay() {
-            const hour = new Date().getHours();
-            if (hour < 12) return 'morning';
-            if (hour < 17) return 'afternoon';
-            return 'evening';
-        }
+        window._ccToggle = function(id) { toggleW(id); };
 
-        function fetchBriefingWeather() {
-            fetch('https://wttr.in/London?format=j1')
-                .then(r => r.json())
-                .then(data => {
-                    const current = data.current_condition?.[0] || {};
-                    const temp = current.temp_C || '--';
-                    const desc = current.weatherDesc?.[0]?.value || 'Unknown';
-                    const code = parseInt(current.weatherCode) || 113;
+        // ─── CSS ───
+        const css = document.createElement('style');
+        css.textContent = `
+        #helm-command-center { display:none; position:fixed; inset:0; z-index:80000; font-family:var(--ob-font,'DM Sans',system-ui,sans-serif); }
+        #helm-command-center.active { display:flex; align-items:center; justify-content:center; }
+        .cc-bg { position:absolute; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); animation:ob-fade-in 0.2s ease; }
+        .cc-panel { position:relative;z-index:1;width:92%;max-width:440px;max-height:85vh;background:rgba(12,16,28,0.97);border:1px solid rgba(255,255,255,0.06);border-radius:20px;overflow-y:auto;overflow-x:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.5);animation:ob-slide-up 0.3s cubic-bezier(0.16,1,0.3,1); }
+        .cc-panel::-webkit-scrollbar{width:4px} .cc-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
+        .cc-head { display:flex;justify-content:space-between;align-items:flex-start;padding:24px 24px 16px;border-bottom:1px solid rgba(255,255,255,0.04);position:sticky;top:0;background:rgba(12,16,28,0.97);z-index:2; }
+        .cc-greet { font-size:22px;font-weight:600;color:rgba(255,255,255,0.92);letter-spacing:-0.3px; }
+        .cc-date { font-size:12px;color:rgba(255,255,255,0.2);margin-top:4px; }
+        .cc-hbtn { width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s; }
+        .cc-hbtn:hover { background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.7); }
+        .cc-hbtn.on { background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.2);color:#a78bfa; }
+        .cc-hbtn .material-symbols-rounded{font-size:18px}
+        .cc-widgets { display:flex;flex-direction:column;gap:10px;padding:16px 20px 20px; }
+        .cc-widget { background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:14px;overflow:hidden;transition:border-color 0.2s; }
+        .cc-widget:hover { border-color:rgba(255,255,255,0.06); }
+        .cc-w-head { display:flex;align-items:center;gap:8px;padding:12px 16px 0; }
+        .cc-w-ico { font-size:16px;color:rgba(255,255,255,0.15); }
+        .cc-w-title { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.2); }
+        .cc-w-body { padding:12px 16px 14px; }
+        .cc-empty { display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;color:rgba(255,255,255,0.12);font-size:12px;text-align:center; }
+        .cc-sched-row { display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03); }
+        .cc-sched-row:last-child{border-bottom:none}
+        .cc-sched-time { font-size:14px;font-weight:700;color:rgba(255,255,255,0.65);min-width:48px;font-variant-numeric:tabular-nums; }
+        .cc-sched-detail { flex:1;min-width:0; }
+        .cc-sched-client { font-size:13px;font-weight:600;color:rgba(255,255,255,0.85); }
+        .cc-sched-prop { font-size:10px;color:rgba(255,255,255,0.2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+        .cc-sched-badge { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.25); }
+        .cc-s-confirmed{background:rgba(0,214,143,0.1);color:#00d68f} .cc-s-pending{background:rgba(255,181,71,0.1);color:#ffb547}
+        .cc-more { text-align:center;font-size:11px;color:rgba(255,255,255,0.15);padding-top:8px; }
+        .cc-perf-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:4px; }
+        .cc-perf-stat { text-align:center;padding:6px 0; }
+        .cc-perf-val { font-size:22px;font-weight:700;line-height:1.1; }
+        .cc-perf-lbl { font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:rgba(255,255,255,0.15);margin-top:2px; }
+        .cc-period { font-size:10px;color:rgba(255,255,255,0.1);text-align:center;margin-top:8px; }
+        .cc-pipe-bar { display:flex;gap:2px;border-radius:4px;overflow:hidden;margin-bottom:12px; }
+        .cc-pipe-stats { display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.3); }
+        .cc-pipe-stats b{font-weight:700}
+        .cc-team-row { display:flex;align-items:center;gap:10px;padding:6px 0; }
+        .cc-team-av { width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0; }
+        .cc-team-nm { font-size:13px;color:rgba(255,255,255,0.6); }
+        .cc-act-grid { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+        .cc-act-btn { display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.015);color:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s;font-family:inherit; }
+        .cc-act-btn:hover { background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);color:rgba(255,255,255,0.75); }
+        .cc-act-btn .material-symbols-rounded{font-size:22px}
+        .cc-act-btn span:last-child { font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px; }
+        .cc-weather { display:flex;align-items:center;gap:16px; }
+        .cc-weather-t { font-size:32px;font-weight:700;color:rgba(255,255,255,0.85); }
+        .cc-settings { padding:16px 24px 24px; }
+        .cc-set-title { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.15);margin-bottom:16px; }
+        .cc-set-row { display:flex;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:opacity 0.2s; }
+        .cc-set-row:hover{opacity:0.8}
+        .cc-set-hint { font-size:10px;color:rgba(255,255,255,0.08);text-align:center;margin-top:16px; }
+        .cc-tog { width:38px;height:22px;border-radius:11px;background:rgba(255,255,255,0.08);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0; }
+        .cc-tog.on { background:rgba(167,139,250,0.4); }
+        .cc-tog-k { width:16px;height:16px;border-radius:8px;background:rgba(255,255,255,0.35);position:absolute;top:3px;left:3px;transition:all 0.2s; }
+        .cc-tog.on .cc-tog-k { left:19px;background:#a78bfa; }
+        `;
+        document.head.appendChild(css);
 
-                    let icon = '☀️';
-                    if (code >= 200 && code < 300) icon = '⛈️';
-                    else if (code >= 300 && code < 400) icon = '🌧️';
-                    else if (code >= 500 && code < 600) icon = '🌧️';
-                    else if (code >= 600 && code < 700) icon = '❄️';
-                    else if (code >= 700 && code < 800) icon = '🌫️';
-                    else if (code === 800 || code === 113) icon = '☀️';
-                    else if (code > 800 || (code >= 116 && code <= 122)) icon = '⛅';
+        // ─── DOM ───
+        const ccEl = document.createElement('div');
+        ccEl.id = 'helm-command-center';
+        document.body.appendChild(ccEl);
 
-                    const iconEl = document.getElementById('briefing-weather-icon');
-                    const descEl = document.getElementById('briefing-weather-desc');
-                    const tempEl = document.getElementById('briefing-weather-temp');
+        // ─── Public API ───
+        window.showCmdCenter = function() { window._ccSettings = false; window._ccW = null; const el = document.getElementById('helm-command-center'); if(el){el.classList.add('active');renderCC();} };
+        window.closeCmdCenter = function() { const el = document.getElementById('helm-command-center'); if(el) el.classList.remove('active'); localStorage.setItem('lastBriefingDate', today()); };
 
-                    if (iconEl) iconEl.textContent = icon;
-                    if (descEl) descEl.textContent = desc;
-                    if (tempEl) tempEl.textContent = `${temp}°C in London`;
+        // Legacy
+        window.showDailyBriefing = window.showCmdCenter;
+        window.closeDailyBriefing = window.closeCmdCenter;
 
-                    todayWeather = { icon, desc, temp };
-                })
-                .catch(() => {
-                    const descEl = document.getElementById('briefing-weather-desc');
-                    if (descEl) descEl.textContent = 'Weather unavailable';
-                });
-        }
+        window.checkDailyBriefing = function() { return localStorage.getItem('lastBriefingDate') !== today(); };
 
-        window.saveTodayAgents = function () {
-            const available = [...window._todayAvailableAgents];
-            if (available.length > 0) {
-                localStorage.setItem('todayAgentCount', available.length);
-                localStorage.setItem('todayAvailableAgents', JSON.stringify(available));
-                localStorage.setItem('todayAgentDate', new Date().toISOString().split('T')[0]);
-            }
-        };
-
-        // Check if we should show briefing on new day
-        window.checkDailyBriefing = function () {
-            const lastBriefing = localStorage.getItem('lastBriefingDate');
-            const today = new Date().toISOString().split('T')[0];
-
-            if (lastBriefing !== today) {
-                // It's a new day - show briefing after welcome screen
-                return true;
-            }
-            return false;
-        };
-
-        // Hook into enterHelmUI to show briefing
-        const originalEnterHelmUI = window.enterHelmUI;
-        window.enterHelmUI = function () {
-            if (originalEnterHelmUI) originalEnterHelmUI();
-
-            // Show daily briefing if it's a new day
-            if (window.checkDailyBriefing()) {
-                setTimeout(() => {
-                    window.showDailyBriefing();
-                }, 600);
-            }
-        };
+        const _origEnter = window.enterHelmUI;
+        window.enterHelmUI = function() { if(_origEnter) _origEnter(); if(window.checkDailyBriefing()) setTimeout(()=>window.showCmdCenter(),600); };
 
     })();
 
+    console.log('[HPM v74.2] Command Center ready');
     console.log('[HPM v61] Voids Generator ready - access via More menu or Write section');
+    console.log('[HPM v61] Daily Briefing ready - shows on new day');    console.log('[HPM v61] Voids Generator ready - access via More menu or Write section');
     console.log('[HPM v61] Daily Briefing ready - shows on new day');
 
     // v61: Morning Voids Email Generator (integrated with Write section)
@@ -64245,5 +64374,101 @@ Write the email now:`;
     console.log('[HPM v72.1] \u2550\u2550\u2550 HELM v72.1 OVERHAUL LOADED \u2550\u2550\u2550');
 
     </script>
+
+<script>
+// ═══ HELM v74.4 ISOLATED JS PATCHES ═══
+// Theme toggle
+(function(){
+    function getSys(){return window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';}
+    function apply(mode){
+        var eff=mode==='auto'?getSys():mode;
+        document.documentElement.setAttribute('data-theme',eff);
+        localStorage.setItem('helm-theme',mode);
+        var btn=document.getElementById('helm-theme-toggle');
+        if(btn){var icons={light:'light_mode',dark:'dark_mode',auto:'routine'};var sp=btn.querySelector('.material-symbols-rounded');if(sp)sp.textContent=icons[mode]||'routine';btn.title='Theme: '+mode.charAt(0).toUpperCase()+mode.slice(1);}
+    }
+    window.cycleHelmTheme=function(){
+        var cur=localStorage.getItem('helm-theme')||'dark';
+        var nxt=cur==='dark'?'light':cur==='light'?'auto':'dark';
+        apply(nxt);
+        // v74.4: No toast for theme changes
+    };
+    try{window.matchMedia('(prefers-color-scheme:light)').addEventListener('change',function(){if(localStorage.getItem('helm-theme')==='auto')apply('auto');});}catch(e){}
+    apply(localStorage.getItem('helm-theme')||'dark');
+})();
+
+// Sync fix: enterHelmUI uses _v73Sync
+(function(){
+    var _orig=window.enterHelmUI;
+    window.enterHelmUI=function(){
+        if(_orig)_orig.apply(this,arguments);
+        if(window._v73Sync&&typeof window._v73Sync.syncNow==='function'){
+            console.log('[HELM v74.4] Triggering sync on enter...');
+            setTimeout(function(){window._v73Sync.syncNow();},300);
+        }
+    };
+})();
+
+// Notification filter: kill sync-complete + map filter spam
+(function(){
+    var _oPush=window.pushHelmAlert;
+    window.pushHelmAlert=function(obj){if(obj&&(obj.title==='Sync Complete'||obj.title==='Theme'))return;if(_oPush)return _oPush.apply(this,arguments);};
+    var _oNotif=window.showHelmNotification;
+    window.showHelmNotification=function(msg){if(typeof msg==='string'&&(msg.indexOf('Filter:')===0||msg.indexOf('Filter cleared')!==-1))return;if(_oNotif)return _oNotif.apply(this,arguments);};
+    var _oToast=window.showToast;
+    window.showToast=function(title){if(typeof title==='string'&&(title.indexOf('Sync Complete')!==-1||title==='Theme'))return;if(_oToast)return _oToast.apply(this,arguments);};
+})();
+
+// Agent assignment
+window._assignAgent=function(vid,agentId){
+    try{var raw=localStorage.getItem('propertyViewings');var vs=raw?JSON.parse(raw):[];var v=vs.find(function(x){return x.id===vid||x.id===String(vid);});if(!v)return;v.agentId=agentId?parseInt(agentId):null;v.agent_id=agentId?parseInt(agentId):null;localStorage.setItem('propertyViewings',JSON.stringify(vs));if(typeof renderViewingsList==='function')renderViewingsList();if(typeof showToast==='function')showToast(agentId?'Agent Assigned':'Agent Removed','Viewing updated');if(window.supabase&&vid)window.supabase.from('viewings').update({agent_id:v.agent_id}).eq('id',vid);}catch(e){console.error('[v74.4]',e);}
+};
+
+// CC sync button fix
+setTimeout(function(){document.querySelectorAll('.cc-act-btn').forEach(function(btn){if((btn.textContent||'').indexOf('Sync')!==-1)btn.onclick=function(){if(window.closeCmdCenter)window.closeCmdCenter();setTimeout(function(){if(window._v73Sync)window._v73Sync.syncNow();},300);};});},3000);
+
+// Fix confirmReschedule — missing newDate and viewing var
+(function(){
+    var _origConfirm=window.confirmReschedule;
+    window.confirmReschedule=function(id){
+        var dateEl=document.getElementById('reschedule-date');
+        var timeEl=document.getElementById('reschedule-time');
+        if(!dateEl||!timeEl)return;
+        var newDate=dateEl.value;
+        var newTime=timeEl.value;
+        if(!newDate||!newTime){if(typeof showToast==='function')showToast('Error','Please select date and time');return;}
+        try{
+            var raw=localStorage.getItem('propertyViewings');
+            var viewings=raw?JSON.parse(raw):[];
+            var viewing=viewings.find(function(v){return v.id===id||v.id===String(id);});
+            if(!viewing){if(_origConfirm)return _origConfirm(id);return;}
+            viewing.date=newDate;
+            viewing.time=newTime;
+            localStorage.setItem('propertyViewings',JSON.stringify(viewings));
+            if(typeof renderViewingsList==='function')renderViewingsList();
+            if(typeof showToast==='function')showToast('Rescheduled','Viewing moved to '+newDate+' at '+newTime);
+            var modal=document.querySelector('.modal[style*="display: flex"],.modal[style*="display:flex"],.modal.active');
+            if(modal)modal.style.display='none';
+            if(window.supabase&&viewing.id)window.supabase.from('viewings').update({date:newDate,time:newTime}).eq('id',viewing.id);
+        }catch(e){console.error('[v74.4] Reschedule error:',e);if(_origConfirm)_origConfirm(id);}
+    };
+})();
+
+// Auto-sync on enter without visual sync bar
+(function(){
+    var syncRan=false;
+    var _origEnterOld=window.enterHelmUI;
+    window.enterHelmUI=function(){
+        if(_origEnterOld)_origEnterOld.apply(this,arguments);
+        if(!syncRan&&window._v73Sync&&typeof window._v73Sync.syncNow==='function'){
+            syncRan=true;
+            console.log('[HELM v74.4] Silent sync on enter...');
+            setTimeout(function(){window._v73Sync.syncNow();},500);
+        }
+    };
+})();
+
+console.log('[HELM v74.4] All patches loaded');
+</script>
 
 </html>
