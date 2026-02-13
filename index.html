@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 75.0                            ║
+    ║                        Version 75.5                          ║
     ║  v72 FIXES + VISUAL OVERHAUL:                                ║
     ║  • OBSIDIAN THEME: Premium dark glassmorphic redesign        ║
     ║  • New fonts: DM Sans + Instrument Sans (replaces Inter)     ║
@@ -718,13 +718,14 @@
     html[data-theme="light"] #helm-ui-shell,
     html[data-theme="light"] .helm-view,
     html[data-theme="light"] .helm-body,
-    html[data-theme="light"] #helm-view-dashboard{background:#edeef2!important;color:#1a1e2e!important}
+    html[data-theme="light"] #helm-view-dashboard{background:#f0ede6!important;color:#1a1e2e!important}
     html[data-theme="light"] #helm-ui-shell:not(.helm-map-active){background:#edeef2!important}
 
     /* ─── Welcome ─── */
-    html[data-theme="light"] .helm-welcome-overlay{background:linear-gradient(165deg,#e4e5ea 0%,#d8dae0 50%,#c8cad2 100%)!important}
-    html[data-theme="light"] .helm-welcome-overlay *{color:#1a1e2e!important}
-    html[data-theme="light"] .helm-welcome-overlay small{color:#8b92a8!important}
+    html[data-theme="light"] .helm-welcome-overlay{background:#f0ede6!important}
+    html[data-theme="light"] .helm-welcome-overlay *{color:#2C3E50!important}
+    html[data-theme="light"] .helm-welcome-overlay small{color:#b0a898!important}
+    html[data-theme="light"] .helm-welcome-overlay #v75-logo-underline{background:linear-gradient(90deg,transparent,rgba(44,62,80,0.2),transparent)!important}
 
     /* ─── Header ─── */
     html[data-theme="light"] .helm-header{background:rgba(255,255,255,0.55)!important;backdrop-filter:blur(40px) saturate(180%)!important;-webkit-backdrop-filter:blur(40px) saturate(180%)!important;border-bottom:1px solid rgba(0,0,0,0.05)!important;box-shadow:none!important}
@@ -19418,7 +19419,15 @@
     html[data-theme="light"] label{color:#4a4a4a!important}
     /* Chalk surfaces */
     html[data-theme="light"] .cc-panel{background:rgba(240,237,230,0.95)!important;border:1px solid rgba(0,0,0,0.1)!important;box-shadow:0 20px 60px rgba(0,0,0,0.08)!important;backdrop-filter:blur(40px)!important;border-radius:24px!important}
+    html[data-theme="light"] .cc-head{background:rgba(240,237,230,0.97)!important;border-bottom:1px solid rgba(0,0,0,0.06)!important;color:#1a1a1a!important}
+    html[data-theme="light"] .cc-head *{color:#1a1a1a!important}
+    html[data-theme="light"] .cc-head .material-symbols-rounded{color:#6a6a6a!important}
     html[data-theme="light"] .cc-widget{background:#f5f2eb!important;border:1px solid rgba(0,0,0,0.08)!important;border-radius:16px!important}
+    html[data-theme="light"] .cc-w-body,html[data-theme="light"] .cc-w-body *{color:#4a4a4a!important}
+    html[data-theme="light"] .cc-w-ico{color:#6366f1!important}
+    html[data-theme="light"] .cc-sched-time{color:#2C3E50!important}
+    html[data-theme="light"] .cc-sched-status{opacity:0.85!important}
+    html[data-theme="light"] .cc-perf-val{opacity:0.85!important}
     html[data-theme="light"] .cc-hbtn,html[data-theme="light"] .cc-act-btn{background:#ece9e1!important;border:1px solid rgba(0,0,0,0.08)!important;color:#4a4a4a!important;border-radius:10px!important}
     html[data-theme="light"] .cc-greet,html[data-theme="light"] .cc-w-title{color:#1a1a1a!important}
     html[data-theme="light"] .cc-date,html[data-theme="light"] .cc-period{color:#b0a898!important}
@@ -19720,7 +19729,8 @@
         <div id="helm-welcome-overlay" class="helm-welcome-overlay" onclick="enterHelmUI()" style="cursor:pointer;">
             <div style="position:relative;z-index:2;text-align:center;padding:0 24px;">
                 <div style="margin-bottom:32px;">
-                    <div id="v75-helm-logo" style="font-size:52px;font-weight:800;letter-spacing:12px;color:rgba(255,255,255,0.9);margin:0 0 14px;font-family:'Big Shoulders Stencil',sans-serif;">HELM</div>
+                    <div id="v75-helm-logo" style="font-size:52px;font-weight:800;letter-spacing:12px;color:rgba(255,255,255,0.9);margin:0 0 6px;font-family:'Big Shoulders Stencil',sans-serif;">HELM</div>
+                    <div style="font-family:'Big Shoulders Stencil',sans-serif;font-weight:400;font-size:10px;letter-spacing:6px;color:rgba(255,255,255,0.3);margin-bottom:8px;">BY HARIR INDUSTRIES</div>
                     <div id="v75-logo-underline" style="width:80px;height:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);margin:0 auto;"></div>
                     <!-- H watermarks background -->
                     <div id="v75-watermarks" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden;"></div>
@@ -20987,7 +20997,7 @@
             <!-- ═══════════════════════════════════════════════════════════════
                  V62 BENTO AGENTS - Translucent Glass Grid Layout
                  ═══════════════════════════════════════════════════════════════ -->
-            <div id="helm-view-agents" class="helm-view">
+            <div id="helm-view-agents" class="helm-view" style="overflow-y:auto;max-height:calc(100vh - 120px);-webkit-overflow-scrolling:touch;">
                 <div style="padding: 24px; width: 100%;">
 
                     <!-- Header Card -->
@@ -21041,7 +21051,7 @@
                     <!-- Timetable Card -->
                     <div class="bento-card" style="padding: 16px; margin-bottom: 20px;">
                         <div id="agent-timetable-container"
-                            style="position: relative; overflow: hidden; border-radius: 12px;">
+                            style="position: relative; overflow-x: auto; overflow-y: auto; max-height: 320px; border-radius: 12px;">
                             <!-- Real-Time Tracker Line -->
                             <div id="agent-timetable-tracker" style="
                             position: absolute;
@@ -41168,15 +41178,18 @@ Harir Industries`;
             if (conversionEl) conversionEl.textContent = conversion + '%';
 
             // Also update v58 tracker stats if on that view
-            const trackerTotal = document.getElementById('pipeline-stat-total');
-            const trackerSigned = document.getElementById('pipeline-stat-signed');
-            const trackerNoshow = document.getElementById('pipeline-stat-noshow');
-            const trackerRate = document.getElementById('pipeline-stat-rate');
+            // v75.1: Skip if v73 pipeline is active (it has its own stats)
+            if (!window._v73Pipeline) {
+                const trackerTotal = document.getElementById('pipeline-stat-total');
+                const trackerSigned = document.getElementById('pipeline-stat-signed');
+                const trackerNoshow = document.getElementById('pipeline-stat-noshow');
+                const trackerRate = document.getElementById('pipeline-stat-rate');
 
-            if (trackerTotal) trackerTotal.textContent = total;
-            if (trackerSigned) trackerSigned.textContent = signedUp;
-            if (trackerNoshow) trackerNoshow.textContent = noShows;
-            if (trackerRate) trackerRate.textContent = conversion + '%';
+                if (trackerTotal) trackerTotal.textContent = total;
+                if (trackerSigned) trackerSigned.textContent = signedUp;
+                if (trackerNoshow) trackerNoshow.textContent = noShows;
+                if (trackerRate) trackerRate.textContent = conversion + '%';
+            }
             
             // v68.2: Update filter count display
             const filterCount = document.getElementById('pipeline-filter-count');
@@ -45422,6 +45435,8 @@ Harir Industries`
             if (viewName === 'pipeline') {
                 if (typeof renderPipelineTrackerTable === 'function') renderPipelineTrackerTable();
                 if (typeof updatePipelineTrackerStats === 'function') if (typeof updatePipelineTrackerStats === "function") updatePipelineTrackerStats();
+                // v75: Re-render v73 pipeline stats to respect date filter (prevent dashboard overwrite)
+                if (window._v73Pipeline) { window._v73Pipeline.render(); }
             }
         };
 
@@ -49153,8 +49168,15 @@ Harir Industries`;
                 try {
                     const data = JSON.parse(localStorage.getItem('hpm_notifications') || '{}');
                     this.notifications = data.notifications || [];
+                    // v75.1: Prune old notifications (> 4 hours)
+                    const cutoff = Date.now() - (4 * 60 * 60 * 1000);
+                    this.notifications = this.notifications.filter(n => {
+                        const ts = n.timestamp ? new Date(n.timestamp).getTime() : 0;
+                        return ts > cutoff;
+                    });
                     // ALWAYS recalculate unread count from actual unread notifications
                     this.unreadCount = this.notifications.filter(n => !n.read).length;
+                    this.save(); // Save pruned list
                     this.updateBadge();
                 } catch (e) { console.warn('Could not load notifications'); }
             },
@@ -50841,7 +50863,9 @@ Harir Industries`;
 
             // SECONDARY SOURCE: Viewings from localStorage (if not already in Watcher)
             const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-            viewings.slice(-10).reverse().forEach(v => {
+            // v75: Only show viewings from last 7 days, not ancient data
+            const _sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            viewings.filter(v => (v.date || '') >= _sevenDaysAgo).slice(-10).reverse().forEach(v => {
                 // Check if already logged by Watcher
                 const alreadyLogged = activities.some(a => 
                     a.source === 'watcher' && 
@@ -50861,9 +50885,10 @@ Harir Industries`;
                 });
             });
 
-            // TERTIARY SOURCE: Pipeline data
+            // TERTIARY SOURCE: Pipeline data (v75.1: last 7 days only)
             const pipelineData = getStorageArray('pipelineData');
-            pipelineData.filter(p => p.status === 'Signed Up').slice(-5).forEach(p => {
+            const _pipelineSevenDays = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            pipelineData.filter(p => p.status === 'Signed Up' && (p.date || '') >= _pipelineSevenDays).slice(-5).forEach(p => {
                 const alreadyLogged = activities.some(a => a.source === 'watcher' && a.type === 'signup');
                 if (alreadyLogged) return;
 
@@ -50878,7 +50903,7 @@ Harir Industries`;
                 });
             });
 
-            pipelineData.filter(p => p.status === 'No Show').slice(-3).forEach(p => {
+            pipelineData.filter(p => p.status === 'No Show' && (p.date || '') >= _pipelineSevenDays).slice(-3).forEach(p => {
                 const alreadyLogged = activities.some(a => a.source === 'watcher' && a.type === 'noshow');
                 if (alreadyLogged) return;
 
@@ -52876,19 +52901,24 @@ Harir Industries`;
         function applyFilters() {
             let d = state.data.map(v => ({ ...v, status: normalizeStatus(v.status) }));
             
-            // v74.2: Compute date-only filtered set FIRST (for stats to use)
+            // v75.1: Compute date-only filtered set FIRST (for stats to use)
             let dateOnly = d;
             if (state.filters.dateRange !== 'all') {
                 const _now = new Date();
-                let _cut = new Date();
-                switch(state.filters.dateRange) {
-                    case 'today': _cut = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()); break;
-                    case '1week': _cut.setDate(_cut.getDate() - 7); break;
-                    case '1month': _cut.setMonth(_cut.getMonth() - 1); break;
-                    case '3months': _cut.setMonth(_cut.getMonth() - 3); break;
-                    case '6months': _cut.setMonth(_cut.getMonth() - 6); break;
+                if (state.filters.dateRange === 'today') {
+                    // v75.1: Exact date match for "Today" — only today's viewings
+                    const _todayStr = _now.toISOString().split('T')[0];
+                    dateOnly = d.filter(v => v.date === _todayStr);
+                } else {
+                    let _cut = new Date();
+                    switch(state.filters.dateRange) {
+                        case '1week': _cut.setDate(_cut.getDate() - 7); break;
+                        case '1month': _cut.setMonth(_cut.getMonth() - 1); break;
+                        case '3months': _cut.setMonth(_cut.getMonth() - 3); break;
+                        case '6months': _cut.setMonth(_cut.getMonth() - 6); break;
+                    }
+                    dateOnly = d.filter(v => v.date >= _cut.toISOString().split('T')[0]);
                 }
-                dateOnly = d.filter(v => v.date >= _cut.toISOString().split('T')[0]);
             }
             state.dateFiltered = dateOnly;
             
@@ -52910,21 +52940,25 @@ Harir Industries`;
             // Date filter
             if (state.filters.dateRange !== 'all') {
                 const now = new Date();
-                let cutoff = new Date();
-                switch(state.filters.dateRange) {
-                    case 'today':
-                        cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate()); break;
-                    case '1week':
-                        cutoff.setDate(cutoff.getDate() - 7); break;
-                    case '1month':
-                        cutoff.setMonth(cutoff.getMonth() - 1); break;
-                    case '3months':
-                        cutoff.setMonth(cutoff.getMonth() - 3); break;
-                    case '6months':
-                        cutoff.setMonth(cutoff.getMonth() - 6); break;
+                if (state.filters.dateRange === 'today') {
+                    // v75.1: Exact date match for "Today"
+                    const todayStr = now.toISOString().split('T')[0];
+                    d = d.filter(v => v.date === todayStr);
+                } else {
+                    let cutoff = new Date();
+                    switch(state.filters.dateRange) {
+                        case '1week':
+                            cutoff.setDate(cutoff.getDate() - 7); break;
+                        case '1month':
+                            cutoff.setMonth(cutoff.getMonth() - 1); break;
+                        case '3months':
+                            cutoff.setMonth(cutoff.getMonth() - 3); break;
+                        case '6months':
+                            cutoff.setMonth(cutoff.getMonth() - 6); break;
+                    }
+                    const cutoffStr = cutoff.toISOString().split('T')[0];
+                    d = d.filter(v => v.date >= cutoffStr);
                 }
-                const cutoffStr = cutoff.toISOString().split('T')[0];
-                d = d.filter(v => v.date >= cutoffStr);
             }
             
             // Sort
@@ -52953,7 +52987,8 @@ Harir Industries`;
         }
 
         function updateStats() {
-            // v74.2: Stats respect date filter
+            // v75.1: Stats ALWAYS respect both date and status filters
+            // Use dateFiltered for stat breakdowns (so clickable stat cards make sense within date range)
             const source = state.dateFiltered || state.data;
             const all = source.map(v => ({ ...v, status: normalizeStatus(v.status) }));
             const total = all.length;
@@ -52964,19 +52999,26 @@ Harir Industries`;
             const conducted = viewed + signed + noshow;
             const rate = conducted > 0 ? Math.round((signed / conducted) * 100) : 0;
 
-            const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
-            el('v73-stat-total', total);
-            el('v73-stat-pending', pending);
-            el('v73-stat-viewed', viewed);
-            el('v73-stat-signed', signed);
-            el('v73-stat-noshow', noshow);
-            el('v73-stat-rate', rate + '%');
+            // v75.1: Direct DOM updates with force
+            const _s = (id, val) => { 
+                const e = document.getElementById(id); 
+                if(e) { 
+                    e.textContent = val; 
+                    e.setAttribute('data-val', val); // Force reflow
+                } 
+            };
+            _s('v73-stat-total', total);
+            _s('v73-stat-pending', pending);
+            _s('v73-stat-viewed', viewed);
+            _s('v73-stat-signed', signed);
+            _s('v73-stat-noshow', noshow);
+            _s('v73-stat-rate', rate + '%');
             
             // Also update legacy IDs for dashboard compatibility
-            el('pipeline-stat-total', total);
-            el('pipeline-stat-signed', signed);
-            el('pipeline-stat-noshow', noshow);
-            el('pipeline-stat-rate', rate + '%');
+            _s('pipeline-stat-total', total);
+            _s('pipeline-stat-signed', signed);
+            _s('pipeline-stat-noshow', noshow);
+            _s('pipeline-stat-rate', rate + '%');
             
             // Highlight active stat card
             document.querySelectorAll('.v73-stat-card').forEach(card => {
@@ -53581,9 +53623,10 @@ Harir Industries`;
                 const stored = localStorage.getItem(STORE_KEY);
                 if (stored) {
                     notifications = JSON.parse(stored);
-                    // Prune old (> 7 days)
-                    const cutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
-                    notifications = notifications.filter(n => new Date(n.ts).getTime() > cutoff);
+                    // v75.1: Prune old (> 4 hours) and dismissed
+                    const cutoff = Date.now() - (4 * 60 * 60 * 1000);
+                    notifications = notifications.filter(n => new Date(n.ts).getTime() > cutoff && !n.dismissed);
+                    saveToStorage(); // Clean up storage too
                 }
             } catch(e) { notifications = []; }
         }
@@ -53891,7 +53934,15 @@ Harir Industries`;
         // ═══ NOTIFICATION PANEL ═══
         function togglePanel() {
             let p = document.getElementById('agent-notif-panel');
-            if (p) { p.remove(); panelOpen = false; return; }
+            if (p) { 
+                // v75.1: Mark all as read when closing panel
+                notifications.forEach(n => { n.read = true; });
+                saveToStorage();
+                updateBadge();
+                p.remove(); 
+                panelOpen = false; 
+                return; 
+            }
             panelOpen = true;
             
             p = document.createElement('div');
@@ -54190,6 +54241,37 @@ Harir Industries`;
         // Init
         loadFromStorage();
         updateBadge();
+        
+        // v75.1: Bridge recent viewing activity into notification center
+        setTimeout(function() {
+            try {
+                const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                const todayStr = new Date().toISOString().split('T')[0];
+                const recentViewings = viewings.filter(v => v.date === todayStr);
+                const existingIds = new Set(notifications.map(n => n.viewingId).filter(Boolean));
+                
+                recentViewings.forEach(v => {
+                    const vid = v.id || v.viewing_id;
+                    if (existingIds.has(vid)) return; // Skip if already notified
+                    
+                    const clientName = v.client_name || v.visitor || v.clientName || v.name || 'Client';
+                    const propertyName = v.property_name || v.property || v.propertyName || 'Property';
+                    const status = (v.status || '').toLowerCase();
+                    
+                    // Only create notifications for today's significant events
+                    if (status.includes('sign') || status.includes('no show') || status.includes('noshow')) {
+                        pushNotification({
+                            type: status.includes('sign') ? 'signed' : 'noshow',
+                            severity: status.includes('sign') ? 'info' : 'warning',
+                            title: status.includes('sign') ? 'Sign Up' : 'No Show',
+                            message: clientName + ' — ' + propertyName,
+                            viewingId: vid
+                        });
+                    }
+                });
+            } catch(e) { console.warn('[v75.1] Activity bridge error:', e); }
+        }, 2000);
+        
         console.log('[HELM v73.1] Agent notification system ready —', notifications.filter(n=>!n.dismissed).length, 'active notifications');
 
     })();
@@ -54873,8 +54955,9 @@ html:not([data-theme="light"]) #email-output-display {
 #pre-landing-helm-logo {
     font-family: "Big Shoulders Stencil", sans-serif !important;
     font-weight: 800;
+    font-optical-sizing: none;
     font-size: clamp(36px, 8vw, 56px);
-    letter-spacing: 8px;
+    letter-spacing: 10px;
     opacity: 0;
     animation: stencil-appear 1.2s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -54937,8 +55020,9 @@ html:not([data-theme="light"]) #pre-landing-helm-logo {
         // Create stencil HELM logo element before the greeting
         var logoDiv = document.createElement('div');
         logoDiv.id = 'pre-landing-helm-logo';
-        logoDiv.textContent = 'HELM';
-        logoDiv.style.cssText = 'margin-bottom:24px;';
+        logoDiv.innerHTML = '<div style="font-family:\'Big Shoulders Stencil\',sans-serif;font-weight:800;font-optical-sizing:none;font-size:clamp(36px,8vw,56px);letter-spacing:10px;">HELM</div>' +
+            '<div style="font-family:\'Big Shoulders Stencil\',sans-serif;font-weight:400;font-size:10px;letter-spacing:6px;opacity:0.5;margin-top:6px;">BY HARIR INDUSTRIES</div>';
+        logoDiv.style.cssText = 'margin-bottom:24px;text-align:center;';
 
         // Insert before the greeting text
         var greeting = document.getElementById('prelanding-greeting-text');
@@ -56113,6 +56197,224 @@ html[data-theme="light"] #agent-notif-panel [style*="color:rgba(255,255,255,0.15
 /* Close button */
 html[data-theme="light"] #agent-notif-panel button[style*="color:rgba(255,255,255,0.2)"] {
     color: #8a8a8a !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — QUICK BOOK MODAL
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] #quick-book-modal {
+    background: rgba(240,237,230,0.6) !important;
+}
+html[data-theme="light"] #quick-book-modal > div[style*="background:linear-gradient"],
+html[data-theme="light"] #quick-book-modal > div[style*="background: linear-gradient"] {
+    background: #f5f2eb !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.12) !important;
+}
+html[data-theme="light"] #quick-book-modal [style*="color:white"],
+html[data-theme="light"] #quick-book-modal [style*="color: white"],
+html[data-theme="light"] #quick-book-modal h2[style*="color:white"] {
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #quick-book-modal [style*="color:rgba(255,255,255"],
+html[data-theme="light"] #quick-book-modal [style*="color: rgba(255,255,255"] {
+    color: #6a6a6a !important;
+}
+html[data-theme="light"] #quick-book-modal input,
+html[data-theme="light"] #quick-book-modal select,
+html[data-theme="light"] #quick-book-modal textarea {
+    background: #ece9e1 !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #quick-book-modal input::placeholder,
+html[data-theme="light"] #quick-book-modal textarea::placeholder {
+    color: #b0a898 !important;
+}
+html[data-theme="light"] #quick-book-modal select option {
+    background: #f5f2eb !important;
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #quick-book-modal button[style*="background:rgba(255,255,255,0.1)"],
+html[data-theme="light"] #quick-book-modal button[style*="background: rgba(255,255,255,0.1)"] {
+    background: #ece9e1 !important;
+    color: #6a6a6a !important;
+}
+/* Cancel button */
+html[data-theme="light"] #quick-book-modal button[style*="background:rgba(255,255,255,0.05)"],
+html[data-theme="light"] #quick-book-modal button[style*="background: rgba(255,255,255,0.05)"] {
+    background: #ece9e1 !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    color: #4a4a4a !important;
+}
+/* Book button keeps green but muted */
+html[data-theme="light"] #quick-book-modal button[style*="background:linear-gradient(135deg,#22c55e"],
+html[data-theme="light"] #quick-book-modal button[style*="background: linear-gradient(135deg, #22c55e"],
+html[data-theme="light"] #quick-book-modal button[style*="background:#22c55e"] {
+    background: #7FB069 !important;
+}
+/* Date viewings info box */
+html[data-theme="light"] #qb-date-viewings {
+    background: rgba(255,183,77,0.08) !important;
+    border-color: rgba(255,183,77,0.15) !important;
+    color: #4a4a4a !important;
+}
+html[data-theme="light"] #quick-book-modal label {
+    color: #6a6a6a !important;
+}
+/* Checkbox area */
+html[data-theme="light"] #quick-book-modal [style*="border-top:1px solid rgba(255,255,255"] {
+    border-color: rgba(0,0,0,0.06) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — QUICK NOTE MODAL
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] #helm-note-modal > div[style*="background:rgba(0,0,0"] {
+    background: rgba(240,237,230,0.5) !important;
+}
+html[data-theme="light"] #helm-note-modal > div > div[style*="background:rgba(12,16,28"],
+html[data-theme="light"] #helm-note-modal [style*="background:rgba(12,16,28"] {
+    background: #f5f2eb !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
+}
+html[data-theme="light"] #helm-note-modal [style*="color:rgba(255,255,255,0.85)"],
+html[data-theme="light"] #helm-note-modal [style*="color: rgba(255,255,255,0.85)"] {
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #helm-note-modal [style*="color:rgba(255,255,255"],
+html[data-theme="light"] #helm-note-modal [style*="color: rgba(255,255,255"] {
+    color: #6a6a6a !important;
+}
+html[data-theme="light"] #helm-note-modal textarea {
+    background: #ece9e1 !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #helm-note-modal textarea::placeholder {
+    color: #b0a898 !important;
+}
+html[data-theme="light"] #helm-note-modal button[style*="background:rgba(255,255,255,0.03)"] {
+    background: #ece9e1 !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    color: #4a4a4a !important;
+}
+html[data-theme="light"] #helm-note-modal button[style*="background:#a78bfa"] {
+    background: #2C3E50 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — TOAST NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] body > div[style*="background:rgba(12,16,28,0.95)"],
+html[data-theme="light"] body > div[style*="background:rgba(12,16,28"] {
+    background: rgba(245,242,235,0.97) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.1) !important;
+}
+html[data-theme="light"] body > div[style*="background:rgba(12,16,28"] [style*="color:white"] {
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] body > div[style*="background:rgba(12,16,28"] [style*="color:rgba(255,255,255"] {
+    color: #6a6a6a !important;
+}
+html[data-theme="light"] body > div[style*="background:rgba(12,16,28"] button[style*="color:rgba(255,255,255,0.15)"] {
+    color: #b0a898 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — SELECT DROPDOWN OPTIONS (global)
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] select option {
+    background: #f5f2eb !important;
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] .v73-status-pill option {
+    background: #f5f2eb !important;
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #v73-pipeline-status-filter option,
+html[data-theme="light"] #v73-pipeline-date-filter option {
+    background: #f5f2eb !important;
+    color: #1a1a1a !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — SHARE VIEWINGS MODAL
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] #share-viewings-modal > div[style*="background:linear-gradient"] {
+    background: #f5f2eb !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+}
+html[data-theme="light"] #share-viewings-modal [style*="color:white"] {
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #share-viewings-modal [style*="color:rgba(255,255,255"] {
+    color: #6a6a6a !important;
+}
+html[data-theme="light"] #share-viewings-modal button[style*="background:rgba(255,255,255,0.1)"] {
+    background: #ece9e1 !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    color: #4a4a4a !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — VIEWING INFO MODAL
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] #viewing-info-modal-overlay {
+    background: rgba(240,237,230,0.5) !important;
+}
+html[data-theme="light"] #viewing-info-modal-overlay > div {
+    background: #f5f2eb !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
+}
+html[data-theme="light"] #viewing-info-modal-overlay [style*="color:white"],
+html[data-theme="light"] #viewing-info-modal-overlay [style*="color: white"] {
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #viewing-info-modal-overlay [style*="color:rgba(255,255,255"],
+html[data-theme="light"] #viewing-info-modal-overlay [style*="color: rgba(255,255,255"] {
+    color: #6a6a6a !important;
+}
+html[data-theme="light"] #viewing-info-modal-overlay input,
+html[data-theme="light"] #viewing-info-modal-overlay select,
+html[data-theme="light"] #viewing-info-modal-overlay textarea {
+    background: #ece9e1 !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: #1a1a1a !important;
+}
+html[data-theme="light"] #viewing-info-modal-overlay [style*="background:rgba(255,255,255,0.0"],
+html[data-theme="light"] #viewing-info-modal-overlay [style*="background: rgba(255,255,255,0.0"] {
+    background: #ece9e1 !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+html[data-theme="light"] #viewing-info-modal-overlay [style*="border-bottom:1px solid rgba(255,255,255"],
+html[data-theme="light"] #viewing-info-modal-overlay [style*="border-top:1px solid rgba(255,255,255"] {
+    border-color: rgba(0,0,0,0.06) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V75 LIGHT MODE — GENERAL DARK INLINE BACKGROUNDS CATCH-ALL
+   ═══════════════════════════════════════════════════════════════ */
+html[data-theme="light"] [style*="background:rgba(12,16,28"],
+html[data-theme="light"] [style*="background: rgba(12,16,28"],
+html[data-theme="light"] [style*="background:rgba(15,23,42,0.9"],
+html[data-theme="light"] [style*="background: rgba(15,23,42,0.9"] {
+    background: rgba(245,242,235,0.97) !important;
+    border-color: rgba(0,0,0,0.1) !important;
+}
+html[data-theme="light"] [style*="background:linear-gradient(145deg, #1e293b"],
+html[data-theme="light"] [style*="background:linear-gradient(145deg,#1e293b"],
+html[data-theme="light"] [style*="background: linear-gradient(145deg, #1e293b"],
+html[data-theme="light"] [style*="background:linear-gradient(135deg,rgba(15,23,42"],
+html[data-theme="light"] [style*="background: linear-gradient(135deg, rgba(15,23,42"],
+html[data-theme="light"] [style*="background:linear-gradient(135deg,rgba(30,41,59"],
+html[data-theme="light"] [style*="background: linear-gradient(135deg, rgba(30,41,59"] {
+    background: #f5f2eb !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.1) !important;
 }
 </style>
 
@@ -63439,7 +63741,11 @@ Write the email now:`;
         function today() { return new Date().toISOString().split('T')[0]; }
         function weekStart() { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d.toISOString().split('T')[0]; }
         function greeting() { const h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
-        function userName() { return window.HPMAuth?.userProfile?.display_name || window.HPMAuth?.userProfile?.full_name?.split(' ')[0] || ''; }
+        function userName() { 
+            const raw = window.HPMAuth?.userProfile?.display_name || window.HPMAuth?.userProfile?.full_name?.split(' ')[0] || ''; 
+            // v75.1: Capitalize first letter
+            return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : '';
+        }
 
         // ─── Widget Renderers ───
         function wSchedule() {
@@ -63460,9 +63766,11 @@ Write the email now:`;
         function wPerformance() {
             const v = getViewings(), p = getPipeline(), ws = weekStart(), td = today();
             const wv = v.filter(x => x.date >= ws && x.date <= td);
-            const wSigned = p.filter(x => { const d = (x.dateAdded||'').split('T')[0]; return d >= ws && d <= td && x.status === 'Signed Up'; });
-            const wNo = p.filter(x => { const d = (x.dateAdded||'').split('T')[0]; return d >= ws && d <= td && x.status === 'No Show'; });
-            const rate = wv.length > 0 ? Math.round((wSigned.length / wv.length) * 100) : 0;
+            // v75: Use viewing date (not dateAdded) for sign-ups and no-shows
+            const wSigned = p.filter(x => { const d = (x.date||x.dateAdded||'').split('T')[0]; return d >= ws && d <= td && (x.status === 'Signed Up' || (x.status||'').toLowerCase().includes('sign')); });
+            const wNo = p.filter(x => { const d = (x.date||x.dateAdded||'').split('T')[0]; return d >= ws && d <= td && (x.status === 'No Show' || (x.status||'').toLowerCase().includes('no show')); });
+            const conducted = wSigned.length + wNo.length + wv.filter(x => (x.outcome||x.status||'').toLowerCase().includes('viewed')).length;
+            const rate = conducted > 0 ? Math.round((wSigned.length / conducted) * 100) : 0;
             return `
                 <div class="cc-perf-grid">
                     <div class="cc-perf-stat"><div class="cc-perf-val" style="color:#4da6ff">${wv.length}</div><div class="cc-perf-lbl">viewings</div></div>
@@ -63492,8 +63800,26 @@ Write the email now:`;
         }
 
         function wTeam() {
-            const profiles = window.HPMAuth?.allUsers || [];
-            if (!profiles.length) return '<div class="cc-empty"><span class="material-symbols-rounded" style="font-size:28px;opacity:0.15">person_add</span><span>No team members loaded</span></div>';
+            let profiles = window.HPMAuth?.allUsers || [];
+            // v75.1: Multiple fallbacks for team data
+            if (!profiles.length && typeof loadAgents === 'function') {
+                try {
+                    const localAgents = loadAgents();
+                    profiles = localAgents.map(a => ({ display_name: a.name, avatar_color: a.color || '#a78bfa' }));
+                } catch(e) {}
+            }
+            // v75.1: Final fallback — use any agents stored in window
+            if (!profiles.length && window._agents && window._agents.length) {
+                profiles = window._agents.map(a => ({ display_name: a.name, avatar_color: a.color || '#a78bfa' }));
+            }
+            if (!profiles.length) {
+                // Try localStorage agents
+                try {
+                    const stored = JSON.parse(localStorage.getItem('helm_agents') || '[]');
+                    if (stored.length) profiles = stored.map(a => ({ display_name: a.name, avatar_color: a.color || '#a78bfa' }));
+                } catch(e) {}
+            }
+            if (!profiles.length) return '<div class="cc-empty"><span class="material-symbols-rounded" style="font-size:28px;opacity:0.15">person_add</span><span>Add agents in the Agents tab</span></div>';
             return profiles.slice(0,5).map(u => {
                 const ini = (u.display_name || u.full_name || '?').split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
                 return `<div class="cc-team-row"><div class="cc-team-av" style="background:${u.avatar_color||'#a78bfa'}">${ini}</div><div class="cc-team-nm">${u.display_name || u.full_name || 'Agent'}</div></div>`;
@@ -66175,26 +66501,41 @@ Write the email now:`;
         const screen = document.getElementById('pre-landing-screen');
         if (!g) return;
         
+        // v75: Dynamic user name from auth profile
+        var userName = 'there';
+        try {
+            if (window.HPMAuth && HPMAuth.userProfile) {
+                userName = HPMAuth.userProfile.display_name || HPMAuth.userProfile.full_name || HPMAuth.currentUser?.email?.split('@')[0] || 'there';
+            } else if (window.HPMAuth && HPMAuth.currentUser) {
+                userName = HPMAuth.currentUser.user_metadata?.display_name || HPMAuth.currentUser.user_metadata?.full_name || HPMAuth.currentUser.email?.split('@')[0] || 'there';
+            }
+            // v75.1: Capitalize first letter
+            if (userName && userName !== 'there') userName = userName.charAt(0).toUpperCase() + userName.slice(1);
+        } catch(e) {}
+        
+        // v75: Light mode check - don't override background if light mode
+        var isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+        
         if (hour >= 5 && hour < 12) {
-            g.textContent = 'Good morning, Ridwan';
+            g.textContent = 'Good morning, ' + userName;
             s.textContent = 'Ready to close some deals';
             if (i) i.textContent = '\u2600\uFE0F';
-            if (screen) screen.style.background = 'linear-gradient(135deg, #0a0e1a 0%, #1a1520 30%, #1e1428 60%, #0f172a 100%)';
+            if (screen && !isLightMode) screen.style.background = 'linear-gradient(135deg, #0a0e1a 0%, #1a1520 30%, #1e1428 60%, #0f172a 100%)';
         } else if (hour >= 12 && hour < 17) {
-            g.textContent = 'Good afternoon, Ridwan';
+            g.textContent = 'Good afternoon, ' + userName;
             s.textContent = 'The pipeline awaits';
             if (i) i.textContent = '\u26C5';
-            if (screen) screen.style.background = 'linear-gradient(135deg, #0f1520 0%, #161a2e 30%, #1a1832 60%, #0f172a 100%)';
+            if (screen && !isLightMode) screen.style.background = 'linear-gradient(135deg, #0f1520 0%, #161a2e 30%, #1a1832 60%, #0f172a 100%)';
         } else if (hour >= 17 && hour < 21) {
-            g.textContent = 'Good evening, Ridwan';
+            g.textContent = 'Good evening, ' + userName;
             s.textContent = 'Wrapping up the day';
             if (i) i.textContent = '\uD83C\uDF07';
-            if (screen) screen.style.background = 'linear-gradient(135deg, #0a0e1a 0%, #1a1225 30%, #1f1030 60%, #0f172a 100%)';
+            if (screen && !isLightMode) screen.style.background = 'linear-gradient(135deg, #0a0e1a 0%, #1a1225 30%, #1f1030 60%, #0f172a 100%)';
         } else {
-            g.textContent = 'Good evening, Ridwan';
+            g.textContent = 'Good evening, ' + userName;
             s.textContent = 'Burning the midnight oil';
             if (i) i.textContent = '\uD83C\uDF19';
-            if (screen) screen.style.background = 'linear-gradient(135deg, #06080f 0%, #0a0f1c 50%, #0d1424 100%)';
+            if (screen && !isLightMode) screen.style.background = 'linear-gradient(135deg, #06080f 0%, #0a0f1c 50%, #0d1424 100%)';
         }
     })();
 
@@ -66259,13 +66600,9 @@ Write the email now:`;
             if(el('dash-noshow-count'))el('dash-noshow-count').textContent=ns;
             if(el('dash-viewed-count'))el('dash-viewed-count').textContent=vw;
             if(el('dash-pending-count'))el('dash-pending-count').textContent=pn;
-            // Also update v73 pipeline stat cards on dashboard
-            if(el('v73-stat-viewed'))el('v73-stat-viewed').textContent=vw;
-            if(el('v73-stat-signed'))el('v73-stat-signed').textContent=sg;
-            if(el('v73-stat-noshow'))el('v73-stat-noshow').textContent=ns;
-            if(el('v73-stat-rate'))el('v73-stat-rate').textContent=rate+'%';
-            if(el('v73-stat-total'))el('v73-stat-total').textContent=tot;
-            if(el('v73-stat-pending'))el('v73-stat-pending').textContent=pn;
+            // v75: NEVER overwrite pipeline stat cards from dashboard
+            // Pipeline has its own updateStats() that respects date/status filters
+            // Dashboard only updates its own dash-* elements
         };
         setTimeout(updateDashboardCharts, 500);
         setInterval(updateDashboardCharts, 30000);
