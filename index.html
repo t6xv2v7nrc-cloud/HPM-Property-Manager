@@ -551,7 +551,8 @@
     
     <!-- v64.3: Supabase + Auth (CLEANED UP) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
     <!-- CRITICAL: Hide app until authenticated -->
     
     <!-- v74: OBSIDIAN DESIGN SYSTEM -->
@@ -4969,6 +4970,125 @@
             .bento-grid-2 {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           v77: HELM CARD SYSTEM (replaces bento for analytics/meta)
+           ═══════════════════════════════════════════════════════════════ */
+
+        .helm-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .helm-metrics-grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .helm-metrics-grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .helm-metrics-grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .helm-metrics-grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+        .helm-metric-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.25s ease;
+        }
+        .helm-metric-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.1);
+            transform: translateY(-1px);
+        }
+        .helm-metric-card .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+        .helm-metric-card .metric-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .helm-metric-card .metric-delta {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+        .helm-metric-card .metric-delta.up { background: rgba(34,197,94,0.12); color: #4ade80; }
+        .helm-metric-card .metric-delta.down { background: rgba(239,68,68,0.12); color: #f87171; }
+        .helm-metric-card .metric-delta.neutral { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+        .helm-metric-card .metric-accent {
+            position: absolute; top: 0; left: 0; width: 3px; height: 100%; border-radius: 16px 0 0 16px;
+        }
+
+        .helm-section-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .helm-section-card .section-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+        }
+        .helm-section-card .section-title {
+            font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 8px;
+        }
+        .helm-section-card .section-subtitle {
+            font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+        }
+
+        .helm-chart-container { min-height: 250px; width: 100%; }
+        .helm-chart-container .apexcharts-canvas { background: transparent !important; }
+
+        .helm-data-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+        .helm-data-table thead th {
+            text-align: left; padding: 10px 14px; font-size: 10px; font-weight: 700;
+            color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; user-select: none; white-space: nowrap;
+        }
+        .helm-data-table thead th:hover { color: rgba(255,255,255,0.6); }
+        .helm-data-table tbody tr { transition: background 0.15s; }
+        .helm-data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+        .helm-data-table tbody td {
+            padding: 10px 14px; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .helm-data-table tbody tr:last-child td { border-bottom: none; }
+        .helm-data-table .table-bar { display: inline-block; height: 6px; border-radius: 3px; min-width: 4px; }
+
+        /* Light Theme */
+        html[data-theme="light"] .helm-metric-card { background: rgba(255,255,255,0.6); border-color: rgba(0,0,0,0.06); }
+        html[data-theme="light"] .helm-metric-card:hover { background: rgba(255,255,255,0.8); border-color: rgba(0,0,0,0.1); }
+        html[data-theme="light"] .helm-metric-card .metric-label { color: #8b92a8; }
+        html[data-theme="light"] .helm-metric-card .metric-value { color: #1a1e2e !important; }
+        html[data-theme="light"] .helm-metric-card .metric-delta.up { background: rgba(34,197,94,0.1); color: #059669; }
+        html[data-theme="light"] .helm-metric-card .metric-delta.down { background: rgba(239,68,68,0.1); color: #dc2626; }
+        html[data-theme="light"] .helm-section-card { background: rgba(255,255,255,0.5); border-color: rgba(0,0,0,0.06); }
+        html[data-theme="light"] .helm-section-card .section-title { color: #1a1e2e; }
+        html[data-theme="light"] .helm-section-card .section-subtitle { color: #8b92a8; }
+        html[data-theme="light"] .helm-data-table thead th { color: #8b92a8; border-bottom-color: rgba(0,0,0,0.06); }
+        html[data-theme="light"] .helm-data-table tbody td { color: #4b5268; border-bottom-color: rgba(0,0,0,0.04); }
+        html[data-theme="light"] .helm-data-table tbody tr:hover { background: rgba(0,0,0,0.02); }
+
+        @media (max-width: 1200px) {
+            .helm-metrics-grid-5 { grid-template-columns: repeat(3, 1fr); }
+            .helm-metrics-grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .helm-metrics-grid-5, .helm-metrics-grid-4, .helm-metrics-grid-3 { grid-template-columns: repeat(2, 1fr); }
+            .helm-metrics-grid-2 { grid-template-columns: 1fr; }
+            .helm-section-card { padding: 16px; }
+        }
+        @media (max-width: 480px) {
+            .helm-metrics-grid-5, .helm-metrics-grid-4, .helm-metrics-grid-3, .helm-metrics-grid-2 { grid-template-columns: 1fr; }
         }
 
         /* ═══════════════════════════════════════════════════════════════
@@ -20082,184 +20202,145 @@
                             </div>
                         </div>
 
-                        <!-- Summary Stat Cards with MoM Deltas -->
-                        <div class="bento-grid bento-grid-5" style="margin-bottom:20px;" id="dash-summary-cards">
-                            <div class="bento-card bento-card-stat" style="position:relative;">
-                                <div class="bento-value-sm" id="dash-stat-total" style="color:#60a5fa;">0</div>
-                                <div class="bento-label">Total Viewings</div>
-                                <div id="dash-delta-total" class="dash-delta" style="position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;display:none;"></div>
+                        <!-- v77: KPI Metric Cards -->
+                        <div class="helm-metrics-grid helm-metrics-grid-5" id="dash-summary-cards">
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#60a5fa;"></div>
+                                <div class="metric-value" id="dash-stat-total" style="color:#60a5fa;">0</div>
+                                <div class="metric-label">Total Viewings</div>
+                                <div id="dash-delta-total" class="metric-delta" style="display:none;"></div>
                             </div>
-                            <div class="bento-card bento-card-stat" style="position:relative;">
-                                <div class="bento-value-sm" id="dash-stat-signed" style="color:#4ade80;">0</div>
-                                <div class="bento-label">Signed Up</div>
-                                <div id="dash-delta-signed" class="dash-delta" style="position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;display:none;"></div>
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#4ade80;"></div>
+                                <div class="metric-value" id="dash-stat-signed" style="color:#4ade80;">0</div>
+                                <div class="metric-label">Signed Up</div>
+                                <div id="dash-delta-signed" class="metric-delta" style="display:none;"></div>
                             </div>
-                            <div class="bento-card bento-card-stat" style="position:relative;">
-                                <div class="bento-value-sm" id="dash-stat-noshow" style="color:#ff6b6b;">0</div>
-                                <div class="bento-label">No Shows</div>
-                                <div id="dash-delta-noshow" class="dash-delta" style="position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;display:none;"></div>
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#ff6b6b;"></div>
+                                <div class="metric-value" id="dash-stat-noshow" style="color:#ff6b6b;">0</div>
+                                <div class="metric-label">No Shows</div>
+                                <div id="dash-delta-noshow" class="metric-delta" style="display:none;"></div>
                             </div>
-                            <div class="bento-card bento-card-stat" style="position:relative;" title="Signed ÷ conducted viewings (excludes pending, cancelled, declined)">
-                                <div class="bento-value-sm" id="dash-stat-rate" style="color:#5eead4;">0%</div>
-                                <div class="bento-label">Conversion Rate</div>
-                                <div id="dash-delta-rate" class="dash-delta" style="position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;display:none;"></div>
+                            <div class="helm-metric-card" title="Signed ÷ conducted viewings (excludes pending, cancelled, declined)">
+                                <div class="metric-accent" style="background:#5eead4;"></div>
+                                <div class="metric-value" id="dash-stat-rate" style="color:#5eead4;">0%</div>
+                                <div class="metric-label">Conversion Rate</div>
+                                <div id="dash-delta-rate" class="metric-delta" style="display:none;"></div>
                             </div>
-                            <div class="bento-card bento-card-stat" style="position:relative;" title="Signed ÷ all viewings (including pending, cancelled, declined)">
-                                <div class="bento-value-sm" id="dash-stat-overall-rate" style="color:#f59e0b;">0%</div>
-                                <div class="bento-label">Overall Rate</div>
-                                <div id="dash-delta-overall-rate" class="dash-delta" style="position:absolute;top:10px;right:12px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;display:none;"></div>
+                            <div class="helm-metric-card" title="Signed ÷ all viewings (including pending, cancelled, declined)">
+                                <div class="metric-accent" style="background:#f59e0b;"></div>
+                                <div class="metric-value" id="dash-stat-overall-rate" style="color:#f59e0b;">0%</div>
+                                <div class="metric-label">Overall Rate</div>
+                                <div id="dash-delta-overall-rate" class="metric-delta" style="display:none;"></div>
                             </div>
                         </div>
 
-                        <!-- Weekly Viewings + Outcomes — Split Layout -->
-                        <div class="bento-grid bento-grid-2" style="margin-bottom:20px;">
-                            <!-- Card 1: Weekly Bar Chart -->
-                            <div class="bento-card">
-                                <div class="bento-section-header">
-                                    <div class="bento-title">
+                        <!-- v77: Dashboard Cards Grid (2-column) -->
+                        <div class="helm-metrics-grid helm-metrics-grid-2">
+                            <!-- Weekly Bar Chart -->
+                            <div class="helm-section-card">
+                                <div class="section-header">
+                                    <div class="section-title">
                                         <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);">bar_chart</span>
                                         Weekly Viewings
                                     </div>
-                                    <span id="dash-chart-total" class="bento-subtitle">0 this week</span>
+                                    <span id="dash-chart-total" class="section-subtitle">0 this week</span>
                                 </div>
-                                <div id="dash-viewings-chart" style="display:flex;align-items:flex-end;gap:8px;height:200px;padding:0 4px;position:relative;"></div>
-                                <div id="dash-chart-days" style="display:flex;justify-content:space-between;margin-top:8px;padding:0 4px;">
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Mon</span>
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Tue</span>
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Wed</span>
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Thu</span>
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Fri</span>
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Sat</span>
-                                    <span style="font-size:9px;color:rgba(255,255,255,0.2);">Sun</span>
-                                </div>
+                                <div id="dash-viewings-chart" class="helm-chart-container"></div>
                             </div>
 
-                            <!-- Card 2: Outcomes Donut -->
-                            <div class="bento-card" id="dash-donut-card">
-                                <div class="bento-section-header">
-                                    <div class="bento-title">
+                            <!-- Outcomes Donut -->
+                            <div class="helm-section-card" id="dash-donut-card">
+                                <div class="section-header">
+                                    <div class="section-title">
                                         <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);">donut_large</span>
                                         Outcomes
                                     </div>
-                                    <span class="bento-subtitle" id="dash-outcomes-label">THIS WEEK'S OUTCOMES</span>
+                                    <span class="section-subtitle" id="dash-outcomes-label">THIS WEEK'S OUTCOMES</span>
                                 </div>
-                                <div id="dash-donut-section" style="display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:8px;">
-                                    <div style="position:relative;width:120px;height:120px;flex-shrink:0;">
-                                        <svg id="dash-donut-svg" viewBox="0 0 120 120" style="width:120px;height:120px;transform:rotate(-90deg);">
-                                            <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10"/>
-                                        </svg>
-                                        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                                            <span id="dash-donut-total" style="font-size:22px;font-weight:700;color:white;">0</span>
-                                            <span style="font-size:7px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.5px;">Total</span>
-                                        </div>
-                                    </div>
-                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;width:100%;">
-                                        <div style="display:flex;align-items:center;gap:6px;" title="Clients who signed a tenancy agreement"><div style="width:6px;height:6px;border-radius:50%;background:#00d68f;flex-shrink:0;"></div><span style="font-size:11px;color:rgba(255,255,255,0.5);flex:1;">Signed Up</span><span id="dash-signed-count" style="font-size:12px;font-weight:700;color:#00d68f;">0</span></div>
-                                        <div style="display:flex;align-items:center;gap:6px;" title="Clients who missed their viewing"><div style="width:6px;height:6px;border-radius:50%;background:#ff6b6b;flex-shrink:0;"></div><span style="font-size:11px;color:rgba(255,255,255,0.5);flex:1;">No Show</span><span id="dash-noshow-count" style="font-size:12px;font-weight:700;color:#ff6b6b;">0</span></div>
-                                        <div style="display:flex;align-items:center;gap:6px;" title="Clients who attended but didn't sign"><div style="width:6px;height:6px;border-radius:50%;background:#60a5fa;flex-shrink:0;"></div><span style="font-size:11px;color:rgba(255,255,255,0.5);flex:1;">Viewed Only</span><span id="dash-viewed-count" style="font-size:12px;font-weight:700;color:#60a5fa;">0</span></div>
-                                        <div style="display:flex;align-items:center;gap:6px;" title="Awaiting outcome to be recorded"><div style="width:6px;height:6px;border-radius:50%;background:#ffb547;flex-shrink:0;"></div><span style="font-size:11px;color:rgba(255,255,255,0.5);flex:1;">Pending</span><span id="dash-pending-count" style="font-size:12px;font-weight:700;color:#ffb547;">0</span></div>
-                                        <div style="display:flex;align-items:center;gap:6px;" title="Viewings cancelled before taking place"><div style="width:6px;height:6px;border-radius:50%;background:#6b7280;flex-shrink:0;"></div><span style="font-size:11px;color:rgba(255,255,255,0.5);flex:1;">Cancelled</span><span id="dash-cancelled-count" style="font-size:12px;font-weight:700;color:#6b7280;">0</span></div>
-                                        <div style="display:flex;align-items:center;gap:6px;" title="Client declined after viewing"><div style="width:6px;height:6px;border-radius:50%;background:#f97316;flex-shrink:0;"></div><span style="font-size:11px;color:rgba(255,255,255,0.5);flex:1;">Declined</span><span id="dash-declined-count" style="font-size:12px;font-weight:700;color:#f97316;">0</span></div>
-                                    </div>
-                                </div>
+                                <div id="dash-donut-apex" class="helm-chart-container" style="min-height:280px;"></div>
                             </div>
                         </div>
 
-                    <!-- v75: MoM Line Graph -->
-                    <div class="bento-card" style="margin-bottom:20px;padding:20px;">
-                        <div class="bento-section-header" style="margin-bottom:14px;">
-                            <div class="bento-title">
+                    <!-- v77: Monthly Trend (full width) -->
+                    <div class="helm-section-card">
+                        <div class="section-header">
+                            <div class="section-title">
                                 <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);font-size:18px;">show_chart</span>
                                 Monthly Trend
                             </div>
-                            <span class="bento-subtitle">Last 6 months</span>
+                            <span class="section-subtitle">Last 6 months</span>
                         </div>
-                        <div id="dash-mom-chart" style="position:relative;height:180px;padding:0 4px;"></div>
-                        <div id="dash-mom-labels" style="display:flex;justify-content:space-between;margin-top:8px;padding:0 4px;"></div>
-                        <div id="dash-mom-legend" style="display:flex;gap:16px;justify-content:center;margin-top:12px;font-size:10px;color:rgba(255,255,255,0.3);"></div>
+                        <div id="dash-mom-chart" class="helm-chart-container"></div>
                     </div>
 
-                    <!-- Conversion Funnel + Today's Performance -->
-                    <div class="bento-grid bento-grid-2" style="margin-bottom:20px;">
-                        <!-- Conversion Funnel -->
-                        <div class="bento-card" style="padding:20px;">
-                            <div class="bento-section-header" style="margin-bottom:14px;">
-                                <div class="bento-title">
+                    <!-- v77: Conversion Funnel + Today's Performance -->
+                    <div class="helm-metrics-grid helm-metrics-grid-2">
+                        <div class="helm-section-card">
+                            <div class="section-header">
+                                <div class="section-title">
                                     <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);font-size:18px;">filter_alt</span>
                                     Conversion Funnel
                                 </div>
                             </div>
                             <div id="dash-funnel" style="display:flex;flex-direction:column;gap:0;"></div>
                         </div>
-
-                        <!-- Today's Performance -->
-                        <div class="bento-card" style="padding:20px;">
-                            <div class="bento-section-header" style="margin-bottom:14px;">
-                                <div class="bento-title">
+                        <div class="helm-section-card">
+                            <div class="section-header">
+                                <div class="section-title">
                                     <span class="material-symbols-rounded" style="color:#6366f1;font-size:18px;">trending_up</span>
                                     Today
                                 </div>
-                                <span class="bento-subtitle" id="dash-today-date"></span>
+                                <span class="section-subtitle" id="dash-today-date"></span>
                             </div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                                <div style="text-align:center;padding:10px 6px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.1);border-radius:10px;">
-                                    <div id="dash-today-total" style="font-size:20px;font-weight:700;color:#3b82f6;">0</div>
-                                    <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Scheduled</div>
+                            <div class="helm-metrics-grid helm-metrics-grid-2" style="margin-bottom:0;">
+                                <div class="helm-metric-card" style="text-align:center;padding:14px 8px;">
+                                    <div class="metric-value" id="dash-today-total" style="color:#3b82f6;font-size:22px;">0</div>
+                                    <div class="metric-label">Scheduled</div>
                                 </div>
-                                <div style="text-align:center;padding:10px 6px;background:rgba(0,214,143,0.06);border:1px solid rgba(0,214,143,0.1);border-radius:10px;">
-                                    <div id="dash-today-signups" style="font-size:20px;font-weight:700;color:#00d68f;">0</div>
-                                    <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Sign-ups</div>
+                                <div class="helm-metric-card" style="text-align:center;padding:14px 8px;">
+                                    <div class="metric-value" id="dash-today-signups" style="color:#00d68f;font-size:22px;">0</div>
+                                    <div class="metric-label">Sign-ups</div>
                                 </div>
-                                <div style="text-align:center;padding:10px 6px;background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.1);border-radius:10px;">
-                                    <div id="dash-today-noshows" style="font-size:20px;font-weight:700;color:#ff6b6b;">0</div>
-                                    <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">No Shows</div>
+                                <div class="helm-metric-card" style="text-align:center;padding:14px 8px;">
+                                    <div class="metric-value" id="dash-today-noshows" style="color:#ff6b6b;font-size:22px;">0</div>
+                                    <div class="metric-label">No Shows</div>
                                 </div>
-                                <div style="text-align:center;padding:10px 6px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.1);border-radius:10px;">
-                                    <div id="dash-today-rate" style="font-size:20px;font-weight:700;color:#6366f1;">0%</div>
-                                    <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Sign-up Rate</div>
+                                <div class="helm-metric-card" style="text-align:center;padding:14px 8px;">
+                                    <div class="metric-value" id="dash-today-rate" style="color:#6366f1;font-size:22px;">0%</div>
+                                    <div class="metric-label">Sign-up Rate</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Calendar Heatmap (6 months) -->
-                    <div class="bento-card bento-span-full" style="margin-bottom:20px;padding:20px;">
-                        <div class="bento-section-header" style="margin-bottom:14px;">
-                            <div class="bento-title">
+                    <!-- v77: Activity Heatmap (full width) -->
+                    <div class="helm-section-card">
+                        <div class="section-header">
+                            <div class="section-title">
                                 <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);font-size:18px;">calendar_month</span>
                                 Activity Heatmap
                             </div>
-                            <span class="bento-subtitle">Last 6 months</span>
+                            <span class="section-subtitle">Last 6 months</span>
                         </div>
-                        <div id="dash-heatmap" style="overflow-x:auto;padding-bottom:4px;"></div>
-                        <div id="dash-heatmap-legend" style="display:flex;align-items:center;gap:6px;margin-top:8px;justify-content:flex-end;">
-                            <span style="font-size:9px;color:rgba(255,255,255,0.25);">Less</span>
-                            <div style="width:10px;height:10px;border-radius:2px;background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.1);"></div>
-                            <div style="width:10px;height:10px;border-radius:2px;background:rgba(45,212,191,0.2);"></div>
-                            <div style="width:10px;height:10px;border-radius:2px;background:rgba(45,212,191,0.4);"></div>
-                            <div style="width:10px;height:10px;border-radius:2px;background:rgba(45,212,191,0.7);"></div>
-                            <div style="width:10px;height:10px;border-radius:2px;background:#2dd4bf;"></div>
-                            <span style="font-size:9px;color:rgba(255,255,255,0.25);">More</span>
-                        </div>
+                        <div id="dash-heatmap" class="helm-chart-container" style="min-height:120px;overflow-x:auto;"></div>
                     </div>
 
-                    <!-- Peak Performance + Weekly Report -->
-                    <div class="bento-grid bento-grid-2" style="margin-bottom:20px;">
-                        <!-- Peak Performance Heatmap -->
-                        <div class="bento-card" style="padding:20px;">
-                            <div class="bento-section-header" style="margin-bottom:14px;">
-                                <div class="bento-title">
+                    <!-- v77: Peak Performance + Weekly Report -->
+                    <div class="helm-metrics-grid helm-metrics-grid-2">
+                        <div class="helm-section-card">
+                            <div class="section-header">
+                                <div class="section-title">
                                     <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);font-size:18px;">local_fire_department</span>
                                     Peak Performance
                                 </div>
                             </div>
-                            <div id="dash-peak-heatmap" style="overflow-x:auto;"></div>
+                            <div id="dash-peak-heatmap" class="helm-chart-container" style="min-height:180px;overflow-x:auto;"></div>
                         </div>
-
-                        <!-- Weekly Report -->
-                        <div class="bento-card" style="padding:20px;">
-                            <div class="bento-section-header" style="margin-bottom:14px;">
-                                <div class="bento-title">
+                        <div class="helm-section-card">
+                            <div class="section-header">
+                                <div class="section-title">
                                     <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);font-size:18px;">insights</span>
                                     Weekly Report
                                 </div>
@@ -20268,39 +20349,54 @@
                         </div>
                     </div>
 
-                    <!-- Financial Stats Row - 4 Mini Cards -->
-                    <div class="bento-grid bento-grid-4" style="margin-bottom: 20px;">
-                        <div class="bento-card bento-card-stat bento-card-green">
-                            <div class="bento-value-sm" id="helm-fin-available" style="color: #4ade80;">£0</div>
-                            <div class="bento-label">Available Rent</div>
+                    <!-- v77: Financial Stats -->
+                    <div class="helm-section-card">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="material-symbols-rounded" style="color:rgba(255,255,255,0.25);font-size:18px;">payments</span>
+                                Financial Overview
+                            </div>
                         </div>
-                        <div class="bento-card bento-card-stat bento-card-amber">
-                            <div class="bento-value-sm" id="helm-fin-occupied" style="color: #fbbf24;">£0</div>
-                            <div class="bento-label">Occupied Rent</div>
-                        </div>
-                        <div class="bento-card bento-card-stat bento-card-blue">
-                            <div class="bento-value-sm" id="helm-fin-annual" style="color: #60a5fa;">£0</div>
-                            <div class="bento-label">Annual Total</div>
-                        </div>
-                        <div class="bento-card bento-card-stat bento-card-purple">
-                            <div class="bento-value-sm" id="dash-conversion-card" style="color: #5eead4;">0%</div>
-                            <div class="bento-label">Sign-up Rate</div>
+                        <div class="helm-metrics-grid helm-metrics-grid-4" style="margin-bottom:0;">
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#4ade80;"></div>
+                                <div class="metric-value" id="helm-fin-available" style="color:#4ade80;">£0</div>
+                                <div class="metric-label">Available Rent</div>
+                            </div>
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#fbbf24;"></div>
+                                <div class="metric-value" id="helm-fin-occupied" style="color:#fbbf24;">£0</div>
+                                <div class="metric-label">Occupied Rent</div>
+                            </div>
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#60a5fa;"></div>
+                                <div class="metric-value" id="helm-fin-annual" style="color:#60a5fa;">£0</div>
+                                <div class="metric-label">Annual Total</div>
+                            </div>
+                            <div class="helm-metric-card">
+                                <div class="metric-accent" style="background:#5eead4;"></div>
+                                <div class="metric-value" id="dash-conversion-card" style="color:#5eead4;">0%</div>
+                                <div class="metric-label">Sign-up Rate</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- v74.3: Occupancy Stats Row -->
-                    <div class="bento-grid bento-grid-3" style="margin-bottom: 20px;">
-                        <div class="bento-card bento-card-stat">
-                            <div class="bento-value-sm" id="dash-occupancy-rate" style="color: #00d68f;">0%</div>
-                            <div class="bento-label">Occupancy Rate</div>
+                    <!-- v77: Occupancy Stats -->
+                    <div class="helm-metrics-grid helm-metrics-grid-3">
+                        <div class="helm-metric-card">
+                            <div class="metric-accent" style="background:#00d68f;"></div>
+                            <div class="metric-value" id="dash-occupancy-rate" style="color:#00d68f;">0%</div>
+                            <div class="metric-label">Occupancy Rate</div>
                         </div>
-                        <div class="bento-card bento-card-stat">
-                            <div class="bento-value-sm" id="dash-units-occupied" style="color: #fbbf24;">0 / 0</div>
-                            <div class="bento-label">Units Occupied</div>
+                        <div class="helm-metric-card">
+                            <div class="metric-accent" style="background:#fbbf24;"></div>
+                            <div class="metric-value" id="dash-units-occupied" style="color:#fbbf24;">0 / 0</div>
+                            <div class="metric-label">Units Occupied</div>
                         </div>
-                        <div class="bento-card bento-card-stat">
-                            <div class="bento-value-sm" id="dash-units-available" style="color: #4da6ff;">0</div>
-                            <div class="bento-label">Available Units</div>
+                        <div class="helm-metric-card">
+                            <div class="metric-accent" style="background:#4da6ff;"></div>
+                            <div class="metric-value" id="dash-units-available" style="color:#4da6ff;">0</div>
+                            <div class="metric-label">Available Units</div>
                         </div>
                     </div>
                     <!-- Recent Activity - Full Width -->
@@ -21572,122 +21668,114 @@
                         </div>
                     </div>
 
-                    <!-- Smart Report Generator Card -->
-                    <div class="bento-card-featured" style="margin-bottom: 20px;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
-                            <div>
-                                <h3
-                                    style="margin: 0 0 8px; color: white; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                                    <span class="material-symbols-rounded"
-                                        style="color: #5eead4; font-size: 24px;">analytics</span>
-                                    Smart Report Generator
-                                </h3>
-                                <p style="margin: 0; color: rgba(255,255,255,0.65); font-size: 13px;">Generate
-                                    personalised reports in your preferred style</p>
+                    <!-- v77: Smart Report Generator -->
+                    <div class="helm-section-card" style="margin-bottom: 20px;">
+                        <div class="section-header" style="margin-bottom:20px;">
+                            <div class="section-title" style="font-size:18px;">
+                                <span class="material-symbols-rounded" style="color:#5eead4;font-size:24px;">analytics</span>
+                                Smart Report Generator
+                            </div>
+                            <span class="section-subtitle">Powered by PipelineEngine</span>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="helm-metrics-grid helm-metrics-grid-4" style="margin-bottom:24px;">
+                            <div class="helm-metric-card" style="text-align:center;">
+                                <div class="metric-accent" style="background:#60a5fa;"></div>
+                                <div class="metric-value" id="report-stat-viewings" style="color:#60a5fa;font-size:22px;">0</div>
+                                <div class="metric-label">Today's Viewings</div>
+                            </div>
+                            <div class="helm-metric-card" style="text-align:center;">
+                                <div class="metric-accent" style="background:#4ade80;"></div>
+                                <div class="metric-value" id="report-stat-signups" style="color:#4ade80;font-size:22px;">0</div>
+                                <div class="metric-label">Sign Ups (Week)</div>
+                            </div>
+                            <div class="helm-metric-card" style="text-align:center;">
+                                <div class="metric-accent" style="background:#f87171;"></div>
+                                <div class="metric-value" id="report-stat-noshows" style="color:#f87171;font-size:22px;">0</div>
+                                <div class="metric-label">No Shows (Week)</div>
+                            </div>
+                            <div class="helm-metric-card" style="text-align:center;">
+                                <div class="metric-accent" style="background:#fbbf24;"></div>
+                                <div class="metric-value" id="report-stat-conversion" style="color:#fbbf24;font-size:22px;">0%</div>
+                                <div class="metric-label">Conversion YTD</div>
                             </div>
                         </div>
 
-                        <!-- Quick Stats Grid -->
-                        <div id="report-stats-grid" class="bento-grid bento-grid-4" style="margin-bottom: 24px;">
-                            <div class="bento-stat-mini"
-                                style="background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2);">
-                                <div id="report-stat-viewings" class="bento-stat-value" style="color: #60a5fa;">0</div>
-                                <div class="bento-stat-label">Today's Viewings</div>
-                            </div>
-                            <div class="bento-stat-mini"
-                                style="background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.2);">
-                                <div id="report-stat-signups" class="bento-stat-value" style="color: #4ade80;">0</div>
-                                <div class="bento-stat-label">Sign Ups</div>
-                            </div>
-                            <div class="bento-stat-mini"
-                                style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2);">
-                                <div id="report-stat-noshows" class="bento-stat-value" style="color: #f87171;">0</div>
-                                <div class="bento-stat-label">No Shows</div>
-                            </div>
-                            <div class="bento-stat-mini"
-                                style="background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2);">
-                                <div id="report-stat-conversion" class="bento-stat-value" style="color: #fbbf24;">0%
-                                </div>
-                                <div class="bento-stat-label">Conversion YTD</div>
-                            </div>
-                        </div>
-
-                        <!-- Report Style Selection -->
+                        <!-- Report Style -->
                         <div style="margin-bottom: 20px;">
-                            <label
-                                style="display: block; margin-bottom: 10px; font-weight: 600; font-size: 11px; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 1px;">Report
-                                Style</label>
-                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                                <button class="report-style-btn bento-pill active" data-style="narrative"
-                                    onclick="selectReportStyle('narrative')"
-                                    style="justify-content: center; background: linear-gradient(135deg, #2dd4bf, #7c3aed); border-color: transparent; color: white;">Narrative</button>
-                                <button class="report-style-btn bento-pill" data-style="bullet"
-                                    onclick="selectReportStyle('bullet')" style="justify-content: center;">Bullet
-                                    Points</button>
-                                <button class="report-style-btn bento-pill" data-style="executive"
-                                    onclick="selectReportStyle('executive')"
-                                    style="justify-content: center;">Executive</button>
-                                <button class="report-style-btn bento-pill" data-style="detailed"
-                                    onclick="selectReportStyle('detailed')"
-                                    style="justify-content: center;">Detailed</button>
+                            <label style="display:block;margin-bottom:10px;font-weight:600;font-size:11px;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:1px;">Report Style</label>
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+                                <button class="report-style-btn bento-pill active" data-style="narrative" onclick="selectReportStyle('narrative')" style="justify-content:center;background:linear-gradient(135deg,#2dd4bf,#7c3aed);border-color:transparent;color:white;">Narrative</button>
+                                <button class="report-style-btn bento-pill" data-style="bullet" onclick="selectReportStyle('bullet')" style="justify-content:center;">Bullet Points</button>
+                                <button class="report-style-btn bento-pill" data-style="executive" onclick="selectReportStyle('executive')" style="justify-content:center;">Executive</button>
+                                <button class="report-style-btn bento-pill" data-style="detailed" onclick="selectReportStyle('detailed')" style="justify-content:center;">Detailed</button>
                             </div>
                         </div>
 
                         <!-- Recipient -->
                         <div style="margin-bottom: 20px;">
-                            <label
-                                style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 11px; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 1px;">Recipient
-                                (optional)</label>
-                            <input type="text" id="report-recipient" class="bento-input"
-                                placeholder="e.g. Manager, Team Lead, Director">
+                            <label style="display:block;margin-bottom:8px;font-weight:600;font-size:11px;color:rgba(255,255,255,0.75);text-transform:uppercase;letter-spacing:1px;">Recipient (optional)</label>
+                            <input type="text" id="report-recipient" class="bento-input" placeholder="e.g. Manager, Team Lead, Director">
                         </div>
 
-                        <!-- Generate Button -->
-                        <button onclick="generateSmartReport()" class="bento-btn-primary"
-                            style="width: 100%; padding: 14px; margin-bottom: 20px; font-size: 14px;">
-                            <span class="material-symbols-rounded" style="font-size: 20px;">auto_awesome</span>
+                        <!-- Generate -->
+                        <button onclick="generateSmartReport()" class="bento-btn-primary" style="width:100%;padding:14px;margin-bottom:20px;font-size:14px;">
+                            <span class="material-symbols-rounded" style="font-size:20px;">auto_awesome</span>
                             Generate Report
                         </button>
 
-                        <!-- Report Preview -->
-                        <div
-                            style="background: rgba(0,0,0,0.25); border-radius: 14px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <span
-                                    style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Report
-                                    Preview</span>
-                                <div style="display: flex; gap: 8px;">
-                                    <button onclick="regenerateReport()" class="bento-pill"
-                                        style="padding: 6px 12px; font-size: 11px;">
-                                        <span class="material-symbols-rounded" style="font-size: 14px;">refresh</span>
-                                        Regenerate
+                        <!-- Preview -->
+                        <div style="background:rgba(0,0,0,0.25);border-radius:14px;padding:20px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                <span style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Report Preview</span>
+                                <div style="display:flex;gap:8px;">
+                                    <button onclick="regenerateReport()" class="bento-pill" style="padding:6px 12px;font-size:11px;">
+                                        <span class="material-symbols-rounded" style="font-size:14px;">refresh</span> Regenerate
                                     </button>
-                                    <button onclick="copyDailyReport()" class="bento-pill"
-                                        style="padding: 6px 12px; font-size: 11px;">
-                                        <span class="material-symbols-rounded"
-                                            style="font-size: 14px;">content_copy</span> Copy
+                                    <button onclick="copyDailyReport()" class="bento-pill" style="padding:6px 12px;font-size:11px;">
+                                        <span class="material-symbols-rounded" style="font-size:14px;">content_copy</span> Copy
                                     </button>
                                 </div>
                             </div>
-                            <div id="daily-report-preview"
-                                style="white-space: pre-wrap; font-family: inherit; font-size: 13px; color: rgba(255,255,255,0.9); line-height: 1.7; margin: 0; max-height: 300px; overflow-y: auto;">
+                            <div id="daily-report-preview" style="white-space:pre-wrap;font-family:inherit;font-size:13px;color:rgba(255,255,255,0.9);line-height:1.7;margin:0;max-height:300px;overflow-y:auto;">
                                 Click "Generate Report" to create your personalised daily summary...</div>
                         </div>
 
-                        <!-- Action Buttons -->
-                        <div class="bento-grid bento-grid-2">
-                            <button onclick="emailDailyReport()" class="bento-pill"
-                                style="padding: 14px; justify-content: center;">
-                                <span class="material-symbols-rounded" style="font-size: 18px;">mail</span>
+                        <!-- Actions -->
+                        <div class="helm-metrics-grid helm-metrics-grid-2" style="margin-bottom:0;">
+                            <button onclick="emailDailyReport()" class="bento-pill" style="padding:14px;justify-content:center;">
+                                <span class="material-symbols-rounded" style="font-size:18px;">mail</span>
                                 Open in Email
                             </button>
-                            <button onclick="copyDailyReport()" class="bento-pill"
-                                style="padding: 14px; justify-content: center;">
-                                <span class="material-symbols-rounded" style="font-size: 18px;">content_copy</span>
+                            <button onclick="copyDailyReport()" class="bento-pill" style="padding:14px;justify-content:center;">
+                                <span class="material-symbols-rounded" style="font-size:18px;">content_copy</span>
                                 Copy to Clipboard
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- v77: Daily Report Reminder -->
+                    <div class="helm-section-card" style="margin-bottom:20px;">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="material-symbols-rounded" style="color:#fbbf24;font-size:18px;">schedule_send</span>
+                                Daily Report Reminder
+                            </div>
+                            <span class="section-subtitle" id="reminder-status-label">Not set</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <label style="font-size:12px;color:rgba(255,255,255,0.6);font-weight:500;">Remind me at:</label>
+                            <input type="time" id="report-reminder-time" value="17:30" class="bento-input" style="width:120px;padding:8px 12px;font-size:13px;">
+                            <button onclick="saveReportReminder()" class="bento-pill" style="padding:8px 16px;">
+                                <span class="material-symbols-rounded" style="font-size:14px;">check</span> Save
+                            </button>
+                            <button onclick="clearReportReminder()" class="bento-pill" style="padding:8px 16px;">
+                                <span class="material-symbols-rounded" style="font-size:14px;">close</span> Clear
+                            </button>
+                        </div>
+                        <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,0.3);">
+                            When the time hits, a notification will prompt you to send your daily report. The report will be auto-generated.
                         </div>
                     </div>
 
@@ -22001,33 +22089,37 @@
                             </div>
                         </div>
 
-                        <!-- KPI Row -->
-                        <div id="tools-analytics-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;"></div>
+                        <!-- v77: KPI Row -->
+                        <div id="tools-analytics-kpis" class="helm-metrics-grid helm-metrics-grid-5"></div>
 
-                        <!-- Charts Row -->
-                        <div id="tools-analytics-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
-                            <!-- Daily viewings bar chart -->
-                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
-                                <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Daily Viewings (Last 14 Days)</div>
-                                <div id="tools-analytics-daily" style="display:flex;align-items:flex-end;gap:4px;height:120px;"></div>
+                        <!-- v77: Charts Row -->
+                        <div class="helm-metrics-grid helm-metrics-grid-2">
+                            <div class="helm-section-card">
+                                <div class="section-header">
+                                    <div class="section-title">Daily Viewings (Last 14 Days)</div>
+                                </div>
+                                <div id="tools-analytics-daily" class="helm-chart-container"></div>
                             </div>
-                            <!-- Outcome breakdown -->
-                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
-                                <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Outcome Breakdown</div>
-                                <div id="tools-analytics-outcomes" style="display:flex;flex-direction:column;gap:8px;"></div>
+                            <div class="helm-section-card">
+                                <div class="section-header">
+                                    <div class="section-title">Outcome Breakdown</div>
+                                </div>
+                                <div id="tools-analytics-outcomes" class="helm-chart-container"></div>
                             </div>
                         </div>
 
-                        <!-- Agent Performance & Top Sources -->
-                        <div id="tools-analytics-bottom-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <!-- Agent performance -->
-                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
-                                <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Agent Performance</div>
+                        <!-- v77: Agent Performance & Top Sources -->
+                        <div id="tools-analytics-bottom-row" class="helm-metrics-grid helm-metrics-grid-2">
+                            <div class="helm-section-card">
+                                <div class="section-header">
+                                    <div class="section-title">Agent Performance</div>
+                                </div>
                                 <div id="tools-analytics-agents" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
                             </div>
-                            <!-- Top referral sources -->
-                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
-                                <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Referral Sources</div>
+                            <div class="helm-section-card">
+                                <div class="section-header">
+                                    <div class="section-title">Referral Sources</div>
+                                </div>
                                 <div id="tools-analytics-sources" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
                             </div>
                         </div>
@@ -61793,23 +61885,20 @@ Available now! Contact for viewing.`;
     };
 
     window.generateSmartReport = function () {
+        // v77: Use PipelineEngine instead of raw localStorage
+        const PE = window.PipelineEngine;
+        const ytdData = PE ? PE.getData('ytd') : { total:0, signed:0, noshow:0, viewed:0, pending:0, cancelled:0, declined:0, signupRate:0, all:[] };
+        const todayData = PE ? PE.getTodayData(ytdData.all) : { total:0, signed:0, noshow:0, rate:0 };
         const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-        const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
         const properties = window.properties || [];
 
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
-        const yearStart = today.getFullYear() + '-01-01';
-
-        // Calculate stats
         const todayViewings = viewings.filter(function (v) { return v.date === todayStr; });
-        const ytdViewings = viewings.filter(function (v) { return v.date >= yearStart; });
-        const signedUp = pipelineData.filter(function (p) { return p.status === 'Signed Up'; });
-        const noShows = pipelineData.filter(function (p) { return p.status === 'No Show'; });
 
-        const ytdSignups = signedUp.length;
-        const ytdNoShows = noShows.length;
-        const conversionRate = pipelineData.length > 0 ? Math.round((ytdSignups / pipelineData.length) * 100) : 0;
+        const ytdSignups = ytdData.signed;
+        const ytdNoShows = ytdData.noshow;
+        const conversionRate = ytdData.signupRate;
         const availableCount = properties.filter(function (p) { return p.status !== 'taken' && p.status !== 'let'; }).length;
         const takenCount = properties.filter(function (p) { return p.status === 'taken' || p.status === 'let'; }).length;
 
@@ -61830,84 +61919,66 @@ Available now! Contact for viewing.`;
         var report = '';
 
         if (style === 'narrative') {
-            // Narrative storytelling style
             report = recipient ? 'Hi ' + recipient + ',\n\n' : '';
             report += 'Here\'s my daily activity summary for ' + dateStr + '.\n\n';
-
             if (todayViewings.length > 0) {
                 report += 'Today I conducted ' + todayViewings.length + ' viewing' + (todayViewings.length > 1 ? 's' : '') + ':\n';
                 todayViewings.forEach(function (v) {
                     var clientName = v.visitor || v.name || 'Client';
                     var propName = (v.property || v.propertyName || '').split(',')[0];
-                    report += '• ' + clientName + ' at ' + propName + ' (' + v.time + ')\n';
+                    report += '  - ' + clientName + ' at ' + propName + ' (' + v.time + ')\n';
                 });
                 report += '\n';
             } else {
                 report += 'No viewings were scheduled for today.\n\n';
             }
-
-            report += 'Year-to-date, I have completed ' + ytdViewings.length + ' viewings with ' + ytdSignups + ' successful sign-ups, giving us a conversion rate of ' + conversionRate + '%. ';
-
+            report += 'Year-to-date, I have completed ' + ytdData.total + ' viewings with ' + ytdSignups + ' successful sign-ups, giving us a conversion rate of ' + conversionRate + '%. ';
             if (ytdNoShows > 0) {
                 report += 'We\'ve had ' + ytdNoShows + ' no-shows which I\'m working to reduce through reminder calls.\n\n';
-            } else {
-                report += '\n\n';
-            }
-
+            } else { report += '\n\n'; }
             report += 'Portfolio status: ' + availableCount + ' properties available, ' + takenCount + ' occupied out of ' + properties.length + ' total.\n\n';
             report += 'Kind regards,\nRidwan Harir\nSenior Lettings Manager\nHarir Industries';
 
         } else if (style === 'bullet') {
-            // Bullet point style
             report = recipient ? 'To: ' + recipient + '\n' : '';
             report += 'Daily Report - ' + dateStr + '\n';
-            report += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-            report += '📊 TODAY\'S ACTIVITY\n';
-            report += '• Viewings: ' + todayViewings.length + '\n';
-            report += '• Sign Ups: ' + signedUp.filter(function (s) { return s.date === todayStr; }).length + '\n';
-            report += '• No Shows: ' + noShows.filter(function (n) { return n.date === todayStr; }).length + '\n\n';
-
-            report += '📈 YTD PERFORMANCE\n';
-            report += '• Total Viewings: ' + ytdViewings.length + '\n';
-            report += '• Total Sign Ups: ' + ytdSignups + '\n';
-            report += '• Conversion Rate: ' + conversionRate + '%\n\n';
-
-            report += '🏠 PORTFOLIO\n';
-            report += '• Available: ' + availableCount + '\n';
-            report += '• Occupied: ' + takenCount + '\n';
-            report += '• Total: ' + properties.length + '\n\n';
-
-            report += '— Ridwan Harir, Harir Industries';
+            report += '-------------------------------------------\n\n';
+            report += 'TODAY\'S ACTIVITY\n';
+            report += '  - Viewings: ' + todayViewings.length + '\n';
+            report += '  - Sign Ups: ' + todayData.signed + '\n';
+            report += '  - No Shows: ' + todayData.noshow + '\n\n';
+            report += 'YTD PERFORMANCE\n';
+            report += '  - Total Viewings: ' + ytdData.total + '\n';
+            report += '  - Total Sign Ups: ' + ytdSignups + '\n';
+            report += '  - Conversion Rate: ' + conversionRate + '%\n\n';
+            report += 'PORTFOLIO\n';
+            report += '  - Available: ' + availableCount + '\n';
+            report += '  - Occupied: ' + takenCount + '\n';
+            report += '  - Total: ' + properties.length + '\n\n';
+            report += '-- Ridwan Harir, Harir Industries';
 
         } else if (style === 'executive') {
-            // Executive summary style
             report = 'EXECUTIVE SUMMARY\n';
             report += dateStr + '\n';
-            report += '═══════════════════════════════════\n\n';
-
+            report += '===================================\n\n';
             report += 'Key Metrics:\n';
-            report += 'Conversion Rate: ' + conversionRate + '% | Portfolio Occupancy: ' + Math.round((takenCount / properties.length) * 100) + '%\n\n';
-
+            report += 'Conversion Rate: ' + conversionRate + '% | Portfolio Occupancy: ' + (properties.length>0?Math.round((takenCount / properties.length) * 100):0) + '%\n\n';
             report += 'Today: ' + todayViewings.length + ' viewings scheduled\n';
-            report += 'YTD: ' + ytdSignups + ' sign-ups from ' + ytdViewings.length + ' viewings\n\n';
-
+            report += 'YTD: ' + ytdSignups + ' sign-ups from ' + ytdData.total + ' viewings\n\n';
             if (availableCount > properties.length * 0.3) {
                 report += 'Note: Vacancy rate above target. Recommend increased marketing focus.\n\n';
             }
-
             report += 'Prepared by: Ridwan Harir\nHarir Industries';
 
         } else if (style === 'detailed') {
-            // Detailed style
             report = 'DETAILED DAILY REPORT\n';
-            report += '════════════════════════════════════════\n';
+            report += '========================================\n';
             report += 'Date: ' + dateStr + '\n';
             report += 'Agent: Ridwan Harir\n';
             report += 'Company: Harir Industries\n';
-            report += '════════════════════════════════════════\n\n';
-
+            report += '========================================\n\n';
             report += 'SECTION 1: TODAY\'S VIEWINGS (' + todayViewings.length + ')\n';
-            report += '────────────────────────────────────────\n';
+            report += '----------------------------------------\n';
             if (todayViewings.length > 0) {
                 todayViewings.forEach(function (v, i) {
                     var clientName = v.visitor || v.name || 'Client';
@@ -61916,25 +61987,20 @@ Available now! Contact for viewing.`;
                     report += '   Property: ' + propName + '\n';
                     report += '   Status: ' + (v.status || 'Pending') + '\n\n';
                 });
-            } else {
-                report += 'No viewings scheduled.\n\n';
-            }
-
+            } else { report += 'No viewings scheduled.\n\n'; }
             report += 'SECTION 2: YTD PERFORMANCE\n';
-            report += '────────────────────────────────────────\n';
-            report += 'Viewings Conducted: ' + ytdViewings.length + '\n';
+            report += '----------------------------------------\n';
+            report += 'Viewings Conducted: ' + ytdData.total + '\n';
             report += 'Successful Sign Ups: ' + ytdSignups + '\n';
             report += 'No Shows: ' + ytdNoShows + '\n';
             report += 'Conversion Rate: ' + conversionRate + '%\n\n';
-
             report += 'SECTION 3: PORTFOLIO STATUS\n';
-            report += '────────────────────────────────────────\n';
+            report += '----------------------------------------\n';
             report += 'Total Properties: ' + properties.length + '\n';
             report += 'Available Units: ' + availableCount + '\n';
             report += 'Occupied Units: ' + takenCount + '\n';
-            report += 'Occupancy Rate: ' + Math.round((takenCount / properties.length) * 100) + '%\n\n';
-
-            report += '════════════════════════════════════════\n';
+            report += 'Occupancy Rate: ' + (properties.length>0?Math.round((takenCount / properties.length) * 100):0) + '%\n\n';
+            report += '========================================\n';
             report += 'Report Generated: ' + new Date().toLocaleTimeString('en-GB');
         }
 
@@ -61944,7 +62010,11 @@ Available now! Contact for viewing.`;
         if (preview) preview.textContent = report;
 
         // Update to-do list
-        updateSmartTodoList([], todayViewings, pipelineData.filter(function (p) { return p.status === 'Pending' || p.status === 'Confirmed'; }));
+        var pendingPipeline = (PE ? ytdData.all : []).filter(function(v) {
+            var s = PE ? PE.normStatus(v.status||v.outcome) : (v.status||'pending');
+            return s === 'pending' || s === 'confirmed';
+        });
+        updateSmartTodoList([], todayViewings, pendingPipeline);
 
         // Award XP
         if (typeof addXP === 'function') addXP(25);
@@ -62001,6 +62071,57 @@ Available now! Contact for viewing.`;
         if (typeof addXP === 'function') addXP(15);
         showToast('Opening Outlook', 'Report loaded in email client');
     };
+
+    // ═══════════════════════════════════════════════════════════════
+    // v77: DAILY REPORT REMINDER SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+    (function initReportReminder() {
+        var savedTime = localStorage.getItem('helmReportReminderTime');
+        var timeInput = document.getElementById('report-reminder-time');
+        if (savedTime && timeInput) timeInput.value = savedTime;
+        function updateStatusLabel() {
+            var t = localStorage.getItem('helmReportReminderTime');
+            var label = document.getElementById('reminder-status-label');
+            if (!label) return;
+            if (t) {
+                var parts = t.split(':');
+                var h = parseInt(parts[0]), m = parts[1];
+                var ampm = h >= 12 ? 'PM' : 'AM';
+                var h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+                label.textContent = 'Active: ' + h12 + ':' + m + ' ' + ampm;
+                label.style.color = '#4ade80';
+            } else {
+                label.textContent = 'Not set';
+                label.style.color = 'rgba(255,255,255,0.3)';
+            }
+        }
+        updateStatusLabel();
+        window.saveReportReminder = function() {
+            var input = document.getElementById('report-reminder-time');
+            if (input && input.value) {
+                localStorage.setItem('helmReportReminderTime', input.value);
+                updateStatusLabel();
+                if (typeof showToast === 'function') showToast('Reminder Saved', 'Daily report reminder set for ' + input.value);
+            }
+        };
+        window.clearReportReminder = function() {
+            localStorage.removeItem('helmReportReminderTime');
+            updateStatusLabel();
+            if (typeof showToast === 'function') showToast('Reminder Cleared', 'Daily report reminder disabled');
+        };
+        setInterval(function() {
+            var reminderTime = localStorage.getItem('helmReportReminderTime');
+            if (!reminderTime) return;
+            var now = new Date();
+            var parts = reminderTime.split(':').map(Number);
+            var todayKey = 'helmReminderSent_' + now.toISOString().split('T')[0];
+            if (now.getHours() === parts[0] && now.getMinutes() === parts[1] && !localStorage.getItem(todayKey)) {
+                localStorage.setItem(todayKey, '1');
+                if (typeof generateSmartReport === 'function') generateSmartReport();
+                if (typeof showToast === 'function') showToast('Daily Report Ready', 'Your report has been generated. Click "Open in Email" to send it.');
+            }
+        }, 60000);
+    })();
 
     // Smart to-do list based on data analysis - v60.25 Client-focused
     window.updateSmartTodoList = function (focusAreas, todayViewings, pendingClients) {
@@ -67139,8 +67260,17 @@ Write the email now:`;
         };
 
         // ═══════════════════════════════════════════════════════════════
-        // v76: UNIFIED DASHBOARD RENDERER
+        // v77: UNIFIED DASHBOARD RENDERER (ApexCharts)
         // ═══════════════════════════════════════════════════════════════
+        window._apexCharts = {};
+        const _apexTheme = {
+            chart: { background: 'transparent', foreColor: 'rgba(255,255,255,0.5)', fontFamily: 'DM Sans, sans-serif' },
+            grid: { borderColor: 'rgba(255,255,255,0.04)', strokeDashArray: 3 },
+            tooltip: { theme: 'dark', style: { fontSize: '11px' } },
+            xaxis: { labels: { style: { colors: 'rgba(255,255,255,0.3)', fontSize: '10px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+            yaxis: { labels: { style: { colors: 'rgba(255,255,255,0.3)', fontSize: '10px' } } }
+        };
+
         window.updateDashboardCharts = function() {
             const period = (document.getElementById('dash-period-select') || {}).value || 'week';
             const data = PipelineEngine.getData(period);
@@ -67170,40 +67300,31 @@ Write the email now:`;
             if (el('dash-cancelled-count')) el('dash-cancelled-count').textContent = data.cancelled;
             if (el('dash-declined-count')) el('dash-declined-count').textContent = data.declined;
 
-            // Multi-segment donut
-            const donutSvg = el('dash-donut-svg');
-            if (donutSvg) {
-                const circumference = 2 * Math.PI * 50; // ~314.16
-                const total = data.signed + data.noshow + data.viewed + data.pending + data.cancelled + data.declined;
-                const segments = [
-                    { count: data.signed, color: '#00d68f' },
-                    { count: data.viewed, color: '#60a5fa' },
-                    { count: data.noshow, color: '#ff6b6b' },
-                    { count: data.pending, color: '#ffb547' },
-                    { count: data.cancelled, color: '#6b7280' },
-                    { count: data.declined, color: '#f97316' }
-                ].filter(s => s.count > 0);
-                // Remove old segment circles
-                donutSvg.querySelectorAll('.donut-segment').forEach(s => s.remove());
-                let offset = 0;
-                segments.forEach(seg => {
-                    const pct = total > 0 ? seg.count / total : 0;
-                    const dashLen = pct * circumference;
-                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                    circle.classList.add('donut-segment');
-                    circle.setAttribute('cx', '60');
-                    circle.setAttribute('cy', '60');
-                    circle.setAttribute('r', '50');
-                    circle.setAttribute('fill', 'none');
-                    circle.setAttribute('stroke', seg.color);
-                    circle.setAttribute('stroke-width', '10');
-                    circle.setAttribute('stroke-dasharray', dashLen + ' ' + (circumference - dashLen));
-                    circle.setAttribute('stroke-dashoffset', -offset);
-                    circle.style.transition = 'stroke-dasharray 0.8s ease, stroke-dashoffset 0.8s ease';
-                    donutSvg.appendChild(circle);
-                    offset += dashLen;
-                });
-                if (el('dash-donut-total')) el('dash-donut-total').textContent = total;
+            // ─── v77: Outcomes Donut (ApexCharts) ───
+            const donutEl = el('dash-donut-apex');
+            if (donutEl) {
+                const donutSeries = [data.signed, data.viewed, data.noshow, data.pending, data.cancelled, data.declined];
+                const donutLabels = ['Signed Up','Viewed Only','No Show','Pending','Cancelled','Declined'];
+                const donutColors = ['#00d68f','#60a5fa','#ff6b6b','#ffb547','#6b7280','#f97316'];
+                const donutOpts = {
+                    chart: { type:'donut', height:280, background:'transparent', fontFamily:'DM Sans, sans-serif',
+                        animations:{enabled:true,easing:'easeinout',speed:600} },
+                    series: donutSeries,
+                    labels: donutLabels,
+                    colors: donutColors,
+                    stroke: { width:0 },
+                    plotOptions: { pie: { donut: { size:'68%',
+                        labels:{ show:true, name:{show:true,fontSize:'11px',color:'rgba(255,255,255,0.5)'},
+                            value:{show:true,fontSize:'22px',fontWeight:700,color:'#fff',
+                                formatter:function(v){return v;}},
+                            total:{show:true,label:'Total',fontSize:'10px',color:'rgba(255,255,255,0.3)',
+                                formatter:function(w){return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0);}} } } } },
+                    legend: { position:'bottom', fontSize:'11px', labels:{colors:'rgba(255,255,255,0.5)'}, markers:{width:8,height:8,radius:4} },
+                    dataLabels: { enabled:false },
+                    tooltip: { theme:'dark', style:{fontSize:'11px'} }
+                };
+                if (window._apexCharts['donut']) { window._apexCharts['donut'].updateOptions(donutOpts, true, true); }
+                else { donutEl.innerHTML=''; const c = new ApexCharts(donutEl, donutOpts); c.render(); window._apexCharts['donut']=c; }
             }
 
             // MoM delta badges
@@ -67233,102 +67354,59 @@ Write the email now:`;
                 });
             }
 
-            // ─── Bullet Chart (Weekly Viewings) ───
+            // ─── v77: Weekly Bar Chart (ApexCharts stacked bar) ───
             const chart = el('dash-viewings-chart');
             if (chart) {
                 const week = PipelineEngine.getWeeklyBreakdown(data.all);
-                const mx = Math.max(...week.days, DAILY_TARGET, 1);
-                const targetPct = Math.max(4, (DAILY_TARGET/mx)*100);
-                // Theme colors
-                const textHi = isLight ? '#1a1a1a' : 'rgba(255,255,255,0.6)';
-                const textLo = isLight ? '#b0a898' : 'rgba(255,255,255,0.12)';
-                const barBg = isLight ? 'rgba(99,102,241,0.22)' : 'rgba(20,184,166,0.25)';
-                const barBorder = isLight ? 'rgba(99,102,241,0.35)' : 'rgba(20,184,166,0.15)';
-                const barToday = isLight ? 'rgba(99,102,241,0.35)' : 'rgba(20,184,166,0.45)';
-                const barTodayBorder = isLight ? 'rgba(99,102,241,0.5)' : 'rgba(20,184,166,0.3)';
-                const targetColor = isLight ? 'rgba(220,38,38,0.5)' : 'rgba(255,107,107,0.35)';
-                const targetTextColor = isLight ? '#dc2626' : '#ff6b6b';
-
-                chart.innerHTML = week.days.map((c, j) => {
-                    const h = c > 0 ? Math.max(8, (c/mx)*100) : 0;
-                    const isT = j === week.todayIdx;
-                    const metTarget = c >= DAILY_TARGET;
-                    const barColor = metTarget ? (isLight?'rgba(34,197,94,0.35)':'rgba(34,197,94,0.25)') : (isT ? barToday : barBg);
-                    const bdrColor = metTarget ? (isLight?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.3)') : (isT ? barTodayBorder : barBorder);
-                    const signH = c > 0 ? Math.max(2, (week.signs[j]/c)*h) : 0;
-                    const noshH = c > 0 ? Math.max(2, (week.noshows[j]/c)*h) : 0;
-                    // Target marker position within bar container
-                    const tgtH = Math.max(4, (DAILY_TARGET/mx)*100);
-                    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:1px;position:relative;">' +
-                        '<span style="font-size:10px;font-weight:700;color:' + (c>0?textHi:textLo) + ';">' + c + '</span>' +
-                        (week.signs[j]>0?'<span style="font-size:7px;font-weight:700;color:#00d68f;" title="Sign-ups">'+week.signs[j]+' signed</span>':'') +
-                        (week.noshows[j]>0?'<span style="font-size:7px;font-weight:600;color:#ff6b6b;" title="No-shows">'+week.noshows[j]+' missed</span>':'') +
-                        '<div style="width:100%;max-width:48px;border-radius:8px 8px 4px 4px;height:'+h+'%;background:'+barColor+';border:1px solid '+bdrColor+';position:relative;min-height:'+(c>0?'8px':'0')+';overflow:visible;">' +
-                        (signH>0?'<div style="position:absolute;bottom:0;left:0;right:0;height:'+signH+'%;background:rgba(0,214,143,0.5);border-radius:0 0 3px 3px;"></div>':'') +
-                        (noshH>0?'<div style="position:absolute;top:0;left:0;right:0;height:'+noshH+'%;background:rgba(255,107,107,0.4);border-radius:4px 4px 0 0;"></div>':'') +
-                        // Bullet chart target marker — vertical tick
-                        '<div style="position:absolute;left:-2px;right:-2px;bottom:'+tgtH+'%;height:0;border-top:2.5px solid '+targetTextColor+';border-radius:1px;opacity:0.7;pointer-events:none;"></div>' +
-                        '</div></div>';
-                }).join('') +
-                // Target label (right side only)
-                '<div style="position:absolute;right:0;top:4px;font-size:8px;font-weight:700;color:'+targetTextColor+';letter-spacing:0.5px;opacity:0.8;">TARGET '+DAILY_TARGET+'/DAY</div>';
-
+                const cats = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                const other = week.days.map((c,i) => Math.max(0, c - week.signs[i] - week.noshows[i]));
+                const opts = {
+                    ...(_apexTheme),
+                    chart: { ..._apexTheme.chart, type:'bar', height:220, stacked:true, toolbar:{show:false},
+                        animations:{enabled:true,easing:'easeinout',speed:600} },
+                    series: [
+                        { name:'Signed', data: week.signs },
+                        { name:'No-Show', data: week.noshows },
+                        { name:'Other', data: other }
+                    ],
+                    colors: ['#00d68f','#ff6b6b','rgba(20,184,166,0.4)'],
+                    plotOptions: { bar: { borderRadius:4, columnWidth:'55%' } },
+                    xaxis: { ..._apexTheme.xaxis, categories: cats },
+                    yaxis: { ..._apexTheme.yaxis },
+                    legend: { show:false },
+                    annotations: { yaxis: [{ y: DAILY_TARGET, borderColor:'#ff6b6b', strokeDashArray:4,
+                        label:{ text:'Target '+DAILY_TARGET+'/day', style:{color:'#ff6b6b',background:'transparent',fontSize:'9px',fontWeight:700}, position:'right', offsetY:-4 } }] },
+                    grid: _apexTheme.grid,
+                    tooltip: { ..._apexTheme.tooltip, shared:true, intersect:false }
+                };
+                if (window._apexCharts['weeklyBar']) { window._apexCharts['weeklyBar'].updateOptions(opts, true, true); }
+                else { chart.innerHTML=''; const c = new ApexCharts(chart, opts); c.render(); window._apexCharts['weeklyBar']=c; }
                 if (el('dash-chart-total')) el('dash-chart-total').textContent = week.weekTotal + ' this week';
             }
 
-            // ─── v75: MoM Line Graph ───
+            // ─── v77: Monthly Trend (ApexCharts line) ───
             var momChart = el('dash-mom-chart');
             if (momChart) {
                 var trend = PipelineEngine.getMonthlyTrend(data.all);
-                var maxVal = Math.max.apply(null, trend.map(function(m){return m.total;}));
-                if (maxVal < 1) maxVal = 1;
-                var chartW = momChart.clientWidth || 400;
-                var chartH = 180;
-                var padX = 10, padY = 20;
-                var stepX = (chartW - padX * 2) / (trend.length - 1 || 1);
-                var tColor = isLight ? '#14b8a6' : '#5eead4';
-                var sColor = isLight ? '#059669' : '#00d68f';
-                var gridColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)';
-                var dotBg = isLight ? '#f5f2eb' : '#0a1018';
-
-                function toPoints(arr, key) {
-                    return arr.map(function(m, i) {
-                        var x = padX + i * stepX;
-                        var y = chartH - padY - ((m[key] / maxVal) * (chartH - padY * 2));
-                        return x + ',' + y;
-                    }).join(' ');
-                }
-                var gridLines = '';
-                for (var g = 0; g <= 4; g++) {
-                    var gy = padY + g * ((chartH - padY * 2) / 4);
-                    gridLines += '<line x1="'+padX+'" y1="'+gy+'" x2="'+(chartW-padX)+'" y2="'+gy+'" stroke="'+gridColor+'" stroke-width="1"/>';
-                }
-                var totalCircles = trend.map(function(m, i) {
-                    var x = padX + i * stepX;
-                    var y = chartH - padY - ((m.total / maxVal) * (chartH - padY * 2));
-                    return '<circle cx="'+x+'" cy="'+y+'" r="4" fill="'+tColor+'" stroke="'+dotBg+'" stroke-width="2" style="cursor:pointer" onmouseover="this.setAttribute(\'r\',\'6\')" onmouseout="this.setAttribute(\'r\',\'4\')"><title>'+m.label+': '+m.total+' viewings, '+m.signed+' signed ('+m.convRate+'%)</title></circle>';
-                }).join('');
-                var signedCircles = trend.map(function(m, i) {
-                    var x = padX + i * stepX;
-                    var y = chartH - padY - ((m.signed / maxVal) * (chartH - padY * 2));
-                    return '<circle cx="'+x+'" cy="'+y+'" r="3" fill="'+sColor+'" stroke="'+dotBg+'" stroke-width="2"><title>'+m.label+': '+m.signed+' sign-ups</title></circle>';
-                }).join('');
-                momChart.innerHTML = '<svg width="100%" height="'+chartH+'" viewBox="0 0 '+chartW+' '+chartH+'" preserveAspectRatio="none">' +
-                    gridLines +
-                    '<polyline points="'+toPoints(trend,'total')+'" fill="none" stroke="'+tColor+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
-                    '<polyline points="'+toPoints(trend,'signed')+'" fill="none" stroke="'+sColor+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6,3"/>' +
-                    totalCircles + signedCircles + '</svg>';
-                var labelsEl = el('dash-mom-labels');
-                if (labelsEl) {
-                    var lblColor = isLight ? '#b0a898' : 'rgba(255,255,255,0.2)';
-                    labelsEl.innerHTML = trend.map(function(m){ return '<span style="font-size:9px;color:'+lblColor+';text-align:center;flex:1;">'+m.label+'</span>'; }).join('');
-                }
-                var legendEl = el('dash-mom-legend');
-                if (legendEl) {
-                    var legColor = isLight ? '#8a8a8a' : 'rgba(255,255,255,0.3)';
-                    legendEl.innerHTML = '<span style="color:'+legColor+'"><span style="display:inline-block;width:12px;height:2px;background:'+tColor+';border-radius:1px;margin-right:4px;vertical-align:middle;"></span>Total Viewings</span>' +
-                        '<span style="color:'+legColor+'"><span style="display:inline-block;width:12px;height:2px;background:'+sColor+';border-radius:1px;margin-right:4px;vertical-align:middle;border-top:1px dashed '+sColor+';"></span>Sign-ups</span>';
-                }
+                var momOpts = {
+                    ..._apexTheme,
+                    chart: { ..._apexTheme.chart, type:'line', height:200, toolbar:{show:false},
+                        animations:{enabled:true,easing:'easeinout',speed:600} },
+                    series: [
+                        { name:'Total Viewings', data: trend.map(function(m){return m.total;}) },
+                        { name:'Sign-ups', data: trend.map(function(m){return m.signed;}) }
+                    ],
+                    colors: ['#5eead4','#00d68f'],
+                    stroke: { width:[2.5,2], curve:'smooth', dashArray:[0,5] },
+                    markers: { size:[4,3], strokeWidth:2, strokeColors:['#0a1018','#0a1018'] },
+                    xaxis: { ..._apexTheme.xaxis, categories: trend.map(function(m){return m.label;}) },
+                    yaxis: { ..._apexTheme.yaxis },
+                    legend: { position:'top', horizontalAlign:'center', fontSize:'10px', labels:{colors:'rgba(255,255,255,0.3)'}, markers:{width:10,height:3,radius:1} },
+                    grid: _apexTheme.grid,
+                    tooltip: { ..._apexTheme.tooltip, shared:true, intersect:false }
+                };
+                if (window._apexCharts['momLine']) { window._apexCharts['momLine'].updateOptions(momOpts, true, true); }
+                else { momChart.innerHTML=''; var c = new ApexCharts(momChart, momOpts); c.render(); window._apexCharts['momLine']=c; }
             }
 
             // ─── Conversion Funnel ───
@@ -67384,110 +67462,86 @@ Write the email now:`;
                 if (el('dash-today-date')) el('dash-today-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
             } catch(e){}
 
-            // ─── Calendar Heatmap (6 months) ───
+            // ─── v77: Activity Heatmap (ApexCharts) ───
             const heatmapEl = el('dash-heatmap');
             if (heatmapEl) {
                 const hmap = PipelineEngine.getHeatmapData(data.all);
                 const now = new Date();
-                const sixAgo = new Date(now);
-                sixAgo.setMonth(sixAgo.getMonth() - 6);
-                // Align to start of week (Monday)
-                const startDay = new Date(sixAgo);
-                const sDow = startDay.getDay();
-                startDay.setDate(startDay.getDate() - (sDow === 0 ? 6 : sDow - 1));
-
-                const maxV = Math.max(...Object.values(hmap), 1);
-                const weeks = [];
-                let cursor = new Date(startDay);
-                while (cursor <= now) {
-                    const weekCells = [];
-                    for (let d = 0; d < 7; d++) {
-                        const ds = cursor.toISOString().split('T')[0];
-                        const count = hmap[ds] || 0;
-                        const inRange = cursor >= sixAgo && cursor <= now;
-                        weekCells.push({date: ds, count, inRange, month: cursor.getMonth()});
-                        cursor.setDate(cursor.getDate() + 1);
+                const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                // Build weekly series for last 26 weeks
+                const hmSeries = dayNames.map(function(dn, di) {
+                    const row = [];
+                    for (var w = 25; w >= 0; w--) {
+                        var d = new Date(now);
+                        var dow = d.getDay();
+                        var mondayOffset = dow === 0 ? 6 : dow - 1;
+                        d.setDate(d.getDate() - mondayOffset - w * 7 + di);
+                        var ds = d.toISOString().split('T')[0];
+                        row.push({ x: ds, y: hmap[ds] || 0 });
                     }
-                    weeks.push(weekCells);
-                }
-
-                const cellSize = 11, gap = 2;
-                const hmColor = isLight ? '99,102,241' : '139,92,246';
-                const emptyBg = isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.03)';
-                const emptyBorder = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)';
-
-                // Month labels
-                let monthLabels = '';
-                let lastMonth = -1;
-                weeks.forEach((w, wi) => {
-                    const m = w[0].month;
-                    if (m !== lastMonth) {
-                        monthLabels += '<text x="'+(wi*(cellSize+gap))+'" y="8" fill="'+(isLight?'#b0a898':'rgba(255,255,255,0.2)')+'" font-size="8" font-family="DM Sans,sans-serif">' +
-                            new Date(2024, m, 1).toLocaleDateString('en-GB',{month:'short'}) + '</text>';
-                        lastMonth = m;
-                    }
+                    return { name: dn, data: row };
                 });
-
-                const svgW = weeks.length * (cellSize+gap);
-                const svgH = 7 * (cellSize+gap) + 14;
-                let cells = '';
-                weeks.forEach((w, wi) => {
-                    w.forEach((cell, di) => {
-                        if (!cell.inRange) return;
-                        const intensity = cell.count > 0 ? Math.min(1, cell.count / maxV) : 0;
-                        const alpha = intensity === 0 ? 0 : 0.1 + intensity * 0.9;
-                        const bg = cell.count > 0 ? 'rgba('+hmColor+','+alpha+')' : emptyBg;
-                        cells += '<rect x="'+(wi*(cellSize+gap))+'" y="'+(14+di*(cellSize+gap))+'" width="'+cellSize+'" height="'+cellSize+'" rx="2" fill="'+bg+'" stroke="'+(cell.count>0?'transparent':emptyBorder)+'" stroke-width="0.5"><title>'+cell.date+': '+cell.count+' viewings</title></rect>';
-                    });
-                });
-
-                heatmapEl.innerHTML = '<svg width="'+svgW+'" height="'+svgH+'" style="display:block;">'+monthLabels+cells+'</svg>';
+                var hmOpts = {
+                    chart: { type:'heatmap', height:140, background:'transparent', fontFamily:'DM Sans, sans-serif', toolbar:{show:false},
+                        animations:{enabled:false} },
+                    series: hmSeries,
+                    colors: ['#8b5cf6'],
+                    plotOptions: { heatmap: { radius:2, enableShades:true, shadeIntensity:0.8,
+                        colorScale:{ ranges:[
+                            {from:0,to:0,color:'rgba(255,255,255,0.03)',name:'none'},
+                            {from:1,to:2,color:'rgba(139,92,246,0.25)',name:'low'},
+                            {from:3,to:5,color:'rgba(139,92,246,0.5)',name:'med'},
+                            {from:6,to:100,color:'#8b5cf6',name:'high'}
+                        ] } } },
+                    dataLabels: { enabled:false },
+                    xaxis: { labels:{show:false}, axisBorder:{show:false}, axisTicks:{show:false} },
+                    yaxis: { labels:{ style:{colors:'rgba(255,255,255,0.25)',fontSize:'9px'} } },
+                    grid: { show:false },
+                    tooltip: { theme:'dark', y:{ formatter:function(v){return v+' viewings';} } },
+                    legend: { show:false }
+                };
+                if (window._apexCharts['heatmap']) { window._apexCharts['heatmap'].updateOptions(hmOpts, true, true); }
+                else { heatmapEl.innerHTML=''; var c = new ApexCharts(heatmapEl, hmOpts); c.render(); window._apexCharts['heatmap']=c; }
             }
 
-            // ─── Peak Performance Heatmap (Day × Hour) ───
+            // ─── v77: Peak Performance Heatmap (ApexCharts) ───
             const peakEl = el('dash-peak-heatmap');
             if (peakEl) {
                 const grid = PipelineEngine.getPeakData(data.all);
-                // Only show business hours 8-20
                 const hours = [];
-                for (let h = 8; h <= 20; h++) hours.push(h);
-                const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-                // Reorder: Mon-Sun
-                const dayOrder = [1,2,3,4,5,6,0];
-
-                let maxT = 0;
-                dayOrder.forEach(d => hours.forEach(h => { if(grid[d][h].total > maxT) maxT = grid[d][h].total; }));
-                if (maxT === 0) maxT = 1;
-
-                const cw = 28, ch = 20, gp = 2;
-                const leftPad = 32, topPad = 20;
-                const svgW = leftPad + hours.length * (cw+gp);
-                const svgH = topPad + dayOrder.length * (ch+gp);
-                const hmCol = isLight ? '99,102,241' : '139,92,246';
-                const signCol = isLight ? '34,197,94' : '0,214,143';
-                let svg = '<svg width="'+svgW+'" height="'+svgH+'" style="display:block;">';
-                // Hour labels
-                hours.forEach((h,i) => {
-                    svg += '<text x="'+(leftPad+i*(cw+gp)+cw/2)+'" y="12" fill="'+(isLight?'#b0a898':'rgba(255,255,255,0.2)')+'" font-size="8" text-anchor="middle" font-family="DM Sans,sans-serif">'+(h<10?'0':'')+h+':00</text>';
+                for (var h = 8; h <= 20; h++) hours.push(h);
+                const dayNamesP = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                const dayOrderP = [1,2,3,4,5,6,0];
+                const peakSeries = dayOrderP.map(function(d, di) {
+                    return {
+                        name: dayNamesP[di],
+                        data: hours.map(function(h) {
+                            return { x: (h<10?'0':'')+h+':00', y: grid[d][h].total };
+                        })
+                    };
                 });
-                // Day labels + cells
-                dayOrder.forEach((d,di) => {
-                    svg += '<text x="0" y="'+(topPad+di*(ch+gp)+ch/2+3)+'" fill="'+(isLight?'#b0a898':'rgba(255,255,255,0.2)')+'" font-size="9" font-family="DM Sans,sans-serif">'+dayNames[d]+'</text>';
-                    hours.forEach((h,hi) => {
-                        const cell = grid[d][h];
-                        const intensity = cell.total / maxT;
-                        const hasSign = cell.signed > 0;
-                        const alpha = cell.total > 0 ? 0.1 + intensity*0.8 : 0;
-                        const col = hasSign ? signCol : hmCol;
-                        const bg = cell.total > 0 ? 'rgba('+col+','+alpha+')' : (isLight?'rgba(0,0,0,0.02)':'rgba(255,255,255,0.02)');
-                        svg += '<rect x="'+(leftPad+hi*(cw+gp))+'" y="'+(topPad+di*(ch+gp))+'" width="'+cw+'" height="'+ch+'" rx="3" fill="'+bg+'"><title>'+dayNames[d]+' '+h+':00 — '+cell.total+' viewings, '+cell.signed+' signed</title></rect>';
-                        if (cell.total > 2) {
-                            svg += '<text x="'+(leftPad+hi*(cw+gp)+cw/2)+'" y="'+(topPad+di*(ch+gp)+ch/2+3)+'" fill="'+(isLight?'#1a1a1a':'rgba(255,255,255,0.6)')+'" font-size="8" font-weight="700" text-anchor="middle" font-family="DM Sans,sans-serif">'+cell.total+'</text>';
-                        }
-                    });
-                });
-                svg += '</svg>';
-                peakEl.innerHTML = svg;
+                var peakOpts = {
+                    chart: { type:'heatmap', height:200, background:'transparent', fontFamily:'DM Sans, sans-serif', toolbar:{show:false},
+                        animations:{enabled:false} },
+                    series: peakSeries,
+                    colors: ['#8b5cf6'],
+                    plotOptions: { heatmap: { radius:3, enableShades:true, shadeIntensity:0.8,
+                        colorScale:{ ranges:[
+                            {from:0,to:0,color:'rgba(255,255,255,0.02)',name:'none'},
+                            {from:1,to:2,color:'rgba(139,92,246,0.3)',name:'low'},
+                            {from:3,to:5,color:'rgba(139,92,246,0.55)',name:'med'},
+                            {from:6,to:100,color:'#8b5cf6',name:'high'}
+                        ] } } },
+                    dataLabels: { enabled:true, style:{fontSize:'8px',fontWeight:700,colors:['rgba(255,255,255,0.6)']},
+                        formatter:function(v){return v>0?v:'';} },
+                    xaxis: { labels:{ style:{colors:'rgba(255,255,255,0.2)',fontSize:'8px'} }, axisBorder:{show:false}, axisTicks:{show:false} },
+                    yaxis: { labels:{ style:{colors:'rgba(255,255,255,0.25)',fontSize:'9px'} } },
+                    grid: { show:false },
+                    tooltip: { theme:'dark', y:{ formatter:function(v){return v+' viewings';} } },
+                    legend: { show:false }
+                };
+                if (window._apexCharts['peak']) { window._apexCharts['peak'].updateOptions(peakOpts, true, true); }
+                else { peakEl.innerHTML=''; var c = new ApexCharts(peakEl, peakOpts); c.render(); window._apexCharts['peak']=c; }
             }
 
             // ─── Weekly Report (insight generation) ───
@@ -67621,27 +67675,28 @@ Write the email now:`;
         const convRate = conducted > 0 ? Math.round((signed / conducted) * 100) : 0;
         const noshowRate = conducted > 0 ? Math.round((noshow / conducted) * 100) : 0;
 
+        // v77: KPI Cards (helm-metric-card)
         const kpiEl = document.getElementById('tools-analytics-kpis');
         if (kpiEl) {
             const total = filtered.length;
             const conductedTotal = signed + noshow + viewed;
             const kpis = [
-                { label: 'Total Viewings', value: filtered.length, color: '#60a5fa', tip: 'All scheduled viewings in this period', sub: signed + ' signed, ' + noshow + ' no-shows, ' + viewed + ' viewed, ' + pending + ' pending' },
-                { label: 'Signed Up', value: signed, color: '#4ade80', tip: 'Clients who signed a tenancy agreement', sub: total > 0 ? Math.round(signed/total*100) + '% of all viewings' : '' },
-                { label: 'Sign-up Rate', value: convRate + '%', color: '#5eead4', tip: 'Signed ÷ conducted viewings (excl. pending/cancelled)', sub: signed + ' of ' + conductedTotal + ' conducted' },
-                { label: 'No-Show Rate', value: noshowRate + '%', color: '#ff6b6b', tip: 'Missed viewings ÷ all conducted viewings', sub: noshow + ' missed of ' + conductedTotal + ' conducted' },
-                { label: 'Pending', value: pending, color: '#ffb547', tip: 'Viewings awaiting outcome to be recorded', sub: cancelled > 0 || declined > 0 ? cancelled + ' cancelled, ' + declined + ' declined' : 'Outcome not yet recorded' }
+                { label: 'Total Viewings', value: filtered.length, color: '#60a5fa', tip: 'All scheduled viewings in this period' },
+                { label: 'Signed Up', value: signed, color: '#4ade80', tip: 'Clients who signed a tenancy agreement' },
+                { label: 'Sign-up Rate', value: convRate + '%', color: '#5eead4', tip: 'Signed ÷ conducted viewings' },
+                { label: 'No-Show Rate', value: noshowRate + '%', color: '#ff6b6b', tip: 'Missed ÷ conducted viewings' },
+                { label: 'Pending', value: pending, color: '#ffb547', tip: 'Awaiting outcome' }
             ];
             kpiEl.innerHTML = kpis.map(k => `
-                <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:14px;text-align:center;cursor:help;" title="${k.tip}">
-                    <div style="font-size:22px;font-weight:800;color:${k.color};margin-bottom:4px;">${k.value}</div>
-                    <div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">${k.label}</div>
-                    <div style="font-size:8px;color:rgba(255,255,255,0.25);margin-top:4px;line-height:1.3;">${k.sub}</div>
+                <div class="helm-metric-card" title="${k.tip}">
+                    <div class="metric-accent" style="background:${k.color};"></div>
+                    <div class="metric-value" style="color:${k.color};">${k.value}</div>
+                    <div class="metric-label">${k.label}</div>
                 </div>
             `).join('');
         }
 
-        // Daily viewings chart (last 14 days)
+        // v77: Daily viewings chart (ApexCharts bar)
         const dailyEl = document.getElementById('tools-analytics-daily');
         if (dailyEl) {
             const days = [];
@@ -67651,22 +67706,26 @@ Write the email now:`;
                 const count = viewings.filter(v => v.date === ds).length;
                 days.push({ date: d, count: count, label: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }) });
             }
-            const maxCount = Math.max(...days.map(d => d.count), 1);
-            dailyEl.innerHTML = days.map(d => {
-                const h = Math.max(4, (d.count / maxCount) * 100);
-                const isToday = d.date.toISOString().split('T')[0] === now.toISOString().split('T')[0];
-                return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;">
-                    <span style="font-size:9px;font-weight:600;color:${d.count > 0 ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.15)'};">${d.count}</span>
-                    <div style="width:100%;max-width:28px;border-radius:4px 4px 2px 2px;height:${h}%;background:${isToday ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.08)'};border:1px solid ${isToday ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.04)'};min-height:4px;"></div>
-                    <span style="font-size:7px;color:rgba(255,255,255,0.2);white-space:nowrap;">${d.label}</span>
-                </div>`;
-            }).join('');
+            const dailyOpts = {
+                chart: { type:'bar', height:160, background:'transparent', fontFamily:'DM Sans, sans-serif', toolbar:{show:false},
+                    animations:{enabled:true,easing:'easeinout',speed:500} },
+                series: [{ name:'Viewings', data: days.map(d => d.count) }],
+                colors: ['#60a5fa'],
+                plotOptions: { bar: { borderRadius:3, columnWidth:'60%' } },
+                xaxis: { categories: days.map(d => d.label), labels:{ style:{colors:'rgba(255,255,255,0.25)',fontSize:'7px'}, rotate:-45, rotateAlways:true } ,
+                    axisBorder:{show:false}, axisTicks:{show:false} },
+                yaxis: { labels:{ style:{colors:'rgba(255,255,255,0.25)',fontSize:'9px'} } },
+                grid: { borderColor:'rgba(255,255,255,0.04)', strokeDashArray:3 },
+                dataLabels: { enabled:false },
+                tooltip: { theme:'dark', style:{fontSize:'11px'} }
+            };
+            if (window._apexCharts['toolsDaily']) { window._apexCharts['toolsDaily'].updateOptions(dailyOpts, true, true); }
+            else { dailyEl.innerHTML=''; const c = new ApexCharts(dailyEl, dailyOpts); c.render(); window._apexCharts['toolsDaily']=c; }
         }
 
-        // Outcome breakdown bars
+        // v77: Outcome breakdown (ApexCharts horizontal bar)
         const outcomesEl = document.getElementById('tools-analytics-outcomes');
         if (outcomesEl) {
-            const total = filtered.length || 1;
             const outcomes = [
                 { label: 'Signed Up', count: signed, color: '#4ade80' },
                 { label: 'Viewed', count: viewed, color: '#60a5fa' },
@@ -67675,19 +67734,22 @@ Write the email now:`;
                 { label: 'Cancelled', count: cancelled, color: '#6b7280' },
                 { label: 'Declined', count: declined, color: '#f97316' }
             ].filter(o => o.count > 0);
-
-            outcomesEl.innerHTML = outcomes.map(o => {
-                const pct = Math.round((o.count / total) * 100);
-                return `<div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                        <span style="font-size:11px;color:rgba(255,255,255,0.6);">${o.label}</span>
-                        <span style="font-size:11px;font-weight:700;color:${o.color};">${o.count} (${pct}%)</span>
-                    </div>
-                    <div style="height:6px;background:rgba(255,255,255,0.04);border-radius:3px;overflow:hidden;">
-                        <div style="height:100%;width:${pct}%;background:${o.color};border-radius:3px;transition:width 0.5s;"></div>
-                    </div>
-                </div>`;
-            }).join('');
+            const outOpts = {
+                chart: { type:'bar', height:Math.max(120, outcomes.length*32), background:'transparent', fontFamily:'DM Sans, sans-serif', toolbar:{show:false},
+                    animations:{enabled:true,easing:'easeinout',speed:500} },
+                series: [{ name:'Count', data: outcomes.map(o => o.count) }],
+                colors: outcomes.map(o => o.color),
+                plotOptions: { bar: { horizontal:true, borderRadius:4, distributed:true, barHeight:'65%' } },
+                xaxis: { labels:{ style:{colors:'rgba(255,255,255,0.3)',fontSize:'9px'} }, axisBorder:{show:false}, axisTicks:{show:false} },
+                yaxis: { labels:{ style:{colors:'rgba(255,255,255,0.5)',fontSize:'11px'} } },
+                xaxis: { categories: outcomes.map(o => o.label), labels:{ style:{colors:'rgba(255,255,255,0.3)',fontSize:'9px'} }, axisBorder:{show:false}, axisTicks:{show:false} },
+                grid: { borderColor:'rgba(255,255,255,0.04)', strokeDashArray:3, xaxis:{lines:{show:true}}, yaxis:{lines:{show:false}} },
+                dataLabels: { enabled:true, style:{fontSize:'10px',fontWeight:700}, formatter:function(v){return v>0?v:'';} },
+                legend: { show:false },
+                tooltip: { theme:'dark', style:{fontSize:'11px'} }
+            };
+            if (window._apexCharts['toolsOutcomes']) { window._apexCharts['toolsOutcomes'].updateOptions(outOpts, true, true); }
+            else { outcomesEl.innerHTML=''; const c = new ApexCharts(outcomesEl, outOpts); c.render(); window._apexCharts['toolsOutcomes']=c; }
         }
 
         // Agent performance
