@@ -6068,49 +6068,7 @@
             }
         }
         
-        /* v68: Mobile bottom nav improvements */
-        @media (max-width: 768px) {
-            .helm-bottom-nav { height: 56px !important;
-                padding: 0 4px !important;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            .helm-nav-item {
-                min-width: 50px !important;
-                padding: 6px 8px !important;
-            }
-            
-            .helm-nav-label {
-                font-size: 9px !important;
-            }
-            
-            .helm-nav-icon .material-symbols-rounded {
-                font-size: 20px !important;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .helm-bottom-nav {
-                height: 56px !important;
-                justify-content: flex-start !important;
-                gap: 2px !important;
-            }
-            
-            .helm-nav-item {
-                min-width: 44px !important;
-                padding: 4px 6px !important;
-            }
-            
-            .helm-nav-label {
-                font-size: 8px !important;
-                display: none; /* Hide labels on very small screens */
-            }
-            
-            .helm-nav-item.active .helm-nav-label {
-                display: block; /* Show label only for active item */
-            }
-        }
+        /* v68 mobile bottom nav rules removed v76 — consolidated in helm-v76-mobile */
 
         /* ═══════════════════════════════════════════════════════════════
            V62 ENHANCED TIME-OF-DAY BACKGROUNDS
@@ -13945,7 +13903,7 @@
         }
         
         #helm-ui-shell > .helm-bottom-nav {
-            flex: 0 0 56px;
+            flex: 0 0 auto;
         }
 
         /* Active panels receive pointer events */
@@ -18243,10 +18201,7 @@
                 font-size: 13px !important;
             }
 
-            /* Bottom nav extra tight */
-            .helm-bottom-nav {
-                padding: 0 2px !important;
-            }
+            /* Bottom nav extra tight — removed v76, consolidated in helm-v76-mobile */
 
             /* Donut chart smaller */
             [style*="width:80px;height:80px"] {
@@ -49560,7 +49515,6 @@ Harir Industries`;
                 return;
             }
 
-            // Geocode the address
             try {
                 const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
                 const response = await fetch(geocodeUrl);
@@ -49569,14 +49523,22 @@ Harir Industries`;
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat);
                     const lon = parseFloat(data[0].lon);
+                    const dateAdded = new Date().toISOString();
+                    const maxId = Math.max(...(window.properties || []).map(p => parseInt(p.id) || 0), 0);
 
-                    // Add all studios as separate properties
                     for (let i = 1; i <= studios; i++) {
+                        const studioName = studios === 1
+                            ? name
+                            : `Unit ${i}, ${name}`;
+
                         const property = {
-                            id: Date.now() + i,
+                            id: maxId + i,
+                            name: studioName,
                             buildingName: name,
                             address: address,
                             beds: 0,
+                            bedrooms: 0,
+                            type: 'Studio',
                             rent: rent,
                             borough: borough,
                             status: 'available',
@@ -49586,7 +49548,8 @@ Harir Industries`;
                             gender: gender,
                             link: link || '',
                             unitNumber: i,
-                            addedDate: new Date().toISOString()
+                            totalStudios: studios,
+                            dateAdded: dateAdded
                         };
 
                         if (typeof window.properties !== 'undefined') {
@@ -49594,29 +49557,31 @@ Harir Industries`;
                         }
                     }
 
-                    // Save to localStorage
                     if (typeof saveProperties === 'function') {
                         saveProperties();
                     } else {
                         localStorage.setItem('propertySystemProperties', JSON.stringify(window.properties));
                     }
 
-                    // Re-render the list in the properties view
+                    for (let i = 0; i < studios; i++) {
+                        const newProp = window.properties[window.properties.length - studios + i];
+                        if (newProp && window.syncSingleProperty) {
+                            window.syncSingleProperty(newProp);
+                        }
+                    }
+
                     helmRenderPropertiesList();
 
-                    // Update map if available
                     if (typeof renderProperties === 'function') {
                         renderProperties();
                     }
 
-                    // Update dashboard
                     if (typeof updateHelmDashboard === 'function') {
                         updateHelmDashboard();
                     }
 
                     showHelmNotification(`✅ Added ${studios} studio(s) successfully!`, 'success');
 
-                    // Clear form
                     document.getElementById('helm-prop-name').value = '';
                     document.getElementById('helm-prop-address').value = '';
                     document.getElementById('helm-prop-studios').value = '1';
@@ -70839,12 +70804,12 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
 
     /* ── BOTTOM NAV ── */
     .helm-bottom-nav{
-        height:var(--mobile-nav)!important;
+        height:auto!important;
         min-height:var(--mobile-nav)!important;
+        box-sizing:content-box!important;
         display:flex!important;
         justify-content:space-around!important;
-        padding:0 var(--safe-left) 0 var(--safe-right)!important;
-        padding-bottom:calc(var(--safe-bottom) + 4px)!important;
+        padding:4px var(--safe-right) calc(var(--safe-bottom) + 4px) var(--safe-left)!important;
         overflow-x:auto!important;
         overflow-y:hidden!important;
         scrollbar-width:none!important;
@@ -71173,7 +71138,7 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
         min-height:var(--mobile-header)!important;
     }
     .helm-bottom-nav{
-        height:var(--mobile-nav)!important;
+        height:auto!important;
         min-height:var(--mobile-nav)!important;
     }
     .helm-view.active>div:first-child{padding:8px!important}
