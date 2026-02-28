@@ -2,16 +2,17 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 75                            ║
-    ║  v72 FIXES + VISUAL OVERHAUL:                                ║
-    ║  • OBSIDIAN THEME: Premium dark glassmorphic redesign        ║
-    ║  • New fonts: DM Sans + Instrument Sans (replaces Inter)     ║
-    ║  • Glassmorphic stat cards, refined nav dock, polished UI    ║
-    ║  • FIX: loadPipelineData canonical source = propertyViewings ║
-    ║  • FIX: Supplementary sources skip matching phone/ID entries ║
-    ║  • FIX: Eliminated 425→251 dedup by preventing concat dupes ║
-    ║  ────────────────────────────────────────────────────────     ║
-    ║  v70: syncSingleProperty, sync guard, property sync fixes    ║
+    ║                        Version 76                            ║
+    ║  v76 VISUAL OVERHAUL:                                        ║
+    ║  • Complete design system rebuild — clean, minimal, warm     ║
+    ║  • Removed ALL XP/rewards/leaderboard points                 ║
+    ║  • Removed bento colored left borders                        ║
+    ║  • Unified modal design across all views                     ║
+    ║  • Redesigned dark mode (deep neutral) + light (warm paper)  ║
+    ║  • Fixed first-login data loading (HELMData reinit on auth)  ║
+    ║  • Email export: dark header with white text                 ║
+    ║  • Reduced localStorage dependency (Supabase-first)          ║
+    ║  • Mobile responsive improvements                            ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  v69: Auth guards, batch upserts, log silencing              ║
     ║  ──────────────────────────────────────────────────────────── ║
@@ -2841,13 +2842,8 @@
             }
         };
 
-        // XP Values
-        const XP_VALUES = {
-            VIEWING_BOOKED: 5, VIEWING_CONDUCTED: 10, SIGNUP_CLOSED: 100,
-            NO_SHOW_RECORDED: 5, PROPERTY_ADDED: 3, CLIENT_ADDED: 3, DATA_SYNCED: 1,
-            VIEWING_SIGNED: 100, VIEWING_INTERESTED: 15, VIEWING_DECLINED: 10,
-            VIEWING_COMPLETED: 10, VIEWING_RESCHEDULED: 0, VIEWING_CANCELLED: -50
-        };
+        // XP system removed in v76
+        const XP_VALUES = {};
 
         // ═══════════════════════════════════════════════════════════
         // AUTH STATE
@@ -3057,76 +3053,8 @@
             },
             
             // v65.8: Enhanced XP system - writes to xp_transactions AND updates profile
-            awardXP: async function(amountOrReason, reasonText = null) {
-                if (!this.currentUser || !window.supabase) {
-                    console.log('[XP] Cannot award - no user or supabase');
-                    return;
-                }
-                
-                // Support both old format (reason string) and new format (amount, reason)
-                let amount, reason;
-                if (typeof amountOrReason === 'number') {
-                    amount = amountOrReason;
-                    reason = reasonText || 'XP Award';
-                } else {
-                    amount = XP_VALUES[amountOrReason] || 0;
-                    reason = amountOrReason;
-                }
-                
-                if (amount === 0) return;
-                
-                const currentXP = this.userProfile?.xp_points || 0;
-                const newXP = Math.max(0, currentXP + amount); // Don't go below 0
-                
-                try {
-                    // 1. Record transaction in xp_transactions table
-                    const { error: txError } = await window.supabase
-                        .from('xp_transactions')
-                        .insert({
-                            user_id: this.currentUser.id,
-                            amount: amount,
-                            reason: reason,
-                            reference_id: null,
-                            created_at: new Date().toISOString()
-                        });
-                    
-                    if (txError) {
-                        console.error('[XP] Transaction insert error:', txError);
-                    } else {
-                        console.log(`[XP] Transaction recorded: ${amount > 0 ? '+' : ''}${amount} XP for ${reason}`);
-                    }
-                    
-                    // 2. Update profile xp_points
-                    const { data, error } = await window.supabase
-                        .from('profiles')
-                        .update({ 
-                            xp_points: newXP,
-                            last_active: new Date().toISOString()
-                        })
-                        .eq('id', this.currentUser.id)
-                        .select()
-                        .single();
-                    
-                    if (!error && data) {
-                        this.userProfile = data;
-                        console.log(`[XP] Profile updated: ${currentXP} → ${newXP} XP`);
-                        
-                        // Show toast notification
-                        if (typeof showToast === 'function') {
-                            const sign = amount > 0 ? '+' : '';
-                            const type = amount > 0 ? 'success' : 'warning';
-                            showToast(`${sign}${amount} XP`, reason, type);
-                        }
-                        
-                        this.updateUserUI();
-                        if (typeof loadTeamLeaderboard === 'function') loadTeamLeaderboard();
-                    } else if (error) {
-                        console.error('[XP] Profile update error:', error);
-                    }
-                } catch (err) {
-                    console.error('[XP] Award error:', err);
-                }
-            },
+            // XP system removed in v76
+            awardXP: async function() { return; },
             
             updateUserUI: function() {
                 if (!this.userProfile) return;
@@ -3159,11 +3087,11 @@
                 
                 if (menuName) menuName.textContent = this.userProfile.display_name || this.userProfile.full_name || this.currentUser?.email?.split('@')[0] || 'User';
                 if (menuEmail) menuEmail.textContent = this.currentUser?.email || '';
-                if (menuXP) menuXP.textContent = `${this.userProfile.xp_points || 0} XP`;
+                if (menuXP) menuXP.style.display = 'none';
                 
                 // Update any XP displays
                 document.querySelectorAll('.user-xp, #user-xp').forEach(el => {
-                    el.textContent = `${this.userProfile.xp_points || 0} XP`;
+                    el.style.display = 'none';
                 });
             },
             
@@ -3289,7 +3217,7 @@
                                 <tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
                                     <th style="padding:12px;text-align:left;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">User</th>
                                     <th style="padding:12px;text-align:left;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">Email</th>
-                                    <th style="padding:12px;text-align:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">XP</th>
+
                                     <th style="padding:12px;text-align:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">Role</th>
                                     <th style="padding:12px;text-align:center;color:rgba(255,255,255,0.6);font-size:11px;font-weight:600;text-transform:uppercase;">Actions</th>
                                 </tr>
@@ -3303,7 +3231,7 @@
                                         <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                                             <td style="padding:12px;color:white;font-weight:600;">${u.display_name || 'User'} ${isCurrentUser ? '<span style="color:#4ade80;font-size:10px;">(you)</span>' : ''}</td>
                                             <td style="padding:12px;color:rgba(255,255,255,0.7);font-size:13px;">${u.email}</td>
-                                            <td style="padding:12px;text-align:center;color:#fbbf24;font-weight:600;">${u.xp_points || 0}</td>
+                                            
                                             <td style="padding:12px;text-align:center;">
                                                 ${canEdit ? `
                                                     <select onchange="updateUserRole('${u.id}', this.value)" style="padding:6px 12px;background:${rc.bg};color:${rc.color};border:1px solid ${rc.color}44;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">
@@ -3320,7 +3248,6 @@
                                             </td>
                                             <td style="padding:12px;text-align:center;">
                                                 ${canEdit && !isCurrentUser ? `
-                                                    <button onclick="resetUserXP('${u.id}')" style="padding:4px 8px;background:rgba(239,68,68,0.2);color:#f87171;border:none;border-radius:6px;font-size:10px;cursor:pointer;" title="Reset XP">Reset XP</button>
                                                 ` : '-'}
                                             </td>
                                         </tr>
@@ -3395,7 +3322,7 @@
         };
         
         // Reset user XP
-        window.resetUserXP = async function(userId) {
+        window.resetUserXP = async function(userId) { return;
             if (!confirm('Reset this user\'s XP to 0? This cannot be undone.')) return;
             
             const { error } = await window.supabase
@@ -3548,7 +3475,7 @@
                             <div style="flex:1;min-width:0;">
                                 <div style="color:white;font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.display_name||'Agent'}</div>
                             </div>
-                            <div style="color:#fbbf24;font-weight:600;font-size:12px;">${u.xp_points||0}</div>
+                            
                         </div>
                     `;
                 }).join('');
@@ -3561,6 +3488,19 @@
             document.body.classList.add('authenticated');
             const loginScreen = document.getElementById('hpm-login-screen');
             if (loginScreen) loginScreen.style.display = 'none';
+            
+            // CRITICAL: Reload data from Supabase after auth (fixes first-login empty data)
+            if (window.HELMData && window.HELMData.init) {
+                window.HELMData.init().then(() => {
+                    console.log('[Auth] HELMData reloaded after auth success');
+                    // Update welcome stats after data loads
+                    if (typeof updateWelcomeStats === 'function') updateWelcomeStats();
+                    // Refresh any visible dashboard
+                    if (typeof updateHelmDashboard === 'function') updateHelmDashboard();
+                }).catch(err => {
+                    console.error('[Auth] HELMData reload failed:', err);
+                });
+            }
             
             // Show welcome screen (user taps to enter)
             window._enterHelmUIRan = false;
@@ -3585,10 +3525,7 @@
             // Update UI with user info
             HPMAuth.updateUserUI();
             
-            // Update welcome screen stats
-            if (typeof updateWelcomeStats === 'function') updateWelcomeStats();
-            
-            console.log('[HPM v65.5] Logged in as:', HPMAuth.userProfile?.display_name);
+            console.log('[HPM v76] Logged in as:', HPMAuth.userProfile?.display_name);
         }
 
         // ═══════════════════════════════════════════════════════════
@@ -3672,8 +3609,8 @@
                                 <div style="color:white;font-weight:600;font-size:14px;">${u.display_name||'Agent'}${isMe?' (You)':''}</div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="color:#fbbf24;font-weight:700;font-size:15px;">${u.xp_points||0}</div>
-                                <div style="color:rgba(255,255,255,0.4);font-size:10px;text-transform:uppercase;">XP</div>
+                                <div style="color:var(--ob-text-secondary,rgba(255,255,255,0.55));font-weight:600;font-size:13px;">#${i+1}</div>
+                                
                             </div>
                         </div>
                     `;
@@ -3693,8 +3630,8 @@
                     dashAvatar.style.background = top.avatar_color || '#5eead4';
                 }
                 if (dashName) dashName.textContent = top.display_name || 'Agent';
-                if (dashStats) dashStats.textContent = `#1 on leaderboard`;
-                if (dashXP) dashXP.textContent = `${top.xp_points || 0} XP`;
+                if (dashStats) dashStats.textContent = "#1 on team";
+                if (dashXP) dashXP.textContent = "";
             }
         }
         
@@ -3749,7 +3686,7 @@
                 if (log.length > 500) log.length = 500;
 
                 // Save to localStorage
-                localStorage.setItem('watcher_activity_log', JSON.stringify(log));
+                try { if(window.supabase && window.HPMAuth?.currentUser) { window.supabase.from('activity_log').insert({ user_id: window.HPMAuth.currentUser.id, log: JSON.stringify(log), created_at: new Date().toISOString() }); } } catch(e){}
 
                 // Try to sync to Supabase if online
                 if (!options.skipSync && window.supabaseClient && navigator.onLine) {
@@ -3768,7 +3705,7 @@
             // Get all logged activities
             getLog: function() {
                 try {
-                    return JSON.parse(localStorage.getItem('watcher_activity_log') || '[]');
+                    return [];
                 } catch (e) {
                     return [];
                 }
@@ -3809,7 +3746,7 @@
                     const idx = log.findIndex(a => a.id === activity.id);
                     if (idx >= 0) {
                         log[idx].synced = true;
-                        localStorage.setItem('watcher_activity_log', JSON.stringify(log));
+                        try { if(window.supabase && window.HPMAuth?.currentUser) { window.supabase.from('activity_log').insert({ user_id: window.HPMAuth.currentUser.id, log: JSON.stringify(log), created_at: new Date().toISOString() }); } } catch(e){}
                     }
                 } catch (e) {
                     // Table might not exist - that's OK
@@ -3928,8 +3865,8 @@
                     let uploadedCounts = { viewings: 0, properties: 0, clients: 0 };
                     
                     // 1. Upload VIEWINGS
-                    const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-                    const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+                    const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
+                    const properties = (window.HELMData ? window.HELMData.properties : window.properties) || [];
                     
                     for (const viewing of viewings) {
                         // v67.7: ALWAYS look up property_name from properties if missing
@@ -3997,7 +3934,7 @@
                     }
                     
                     // 3. Upload PIPELINE/CLIENTS - v68.1 fixed field mapping
-                    const clients = JSON.parse(localStorage.getItem('elevate_clients') || '[]');
+                    const clients = (window.HELMData ? window.HELMData.pipeline : []) || [];
                     for (const client of clients) {
                         // v68.1: Skip clients without a name - they'll cause NOT NULL errors
                         const clientName = client.name || client.clientName || client.client_name || '';
@@ -19380,7 +19317,7 @@
                 }
 
                 // Award XP
-                this.awardXP(10, 'Client Match');
+                // XP removed
 
                 showHelmNotification(`🎯 Showing properties for ${client.visitor || client.name}`, 'success');
             },
@@ -19417,9 +19354,9 @@
                     this.dispatch('pipeline-updated', { clientId, oldStatus, newStatus, newStage });
 
                     // Award XP based on stage progression
-                    if (newStage === 'viewing_done') this.awardXP(50, 'Viewing Completed');
-                    if (newStage === 'application') this.awardXP(75, 'Application Started');
-                    if (newStage === 'signed') this.awardXP(200, 'Deal Closed!');
+                    if (newStage === 'viewing_done') // XP removed
+                    if (newStage === 'application') // XP removed
+                    if (newStage === 'signed') // XP removed
 
                     // Refresh UI
                     if (typeof renderPipelineTable === 'function') renderPipelineTable();
@@ -19517,7 +19454,7 @@
                         }
                     }
 
-                    this.awardXP(50, 'Viewing Completed');
+                    // XP removed
 
                     // Dispatch for UI updates
                     this.dispatch('viewing-completed', { viewingId, outcome, viewing });
@@ -19546,7 +19483,7 @@
                     prop.status = newStatus;
                     if (newStatus === 'taken') {
                         window.takenProperties?.add(propertyId);
-                        this.awardXP(100, 'Property Let! 🏠');
+                        // XP removed
                     } else {
                         window.takenProperties?.delete(propertyId);
                     }
@@ -19580,7 +19517,7 @@
 
             // ===== XP/GAMIFICATION - v61 UNIFIED =====
 
-            awardXP: function (amount, reason) {
+            awardXP: function () { return;
                 // v61: Use unified XP system
                 if (typeof window.awardXP === 'function') {
                     window.awardXP(amount, reason);
@@ -19596,9 +19533,9 @@
 
                 // Also sync to hpmXPData if it exists
                 try {
-                    const xpData = JSON.parse(localStorage.getItem('hpmXPData') || '{}');
+                    const xpData = {};
                     xpData.totalXP = xp;
-                    localStorage.setItem('hpmXPData', JSON.stringify(xpData));
+                    // XP removed
                 } catch (e) { }
 
                 const newLevel = Math.floor(xp / 500) + 1;
@@ -20434,6 +20371,253 @@
     html.has-session #hpm-login-screen{display:none!important}
     html.has-session #helm-ui-shell{display:flex!important;flex-direction:column!important}
     </style>
+
+<!-- ═══ v76: HELM VISUAL OVERHAUL — Clean Minimal Design System ═══ -->
+<style id="v76-overhaul">
+/* ────────────────────────────────────────────────────────
+   v76 DESIGN TOKENS — Neutral, clean, professional
+   ──────────────────────────────────────────────────────── */
+:root {
+    --h76-bg: #0b0f14;
+    --h76-surface: rgba(255,255,255,0.025);
+    --h76-surface-2: rgba(255,255,255,0.04);
+    --h76-surface-3: rgba(255,255,255,0.07);
+    --h76-border: rgba(255,255,255,0.06);
+    --h76-border-hover: rgba(255,255,255,0.12);
+    --h76-text-1: rgba(255,255,255,0.92);
+    --h76-text-2: rgba(255,255,255,0.55);
+    --h76-text-3: rgba(255,255,255,0.30);
+    --h76-accent: #5eead4;
+    --h76-accent-soft: rgba(94,234,212,0.08);
+    --h76-accent-mid: rgba(94,234,212,0.18);
+    --h76-success: #34d399;
+    --h76-warning: #fbbf24;
+    --h76-danger: #f87171;
+    --h76-info: #60a5fa;
+    --h76-r-sm: 8px; --h76-r: 12px; --h76-r-lg: 16px; --h76-r-xl: 20px;
+    --h76-sh: 0 1px 3px rgba(0,0,0,0.3);
+    --h76-sh-lg: 0 8px 32px rgba(0,0,0,0.35);
+    --h76-font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+html[data-theme="light"] {
+    --h76-bg: #f8f7f4;
+    --h76-surface: rgba(255,255,255,0.65);
+    --h76-surface-2: rgba(0,0,0,0.025);
+    --h76-surface-3: rgba(0,0,0,0.05);
+    --h76-border: rgba(0,0,0,0.06);
+    --h76-border-hover: rgba(0,0,0,0.12);
+    --h76-text-1: #1a1a1a;
+    --h76-text-2: #6b6560;
+    --h76-text-3: #a09890;
+    --h76-accent: #0d9488;
+    --h76-accent-soft: rgba(13,148,136,0.06);
+    --h76-accent-mid: rgba(13,148,136,0.14);
+    --h76-sh: 0 1px 3px rgba(0,0,0,0.04);
+    --h76-sh-lg: 0 8px 32px rgba(0,0,0,0.06);
+}
+
+/* ── Base ── */
+body, html { font-family: var(--h76-font) !important; }
+body.authenticated { background: var(--h76-bg) !important; }
+#helm-ui-shell::before, #helm-ui-shell::after { display: none !important; }
+
+/* ── BENTO CARDS — No colored left borders, clean flat ── */
+.bento-card, .bento-card-stat,
+.bento-card-blue, .bento-card-green, .bento-card-purple,
+.bento-card-amber, .bento-card-red, .bento-card-teal {
+    background: var(--h76-surface) !important;
+    border: 1px solid var(--h76-border) !important;
+    border-left: 1px solid var(--h76-border) !important;
+    border-radius: var(--h76-r-lg) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.bento-card:hover, .bento-card-stat:hover,
+.bento-card-blue:hover, .bento-card-green:hover, .bento-card-purple:hover,
+.bento-card-amber:hover, .bento-card-red:hover {
+    border-color: var(--h76-border-hover) !important;
+    box-shadow: var(--h76-sh) !important;
+}
+.bento-title { color: var(--h76-text-1) !important; font-weight: 600 !important; }
+.bento-subtitle, .bento-label, .bento-stat-label { color: var(--h76-text-2) !important; }
+.bento-value, .bento-value-sm { color: var(--h76-text-1) !important; }
+.bento-icon { background: var(--h76-accent-soft) !important; border-radius: 10px !important; }
+.bento-pill, .helm-tool-pill {
+    background: var(--h76-surface-2) !important;
+    border: 1px solid var(--h76-border) !important;
+    border-radius: var(--h76-r-sm) !important;
+    color: var(--h76-text-1) !important;
+    font-weight: 500 !important;
+}
+.bento-pill:hover, .helm-tool-pill:hover { background: var(--h76-surface-3) !important; }
+.bento-input, .bento-select {
+    background: var(--h76-surface-2) !important;
+    border: 1px solid var(--h76-border) !important;
+    border-radius: var(--h76-r-sm) !important;
+    color: var(--h76-text-1) !important;
+}
+.bento-input:focus, .bento-select:focus {
+    border-color: var(--h76-accent) !important;
+    box-shadow: 0 0 0 3px var(--h76-accent-soft) !important;
+    outline: none !important;
+}
+.bento-btn, .bento-btn-primary { border-radius: var(--h76-r) !important; font-weight: 600 !important; }
+
+/* ── VIEWING CARDS — Clean, no colored left border ── */
+.v24-viewing-card {
+    background: var(--h76-surface) !important;
+    border: 1px solid var(--h76-border) !important;
+    border-left: 1px solid var(--h76-border) !important;
+    border-radius: var(--h76-r-lg) !important;
+    backdrop-filter: none !important;
+}
+.v24-viewing-card:hover { border-color: var(--h76-border-hover) !important; box-shadow: var(--h76-sh) !important; }
+.v24-viewing-card.today-card {
+    background: var(--h76-accent-soft) !important;
+    border-color: var(--h76-accent-mid) !important;
+    border-left-color: var(--h76-accent-mid) !important;
+}
+.v24-viewing-card.past-card { opacity: 0.6; border-left-color: var(--h76-border) !important; }
+.v24-card-title { color: var(--h76-text-1) !important; }
+.v24-card-info { color: var(--h76-text-2) !important; }
+.v24-viewings-title { color: var(--h76-text-1) !important; }
+.v24-viewings-subtitle { color: var(--h76-text-3) !important; }
+
+/* ── MODALS — Unified clean design ── */
+.modal, [id$="-modal"][style*="position:fixed"] { backdrop-filter: blur(8px) !important; }
+.modal-content, .modal-panel {
+    background: var(--h76-surface) !important;
+    border: 1px solid var(--h76-border) !important;
+    border-radius: var(--h76-r-xl) !important;
+    box-shadow: var(--h76-sh-lg) !important;
+    backdrop-filter: blur(40px) !important;
+}
+html[data-theme="light"] .modal-content, html[data-theme="light"] .modal-panel {
+    background: rgba(255,255,255,0.88) !important;
+}
+.modal-header { background: transparent !important; border-bottom: 1px solid var(--h76-border) !important; }
+.modal-header h2, .modal-header h3 { color: var(--h76-text-1) !important; font-weight: 700 !important; font-size: 18px !important; }
+.modal-body { color: var(--h76-text-2) !important; }
+.modal { background: rgba(0,0,0,0.5) !important; backdrop-filter: blur(6px) !important; }
+html[data-theme="light"] .modal { background: rgba(0,0,0,0.15) !important; }
+
+/* ── NAV ── */
+.helm-nav, .helm-dock, #helm-bottom-nav, .helm-bottom-nav {
+    background: var(--h76-surface) !important;
+    border-top: 1px solid var(--h76-border) !important;
+    backdrop-filter: blur(24px) !important;
+}
+html[data-theme="light"] .helm-nav, html[data-theme="light"] .helm-dock, html[data-theme="light"] #helm-bottom-nav {
+    background: rgba(255,255,255,0.88) !important;
+}
+.helm-nav-item.active, .nav-item.active, .dock-item.active {
+    color: var(--h76-accent) !important;
+    background: var(--h76-accent-soft) !important;
+}
+
+/* ── HEADER ── */
+.helm-header, #helm-header, .helm-top-bar {
+    background: var(--h76-surface) !important;
+    border-bottom: 1px solid var(--h76-border) !important;
+    backdrop-filter: blur(24px) !important;
+}
+html[data-theme="light"] .helm-header, html[data-theme="light"] #helm-header {
+    background: rgba(255,255,255,0.88) !important;
+}
+
+/* ── PIPELINE ── */
+#v73-pipeline-header { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; }
+.v73-pipeline-row:hover { background: var(--h76-accent-soft) !important; }
+.v73-pipeline-row td { color: var(--h76-text-1) !important; border-bottom: 1px solid var(--h76-border) !important; }
+.v73-action-btn { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-sm) !important; }
+.v73-action-btn:hover { background: var(--h76-surface-3) !important; }
+
+/* ── TABLES ── */
+thead th, thead td { background: var(--h76-surface-2) !important; color: var(--h76-text-2) !important; font-weight: 600 !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; border-bottom: 1px solid var(--h76-border) !important; }
+tbody tr:hover { background: var(--h76-accent-soft) !important; }
+tbody td { color: var(--h76-text-1) !important; border-bottom: 1px solid var(--h76-border) !important; }
+
+/* ── BUTTONS ── */
+.viewings-tab-btn, .filter-btn { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-sm) !important; color: var(--h76-text-2) !important; }
+.viewings-tab-btn.active, .filter-btn.active { background: var(--h76-accent) !important; border-color: var(--h76-accent) !important; color: #0b0f14 !important; font-weight: 600 !important; }
+html[data-theme="light"] .viewings-tab-btn.active, html[data-theme="light"] .filter-btn.active { background: #0d9488 !important; color: #fff !important; }
+
+/* ── INPUTS ── */
+input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], input[type="time"], input[type="search"], input[type="password"], textarea, select, .glass-input, .hm-input {
+    background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-sm) !important; color: var(--h76-text-1) !important; outline: none !important;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--h76-accent) !important; box-shadow: 0 0 0 3px var(--h76-accent-soft) !important; }
+input::placeholder, textarea::placeholder { color: var(--h76-text-3) !important; }
+
+/* ── TOASTS ── */
+.hm-toast { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(24px) !important; }
+.hm-toast-title { color: var(--h76-text-1) !important; }
+.hm-toast-message { color: var(--h76-text-2) !important; }
+
+/* ── COMMAND CENTER ── */
+.cc-panel { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-xl) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(40px) !important; }
+html[data-theme="light"] .cc-panel { background: rgba(255,255,255,0.85) !important; }
+.cc-greet, .cc-w-title { color: var(--h76-text-1) !important; }
+.cc-date, .cc-period { color: var(--h76-text-3) !important; }
+.cc-widget { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r) !important; }
+.cc-act-btn, .cc-hbtn { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; color: var(--h76-text-1) !important; border-radius: var(--h76-r-sm) !important; }
+.cc-act-btn:hover, .cc-hbtn:hover { background: var(--h76-surface-3) !important; }
+
+/* ── MISC ── */
+.sidebar, .helm-sidebar, #property-sidebar { background: var(--h76-surface) !important; border-color: var(--h76-border) !important; backdrop-filter: blur(24px) !important; }
+.map-toolbar, #map-filter-bar, #unified-map-toolbar { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh) !important; backdrop-filter: blur(24px) !important; }
+.agent-card { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; }
+.tools-grid .tool-card, .write-card { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; }
+#hpm-user-menu { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(24px) !important; }
+html[data-theme="light"] #hpm-user-menu { background: rgba(255,255,255,0.9) !important; }
+#hpm-user-menu button:hover { background: var(--h76-surface-2) !important; }
+.floating-menu, .helm-floating-menu { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(24px) !important; }
+.helm-section-card { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: none !important; }
+.helm-metric-card, .dash-metric { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-left: 1px solid var(--h76-border) !important; border-radius: var(--h76-r) !important; }
+.empty-state { color: var(--h76-text-3) !important; }
+.team-leaderboard-widget { background: transparent !important; }
+
+/* ── STUDIO BUBBLES ── */
+.studio-bubble, .studio-chip { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r) !important; box-shadow: none !important; }
+.studio-chip.avail { background: rgba(52,211,153,0.1) !important; border-color: rgba(52,211,153,0.25) !important; }
+.studio-chip.taken { background: rgba(248,113,113,0.1) !important; border-color: rgba(248,113,113,0.25) !important; }
+
+/* ── AGENT NOTIFS ── */
+.agent-notif-item { border-radius: var(--h76-r) !important; background: var(--h76-surface-2) !important; }
+.agent-notif-item:hover { background: var(--h76-surface-3) !important; }
+.agent-notif-item.unread { background: var(--h76-accent-soft) !important; border-left-color: var(--h76-accent) !important; }
+
+/* ── LOGIN & Welcome ── */
+#hpm-login-screen { background: #0b0f14 !important; }
+html[data-theme="light"] #hpm-login-screen { background: #f8f7f4 !important; }
+.helm-welcome-overlay { background: #0b0f14 !important; }
+html[data-theme="light"] .helm-welcome-overlay { background: #f8f7f4 !important; }
+html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
+
+/* ── STATUS BADGES ── */
+.status-badge, .v24-status-badge, .hm-badge { border-radius: 6px !important; font-weight: 600 !important; font-size: 10px !important; padding: 3px 8px !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; }
+.v24-card-badge.today { background: var(--h76-accent-soft) !important; color: var(--h76-accent) !important; border-radius: 6px !important; }
+.v24-card-badge.past { background: var(--h76-surface-2) !important; color: var(--h76-text-3) !important; border-radius: 6px !important; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--h76-border-hover); border-radius: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ── HIDE XP ── */
+#xp-notification, .xp-progress, .xp-progress-section, .xp-notification, .xp-badge, #xp-badge,
+.header-user-xp-badge, [onclick*="showXPStats"], .lb-xp-col, #xp-stats-modal, #menu-user-xp,
+#welcome-xp, .user-xp, #user-xp, div[id="dash-lb-xp"],
+.helm-welcome-overlay div:has(> #welcome-xp) { display: none !important; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+    .bento-card, .helm-section-card, .v24-viewing-card, .agent-card, .tool-card { border-radius: var(--h76-r) !important; }
+    .modal-content, .modal-panel { border-radius: var(--h76-r-lg) !important; margin: 8px !important; }
+    .bento-grid, .bento-grid-2, .bento-grid-3, .bento-grid-4, .bento-grid-5 { grid-template-columns: 1fr !important; gap: 8px !important; }
+}
+</style>
 
 </head>
 
@@ -22250,7 +22434,7 @@
                                     <span class="material-symbols-rounded">upload</span>
                                     <span>Import All</span>
                                 </button>
-                                <button onclick="if(confirm('Clear all local data? This cannot be undone.')){localStorage.clear();location.reload();}" class="bento-pill helm-tool-pill" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171;">
+                                <button onclick="if(confirm('Clear local cache? This will refresh from the server.')){localStorage.removeItem('propertySystemProperties');localStorage.removeItem('propertyViewings');localStorage.removeItem('pipelineData');localStorage.removeItem('takenPropertiesSet');location.reload();}" class="bento-pill helm-tool-pill" style="background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171;">
                                     <span class="material-symbols-rounded">delete_forever</span>
                                     <span>Clear Data</span>
                                 </button>
@@ -22876,7 +23060,7 @@
                             <polyline points="1 20 1 14 7 14" />
                             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                         </svg><span style="font-size:12px;font-weight:600;">Sync</span></button>
-                    <button onclick="if(confirm('Clear all data?')){localStorage.clear();location.reload();}"
+                    <button onclick="if(confirm('Clear local cache and reload from server?')){localStorage.removeItem('propertySystemProperties');localStorage.removeItem('propertyViewings');localStorage.removeItem('pipelineData');location.reload();}"
                         style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;background:#7f1d1d;border:2px solid #991b1b;border-radius:16px;color:white;cursor:pointer;"><svg
                             width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
@@ -25833,7 +26017,7 @@
                 }
 
                 // Award XP with notification - v65.8: Also syncs to Supabase
-                window.awardXP = function (amount, title, emoji = '⭐') {
+                window.awardXP = function () { return; /* XP removed */
                     const data = getXPData();
 
                     // Check if new day
@@ -25881,7 +26065,7 @@
                     
                     // v65.8: ALSO sync to Supabase via HPMAuth
                     if (window.HPMAuth && typeof window.HPMAuth.awardXP === 'function') {
-                        window.HPMAuth.awardXP(amount, title);
+                        window.// XP removed;
                     }
                 };
 
@@ -26139,7 +26323,7 @@
                 window.getXPData = getXPData;
 
                 // Show XP stats modal - v63 Bento Glass Design
-                window.showXPStats = function () {
+                window.showXPStats = function () { return;
                     const data = getXPData();
                     const progress = getXPProgressInLevel(data.totalXP);
                     const percent = ((progress.current / progress.needed) * 100).toFixed(0);
@@ -31462,7 +31646,7 @@
 
                         // 🏆 Award XP for booking viewing (v64 team system)
                         if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                            HPMAuth.awardXP('VIEWING_BOOKED', newViewing.id);
+                            // XP removed;
                         }
 
                         // 🎉 Celebrate the new booking!
@@ -33559,7 +33743,7 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                                 }
                             }
                             // 🏆 Award XP for adding property
-                            awardXP(20, 'Property Added', '🏠');
+                            // XP removed;
 
                             // v62: Inform user about editing unit names
                             const editMsg = studioCount > 1
@@ -37738,7 +37922,7 @@ GENERATED BY RIDWAN HARIR'S PROPERTY MANAGEMENT
                 renderReferrals();
 
                 // 🏆 Award XP for adding referral
-                awardXP(15, 'Referral Added', '👥');
+                // XP removed;
 
                 showToast('Added!', `${newRef.name} added to referrals`);
             };
@@ -38487,7 +38671,7 @@ Total: ${referrals.length}
             
             // 2. Clean viewings
             try {
-                const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
                 const cleanViewings = window.deduplicateViewings(viewings);
                 cleaned.viewings = viewings.length - cleanViewings.length;
                 localStorage.setItem('propertyViewings', JSON.stringify(cleanViewings));
@@ -38576,7 +38760,7 @@ Total: ${referrals.length}
             
             // Step 1: Load from propertyViewings (THE canonical Supabase-synced source)
             try {
-                const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
                 viewings.forEach(v => {
                     const entry = {
                         id: v.id,
@@ -39767,7 +39951,7 @@ Total: ${referrals.length}
             };
 
             // Save to localStorage + Supabase
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             viewings.push(viewing);
             localStorage.setItem('propertyViewings', JSON.stringify(viewings));
             window.viewings = viewings;
@@ -40220,7 +40404,7 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
     if (window._dataCache) window._dataCache.pipeline = data;
     
     // Also update in propertyViewings (for compatibility)
-    const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+    const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
     const viewingIdx = viewings.findIndex(v => v.id === id || String(v.id) === String(id));
     if (viewingIdx !== -1) {
         viewings[viewingIdx].status = newStatus;
@@ -40318,9 +40502,9 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
         
         if (viewingId && !awardedXP[viewingId]) {
             if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                HPMAuth.awardXP(200, 'Deal Closed!');
+                // XP removed;
             } else if (typeof awardXP === 'function') {
-                awardXP(200, 'Deal Closed!', '🎉');
+                // XP removed;
             }
             awardedXP[viewingId] = { awardedAt: updatedAt, amount: 200, client: row.visitor || row.name };
             localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
@@ -40354,7 +40538,7 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
         }
         // Award XP for recording no-show
         if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-            HPMAuth.awardXP(5, 'No Show Recorded');
+            // XP removed;
         }
         showToast('No Show', 'Client marked as no-show');
     } else {
@@ -41756,7 +41940,7 @@ window.updatePipelineRow = function(index, field, value) {
             
             if (viewingId && !awardedXP[viewingId]) {
                 // First time signing up this viewing - award XP
-                if (typeof awardXP === 'function') awardXP(200, 'Deal Closed!', '🎉');
+                // XP removed
                 // Mark as awarded
                 awardedXP[viewingId] = { 
                     awardedAt: new Date().toISOString(),
@@ -41959,7 +42143,7 @@ window.completeSignUp = function(pipelineIndex, visitorName, propertyId) {
     
     // Award XP (includes its own notification)
     if (typeof awardXP === 'function') {
-        awardXP(50, 'Client Signed Up!', '🎉');
+        // XP removed;
     }
     
     // Single unified notification for sign-up (replaces duplicate notifications)
@@ -45357,45 +45541,20 @@ Harir Industries`
                 welcomeOverlay.classList.remove('hidden', 'dismissing');
                 welcomeOverlay.style.display = 'flex';
 
-                // Load FRESH data from localStorage for accurate counts
-                let props = [];
-                try {
-                    const storedProps = localStorage.getItem('propertySystemProperties');
-                    if (storedProps) {
-                        props = JSON.parse(storedProps);
-                    }
-                } catch (e) { console.error('[WELCOME] Error loading properties:', e); }
-
-                // Fallback to window.properties if localStorage empty
-                if (props.length === 0 && window.properties) {
-                    props = window.properties;
-                }
-
-                // Also sync to window.properties
-                if (props.length > 0) {
-                    window.properties = props;
-                }
+                // Use in-memory data from HELMData (Supabase source of truth)
+                const props = window.properties || (window.HELMData ? window.HELMData.properties : []) || [];
+                const allViewings = window.viewings || (window.HELMData ? window.HELMData.viewings : []) || [];
 
                 const today = helmFormatDate ? helmFormatDate(new Date()) : new Date().toISOString().split('T')[0];
-                let todayViewings = [];
-                try {
-                    const storedViewings = localStorage.getItem('propertyViewings');
-                    if (storedViewings) {
-                        const allViewings = JSON.parse(storedViewings);
-                        todayViewings = allViewings.filter(v => v.date === today);
-                        window.viewings = allViewings; // Sync to window
-                    }
-                } catch (e) { console.error('[WELCOME] Error loading viewings:', e); }
+                const todayViewings = allViewings.filter(v => v.date === today);
 
                 const welcomeProps = document.getElementById('welcome-props');
                 const welcomeViewings = document.getElementById('welcome-viewings');
-                const welcomeXP = document.getElementById('welcome-xp');
 
                 console.log('[WELCOME] Loaded', props.length, 'properties,', todayViewings.length, 'viewings today');
 
                 if (welcomeProps) welcomeProps.textContent = props.length;
                 if (welcomeViewings) welcomeViewings.textContent = todayViewings.length;
-                if (welcomeXP) welcomeXP.textContent = window.userXP || 0;
             }
         }
 
@@ -46248,7 +46407,7 @@ Harir Industries`
         // v66.1: Removed helmRenderViewingsList() - ancient code replaced by renderHelmViewingsList()
 
         window.helmCompleteViewing = function (id) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewing = viewings.find(v => v.id == id);
             if (!viewing) return;
 
@@ -46411,7 +46570,7 @@ Harir Industries`
 
             const msgData = messages[outcome] || messages['shown'];
             if (typeof showToast === 'function') showToast(outcome.toUpperCase(), msgData.msg);
-            if (typeof awardXP === 'function') awardXP(msgData.xp, msgData.msg);
+            // XP removed
 
             // Offer follow-up for interested clients
             if (outcome === 'interested') {
@@ -46434,7 +46593,7 @@ Harir Industries`
 
         // Check for pending viewing outcomes (viewings past their time)
         window.checkPendingViewingOutcomes = function () {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const now = new Date();
 
             const pendingOutcomes = viewings.filter(v => {
@@ -46663,7 +46822,7 @@ Harir Industries`
             }
 
             // Check viewings
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const agentViewings = viewings.filter(v =>
                 v.agentId == agentId && v.date === today
             ).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
@@ -46746,7 +46905,7 @@ Harir Industries`
             if (!container) return;
 
             const agents = loadAgents();
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const tasks = loadAgentTasks();
             const today = new Date().toISOString().split('T')[0];
             const now = new Date();
@@ -46910,7 +47069,7 @@ Harir Industries`
         // Update agent stats
         window.updateAgentStats = function () {
             const agents = loadAgents();
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const keys = loadKeysAllocation();
             const today = new Date().toISOString().split('T')[0];
 
@@ -46952,7 +47111,7 @@ Harir Industries`
             if (!container) return;
 
             const agents = loadAgents();
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const tasks = loadAgentTasks();
             const keys = loadKeysAllocation();
             const today = new Date().toISOString().split('T')[0];
@@ -47463,7 +47622,7 @@ Harir Industries`
 
         // Assign viewing to agent
         window.assignViewingToAgent = function (agentId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const today = new Date().toISOString().split('T')[0];
             const unassigned = viewings.filter(v => !v.agentId && v.date >= today);
 
@@ -47491,7 +47650,7 @@ Harir Industries`
         };
 
         window.confirmAssignViewing = function (viewingId, agentId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const idx = viewings.findIndex(v => v.id === viewingId);
             if (idx !== -1) {
                 const viewing = viewings[idx];
@@ -47802,7 +47961,7 @@ Harir Industries`
             const agent = agents.find(a => a.id === agentId);
             if (!agent) return;
 
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const today = new Date().toISOString().split('T')[0];
             const agentViewings = viewings.filter(v => v.agentId == agentId && v.date === today);
             const keys = loadKeysAllocation();
@@ -47874,7 +48033,7 @@ Harir Industries`
         };
 
         window.reassignViewing = function (viewingId, newAgentId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const idx = viewings.findIndex(v => v.id === viewingId);
             if (idx !== -1) {
                 viewings[idx].agentId = newAgentId;
@@ -48116,7 +48275,7 @@ Harir Industries`
         
         // Get agent's current/next scheduled location based on viewings
         window.getAgentScheduledLocation = function(agentId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const today = new Date().toISOString().split('T')[0];
             const now = new Date();
             const currentHour = now.getHours();
@@ -48369,7 +48528,7 @@ Harir Industries`
         // Show agent analytics
         window.showAgentAnalytics = function () {
             const agents = loadAgents();
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const now = new Date();
             const today = now.toISOString().split('T')[0];
             const thisWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -48992,7 +49151,7 @@ Harir Industries`
 
         // Share viewing via WhatsApp
         window.shareViewingWhatsApp = window.shareViewingWhatsApp || function (viewingId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewing = viewings.find(v => v.id == viewingId);
             if (!viewing) {
                 alert('Viewing not found');
@@ -49031,7 +49190,7 @@ Harir Industries`;
 
         // v59.7: Share viewing via Email
         window.shareViewingEmail = function (viewingId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewing = viewings.find(v => v.id == viewingId);
             if (!viewing) {
                 showToast('Error', 'Viewing not found', true);
@@ -49071,7 +49230,7 @@ Tel: 020 XXXX XXXX`;
 
         // v59.7: Share modal with multiple options
         window.showShareViewingModal = function (viewingId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewing = viewings.find(v => v.id == viewingId);
             if (!viewing) {
                 showToast('Error', 'Viewing not found', true);
@@ -49116,7 +49275,7 @@ Tel: 020 XXXX XXXX`;
 
         // v59.7: Copy viewing details to clipboard
         window.copyViewingDetails = function (viewingId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewing = viewings.find(v => v.id == viewingId);
             if (!viewing) return;
 
@@ -49142,7 +49301,7 @@ Harir Industries`;
 
         // Edit viewing
         window.editViewing = function (viewingId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewing = viewings.find(v => v.id == viewingId);
             if (!viewing) {
                 showToast('Error', 'Viewing not found', true);
@@ -49275,7 +49434,7 @@ Harir Industries`;
 
         // Save edited viewing
         window.saveEditedViewing = function (viewingId) {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const viewingIdx = viewings.findIndex(v => v.id == viewingId);
             if (viewingIdx === -1) {
                 showToast('Error', 'Viewing not found', true);
@@ -49333,7 +49492,7 @@ Harir Industries`;
 
         // Export all viewings to WhatsApp
         window.exportViewingsWhatsApp = function () {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const properties = window.properties || [];
 
             if (viewings.length === 0) {
@@ -49395,7 +49554,7 @@ Harir Industries`;
 
         // Export viewings to clipboard
         window.exportViewingsClipboard = function () {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const properties = window.properties || [];
 
             if (viewings.length === 0) {
@@ -49466,7 +49625,7 @@ Harir Industries`;
 
         // Export viewings to CSV
         window.exportViewingsCSV = function () {
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const properties = window.properties || [];
 
             if (viewings.length === 0) {
@@ -49613,7 +49772,7 @@ Harir Industries`;
             if (typeof renderHelmViewingsList === 'function') renderHelmViewingsList();
             showHelmNotification('✅ Viewing scheduled!', 'success');
 
-            if (typeof awardXP === 'function') awardXP(10, 'Scheduled viewing');
+            // XP removed
         };
 
         window.cancelQuickAdd = function () {
@@ -51022,7 +51181,7 @@ Harir Industries`;
 
             // XP reward
             if (typeof awardXP === 'function') {
-                awardXP(15, 'Viewing Booked', '📅');
+                // XP removed;
             } else if (typeof addXP === 'function') {
                 addXP(15, 'Booked a viewing');
             }
@@ -51753,7 +51912,7 @@ Harir Industries`;
             }
 
             // SECONDARY SOURCE: Viewings from localStorage (if not already in Watcher)
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             // v75: Only show viewings from last 7 days, not ancient data
             const _sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             viewings.filter(v => (v.date || '') >= _sevenDaysAgo).slice(-10).reverse().forEach(v => {
@@ -54482,9 +54641,9 @@ Harir Industries`;
             
             if (!awardedXP[id]) {
                 if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                    HPMAuth.awardXP(200, 'Deal Closed!');
+                    // XP removed;
                 } else if (typeof awardXP === 'function') {
-                    awardXP(200, 'Deal Closed!', '🎉');
+                    // XP removed;
                 }
                 awardedXP[id] = { awardedAt: new Date().toISOString(), amount: 200, client: clientName };
                 localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
@@ -59384,7 +59543,7 @@ Harir Industries`;
         
         // Award/deduct XP
         if (xpChange !== 0 && typeof awardXP === 'function') {
-            awardXP(xpChange, outcome === 'signed' ? 'Sign-up!' : (outcome === 'cancelled' ? 'Viewing cancelled' : 'Viewing completed'));
+            // XP removed;
         }
         
         // Close modal
@@ -61324,7 +61483,7 @@ Harir Industries`;
             
             if (!awardedXP[viewingId]) {
                 if (typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
-                    HPMAuth.awardXP('SIGNUP_CLOSED', viewingId);
+                    // XP removed;
                 } else if (typeof addXP === 'function') {
                     addXP(200);
                     showHelmNotification('Deal Closed! +200 XP', 'success');
@@ -61436,9 +61595,9 @@ Harir Industries`;
         // v64: Award XP for other outcomes too
         if (outcome !== 'signed-up' && typeof HPMAuth !== 'undefined' && HPMAuth.awardXP) {
             if (outcome === 'no-show') {
-                HPMAuth.awardXP('NO_SHOW_RECORDED', viewingId);
+                // XP removed;
             } else if (outcome === 'completed' || outcome === 'not-interested') {
-                HPMAuth.awardXP('VIEWING_CONDUCTED', viewingId);
+                // XP removed;
             }
         }
 
@@ -61903,7 +62062,7 @@ Harir Industries`;
 
     // Update viewings stats
     window.updateViewingsStats = function () {
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
 
         // Calculate dates properly
         const now = new Date();
@@ -61972,7 +62131,7 @@ Harir Industries`;
         document.body.appendChild(modal);
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const today = new Date().toISOString().split('T')[0];
         const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
         const weekFromNow = new Date(Date.now() + 7 * 86400000);
@@ -61983,7 +62142,7 @@ Harir Industries`;
     };
 
     window.shareViewingsForPeriod = function (period) {
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const todayStr = today.toISOString().split('T')[0];
         const tomorrowStr = new Date(today.getTime() + 86400000).toISOString().split('T')[0];
@@ -62024,7 +62183,7 @@ Harir Industries`;
     // Agent Rankings Modal
     window.showAgentRankings = function () {
         const agents = typeof loadAgents === 'function' ? loadAgents() : [];
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const pipelineData = window.getStorageArray('pipelineData');
         const today = new Date().toISOString().split('T')[0];
 
@@ -62658,7 +62817,7 @@ Available now! Contact for viewing.`;
     // ========================================
 
     window.updateNavBadges = function () {
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         // v83: Use canonical loadPipelineData() instead of stale getStorageArray('pipelineData')
         const pipelineData = typeof loadPipelineData === 'function' ? loadPipelineData() : window.getStorageArray('pipelineData');
         // v65.5: Ensure properties is array
@@ -62750,7 +62909,7 @@ Available now! Contact for viewing.`;
         if (!container) return;
 
         const agents = typeof loadAgents === 'function' ? loadAgents() : [];
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const pipelineData = window.getStorageArray('pipelineData');
         const today = new Date().toISOString().split('T')[0];
 
@@ -62815,7 +62974,7 @@ Available now! Contact for viewing.`;
         const container = document.getElementById('helm-today-list');
         if (!container) return;
 
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const today = new Date().toISOString().split('T')[0];
         const todayViewings = viewings.filter(v => v.date === today).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
@@ -62962,20 +63121,20 @@ Available now! Contact for viewing.`;
         Object.keys(grouped).sort().forEach(borough => {
             const props = grouped[borough];
 
-            htmlTable += `<h3 style="background: #2563eb; color: #fff; padding: 8px 12px; margin: 15px 0 0 0; border-radius: 4px 4px 0 0;">${borough}</h3>
+            htmlTable += `<h3 style="background: #1e293b; color: #ffffff; padding: 8px 12px; margin: 15px 0 0 0; border-radius: 4px 4px 0 0; font-family: Arial, sans-serif;">${borough}</h3>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px;">
         <thead>
-        <tr style="background: #1e40af; color: white;">
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: left; color: white;">Address</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Photos</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Property</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Floor</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Bed</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Max Occ</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Lift</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Bills Inc</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: center; color: white;">Pets</th>
-        <th style="border: 1px solid #1e40af; padding: 8px; text-align: right; color: white;">Monthly Rent</th>
+        <tr style="background: #1e293b;">
+        <th style="border: 1px solid #334155; padding: 8px; text-align: left; color: #ffffff; font-weight: 600;">Address</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Photos</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Property</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Floor</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Bed</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Max Occ</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Lift</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Bills Inc</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: center; color: #ffffff; font-weight: 600;">Pets</th>
+        <th style="border: 1px solid #334155; padding: 8px; text-align: right; color: #ffffff; font-weight: 600;">Monthly Rent</th>
         </tr>
         </thead>
         <tbody>`;
@@ -63051,25 +63210,25 @@ Available now! Contact for viewing.`;
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
 
         modal.innerHTML = `
-        <div style="background:white;border-radius:16px;max-width:1000px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
-            <div style="padding:20px;background:#121c24;color:white;display:flex;justify-content:space-between;align-items:center;">
+        <div style="background:#1a1e28;border-radius:20px;max-width:1000px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
+            <div style="padding:20px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);">
                 <div>
-                    <h2 style="margin:0;font-size:18px;">📧 Export for Email</h2>
-                    <p style="margin:5px 0 0;font-size:12px;opacity:0.7;">${count} properties - Copy and paste into Outlook</p>
+                    <h2 style="margin:0;font-size:18px;color:rgba(255,255,255,0.92);font-family:'DM Sans',sans-serif;font-weight:700;">Export for Email</h2>
+                    <p style="margin:5px 0 0;font-size:12px;color:rgba(255,255,255,0.45);">${count} properties — Copy and paste into Outlook</p>
                 </div>
-                <button onclick="document.getElementById('email-export-modal').remove()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;padding:0;width:32px;height:32px;">&times;</button>
+                <button onclick="document.getElementById('email-export-modal').remove()" style="width:32px;height:32px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>
             </div>
             <div id="email-export-preview" style="flex:1;overflow:auto;padding:20px;background:#fff;">
                 ${htmlContent}
             </div>
-            <div style="padding:15px 20px;background:#f8fafc;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid #e2e8f0;">
-                <button onclick="createNewEmailWithContent()" style="padding:12px 24px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:16px;">✉️</span> Create New Email
+            <div style="padding:15px 20px;background:rgba(255,255,255,0.03);display:flex;gap:10px;justify-content:flex-end;border-top:1px solid rgba(255,255,255,0.06);">
+                <button onclick="createNewEmailWithContent()" style="padding:12px 24px;background:#5eead4;color:#0b0f14;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;">
+                    ✉️ Create New Email
                 </button>
-                <button onclick="copyEmailExport()" style="padding:12px 24px;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;">
+                <button onclick="copyEmailExport()" style="padding:12px 24px;background:#34d399;color:#0b0f14;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;">
                     📋 Copy to Clipboard
                 </button>
-                <button onclick="document.getElementById('email-export-modal').remove()" style="padding:12px 24px;background:#64748b;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px;">
+                <button onclick="document.getElementById('email-export-modal').remove()" style="padding:12px 24px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(255,255,255,0.7);cursor:pointer;font-weight:600;font-size:14px;">
                     Close
                 </button>
             </div>
@@ -63392,7 +63551,7 @@ Available now! Contact for viewing.`;
         const PE = window.PipelineEngine;
         const ytdData = PE ? PE.getData('ytd') : { total:0, signed:0, noshow:0, viewed:0, pending:0, cancelled:0, declined:0, signupRate:0, all:[] };
         const todayData = PE ? PE.getTodayData(ytdData.all) : { total:0, signed:0, noshow:0, rate:0 };
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const properties = window.properties || [];
 
         const today = new Date();
@@ -63775,7 +63934,7 @@ Available now! Contact for viewing.`;
         if (!todoList) return;
 
         const todos = [];
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
 
         // Priority 1: Today's viewings that need follow-up
@@ -64818,7 +64977,7 @@ Write the email now:`;
             }
 
             // Search viewings
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             if (viewingsMatch || boroughMatch) {
                 const today = new Date().toISOString().split('T')[0];
                 let filtered = viewings.filter(v => v.date >= today);
@@ -64963,7 +65122,7 @@ Write the email now:`;
             }
 
             // Award XP
-            if (typeof awardXP === 'function') awardXP(15, 'Quick capture');
+            // XP removed
 
             window.closeQuickCapture();
         };
@@ -65045,7 +65204,7 @@ Write the email now:`;
             },
 
             getPropertyPerformance: function () {
-                const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+                const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
                 const pipeline = window.loadPipelineData ? window.loadPipelineData() : [];
 
                 const stats = {};
@@ -67253,7 +67412,7 @@ Write the email now:`;
             const _anim = typeof animateMetricValue === 'function' ? animateMetricValue : (el,v) => { if(el) el.textContent = v; };
             _anim(document.getElementById('helm-available-count'), available);
 
-            const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+            const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
             const todayStr = new Date().toISOString().split('T')[0];
             const todayCount = viewings.filter(v => v.date === todayStr).length;
 
@@ -67906,8 +68065,8 @@ Write the email now:`;
         window._hpmSyncingToCloud = true;
         
         // Upload viewings in batch
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
-        const properties = JSON.parse(localStorage.getItem('elevate_properties') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
+        const properties = (window.HELMData ? window.HELMData.properties : window.properties) || [];
         
         const CHUNK_SIZE = 50;
         
@@ -68155,7 +68314,7 @@ Write the email now:`;
         
         window._hpmSyncingToCloud = true;
         
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         if (viewings.length === 0) {
             return;
         }
@@ -70306,7 +70465,7 @@ Write the email now:`;
     // v74: TOOLS ANALYTICS DASHBOARD
     // ═══════════════════════════════════════════════════════════════
     window.renderToolsAnalytics = function () {
-        const viewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
+        const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
         const period = document.getElementById('tools-analytics-period')?.value || 'month';
 
