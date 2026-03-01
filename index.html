@@ -2369,6 +2369,93 @@
         };
 
         // ═══════════════════════════════════════════════════════════════════
+        // PROPERTY PHOTOS - Supabase Storage with localStorage fallback
+        // ═══════════════════════════════════════════════════════════════════
+        window.PropertyPhotos = {
+            bucketName: 'property-photos',
+            bucketReady: false,
+
+            async ensureBucket() {
+                if (this.bucketReady || !window.supabase) return;
+                try {
+                    const { data, error } = await window.supabase.storage.getBucket(this.bucketName);
+                    if (error && error.message && error.message.includes('not found')) {
+                        await window.supabase.storage.createBucket(this.bucketName, {
+                            public: true,
+                            fileSizeLimit: 1048576
+                        });
+                    }
+                    this.bucketReady = true;
+                } catch (e) {
+                    console.warn('[Photos] Bucket init failed, using localStorage fallback:', e);
+                }
+            },
+
+            async uploadPhoto(propertyId, blob, filename) {
+                await this.ensureBucket();
+                if (!window.supabase || !this.bucketReady) return null;
+                var path = propertyId + '/' + Date.now() + '_' + filename.replace(/[^a-zA-Z0-9._-]/g, '');
+                try {
+                    var result = await window.supabase.storage
+                        .from(this.bucketName)
+                        .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+                    if (result.error) { console.error('[Photos] Upload error:', result.error); return null; }
+                    var urlResult = window.supabase.storage
+                        .from(this.bucketName)
+                        .getPublicUrl(path);
+                    return urlResult.data.publicUrl;
+                } catch (e) {
+                    console.error('[Photos] Upload exception:', e);
+                    return null;
+                }
+            },
+
+            async deletePhoto(propertyId, photoUrl) {
+                if (!window.supabase || !this.bucketReady) return;
+                try {
+                    var pathMatch = photoUrl.match(/property-photos\/(.+)$/);
+                    if (pathMatch) {
+                        await window.supabase.storage.from(this.bucketName).remove([pathMatch[1]]);
+                    }
+                } catch (e) { console.warn('[Photos] Delete error:', e); }
+            },
+
+            getPhotos(propertyId) {
+                // Check in-memory property.photos first (from Supabase)
+                var prop = (window.properties || []).find(function(p) {
+                    return p.id === propertyId || String(p.id) === String(propertyId);
+                });
+                if (prop && prop.photos && Array.isArray(prop.photos) && prop.photos.length > 0) {
+                    return prop.photos;
+                }
+                // Fallback to localStorage
+                return JSON.parse(localStorage.getItem('propPhotos_' + propertyId) || '[]');
+            },
+
+            async savePhotoUrls(propertyId, urls) {
+                // Update in-memory property
+                var prop = (window.properties || []).find(function(p) {
+                    return p.id === propertyId || String(p.id) === String(propertyId);
+                });
+                if (prop) prop.photos = urls;
+                // Save to Supabase photos column
+                if (window.supabase) {
+                    try {
+                        await window.supabase.from('properties')
+                            .update({ photos: urls })
+                            .eq('id', String(propertyId));
+                    } catch (e) { console.warn('[Photos] DB save failed:', e); }
+                }
+                // Also cache in localStorage
+                localStorage.setItem('propPhotos_' + propertyId, JSON.stringify(urls));
+            },
+
+            canvasToBlob(canvas) {
+                return new Promise(function(resolve) { canvas.toBlob(resolve, 'image/jpeg', 0.7); });
+            }
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
         // v68.3: SUPABASE-FIRST DATA LAYER - All data goes to Supabase first
         // localStorage is ONLY a cache for offline access
         // ═══════════════════════════════════════════════════════════════════
@@ -2454,7 +2541,8 @@
                     takenBy: p.taken_by || p.client_name || '',
                     takenDate: p.taken_date,
                     dateAdded: p.date_added || p.created_at,
-                    updatedAt: p.updated_at
+                    updatedAt: p.updated_at,
+                    photos: p.photos || []
                 };
             },
             
@@ -2524,9 +2612,10 @@
                     client_name: property.takenBy || '',
                     taken_by: property.takenBy || '',
                     taken_date: property.takenDate || null,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
+                    photos: property.photos || []
                 };
-                
+
                 console.log('[HELMData] Saving property to Supabase:', property.id);
                 
                 const { data, error } = await window.supabase
@@ -2866,6 +2955,11 @@
             
             getCurrentUser: function() { return this.currentUser; },
             getUserProfile: function() { return this.userProfile; },
+            getAgentName: function() {
+                const p = this.userProfile || {};
+                const u = this.currentUser || {};
+                return p.display_name || p.full_name || u.user_metadata?.full_name || u.user_metadata?.display_name || (u.email ? u.email.split('@')[0] : null) || null;
+            },
             getRole: function() { return this.userRole || 'viewer'; },
             getRoleLevel: function() { return this.ROLE_LEVELS[this.userRole] || 10; },
             
@@ -3149,6 +3243,16 @@
                 this.userRole = 'viewer';
                 location.reload();
             }
+        };
+        
+        // User-specific agent name (no hardcoded names)
+        window.getCurrentAgentName = function() {
+            if (window.HPMAuth?.getAgentName?.()) return window.HPMAuth.getAgentName();
+            try {
+                const local = JSON.parse(localStorage.getItem('elevateEstatesCurrentUser') || 'null');
+                if (local && (local.firstName || local.lastName)) return [local.firstName, local.lastName].filter(Boolean).join(' ');
+            } catch (e) {}
+            return 'Agent';
         };
         
         // Toggle user menu dropdown
@@ -4998,13 +5102,13 @@
             color: #2dd4bf;
         }
 
-        /* Bento Button Styles */
+        /* Bento Button Styles - unified 4-colour palette */
         .bento-btn {
             padding: 10px 16px;
-            background: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(139, 92, 246, 0.25);
+            background: var(--ob-bg-surface, rgba(255,255,255,0.05));
+            border: 1px solid var(--ob-border-default, rgba(255,255,255,0.08));
             border-radius: 10px;
-            color: #5eead4;
+            color: var(--ob-text-secondary, rgba(255,255,255,0.7));
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -5015,19 +5119,19 @@
         }
 
         .bento-btn:hover {
-            background: rgba(139, 92, 246, 0.25);
-            border-color: rgba(139, 92, 246, 0.4);
+            background: var(--ob-bg-hover, rgba(255,255,255,0.08));
+            border-color: var(--ob-border-strong, rgba(255,255,255,0.12));
             transform: translateY(-1px);
         }
 
         .bento-btn-primary {
-            background: linear-gradient(135deg, #2dd4bf, #7c3aed);
+            background: var(--ob-accent);
             border: none;
             color: white;
         }
 
         .bento-btn-primary:hover {
-            background: linear-gradient(135deg, #9b6ff7, #2dd4bf);
+            opacity: 0.9;
         }
 
         .bento-btn-ghost {
@@ -5953,7 +6057,7 @@
             background: rgba(255,255,255,0.08) !important;
         }
         html:not([data-theme="light"]) .bento-btn-primary {
-            background: linear-gradient(135deg, #2dd4bf, #7c3aed) !important;
+            background: var(--ob-accent) !important;
             border: none !important;
             color: white !important;
         }
@@ -10115,14 +10219,14 @@
         }
 
         .filter-btn:hover {
-            border-color: var(--color-gold);
-            color: var(--color-gold);
+            border-color: var(--ob-accent, #5eead4);
+            color: var(--ob-accent, #5eead4);
         }
 
         .filter-btn.active {
-            background: var(--color-gold);
+            background: var(--ob-accent, #5eead4);
             color: white;
-            border-color: var(--color-gold);
+            border-color: var(--ob-accent, #5eead4);
         }
 
         .borough-group {
@@ -11229,17 +11333,17 @@
         }
 
         .v24-card-btn.edit {
-            background: var(--hm-warning);
+            background: var(--ob-accent);
             color: white;
         }
 
         .v24-card-btn.cancel {
-            background: var(--hm-error);
+            background: var(--ob-danger, #ff6b6b);
             color: white;
         }
 
         .v24-card-btn.pipeline {
-            background: var(--hm-info);
+            background: var(--ob-accent);
             color: white;
         }
 
@@ -12454,7 +12558,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.3s;
+            animation: fadeIn 0.3s forwards;
+            opacity: 1;
         }
 
         .modal-content {
@@ -12466,7 +12571,8 @@
             max-height: 85vh;
             overflow-y: auto;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(94, 234, 212, 0.08);
-            animation: slideUp 0.3s;
+            animation: slideUp 0.3s forwards;
+            opacity: 1;
             position: relative;
             z-index: 100000;
         }
@@ -12590,22 +12696,23 @@
         }
 
         .btn-primary {
-            background: #2ecc71;
+            background: var(--ob-accent);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #27ae60;
+            opacity: 0.9;
             transform: translateY(-1px);
         }
 
         .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
+            background: var(--ob-bg-surface, rgba(255,255,255,0.05));
+            color: var(--ob-text-primary, rgba(255,255,255,0.9));
+            border: 1px solid var(--ob-border-default, rgba(255,255,255,0.08));
         }
 
         .btn-secondary:hover {
-            background: #d0d0d0;
+            background: var(--ob-bg-hover, rgba(255,255,255,0.08));
         }
 
         /* ═══════════════════════════════════════════════════════════════
@@ -15381,8 +15488,8 @@
         }
 
         .helm-filter-btn.active {
-            background: #3b82f6;
-            border-color: #3b82f6;
+            background: var(--ob-accent);
+            border-color: var(--ob-accent);
             color: white;
         }
 
@@ -15401,7 +15508,7 @@
             margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid var(--ob-accent);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             border-right: 1px solid rgba(255, 255, 255, 0.05);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -15410,8 +15517,8 @@
 
         .helm-property-card:hover {
             transform: translateX(8px) scale(1.02);
-            background: linear-gradient(145deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.1));
-            border-left-color: #60a5fa;
+            background: linear-gradient(145deg, rgba(94, 234, 212, 0.15), rgba(94, 234, 212, 0.05));
+            border-left-color: var(--ob-accent);
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3), 0 0 15px rgba(59, 130, 246, 0.15);
         }
 
@@ -15554,16 +15661,16 @@
             width: 100%;
             margin-top: 10px;
             padding: 10px 16px;
-            background: linear-gradient(145deg, rgba(34, 197, 94, 0.6), rgba(34, 197, 94, 0.3));
+            background: linear-gradient(145deg, #2563eb, #1d4ed8);
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(34, 197, 94, 0.4);
+            border: 1px solid rgba(96, 165, 250, 0.38);
             border-radius: 10px;
-            color: white;
+            color: #f8fbff;
             font-weight: 600;
             font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.34);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -15572,8 +15679,8 @@
 
         .helm-quick-book-btn:hover {
             transform: translateY(-3px) scale(1.03);
-            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.5), 0 0 15px rgba(34, 197, 94, 0.3);
-            background: linear-gradient(145deg, rgba(34, 197, 94, 0.8), rgba(34, 197, 94, 0.5));
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.5), 0 0 15px rgba(59, 130, 246, 0.28);
+            background: linear-gradient(145deg, #3b82f6, #2563eb);
         }
 
         .helm-quick-book-btn:active {
@@ -18395,16 +18502,14 @@
         .tb-btn .material-symbols-rounded { font-size: 16px; }
         .tb-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); }
         .tb-btn.active, .tactical-filter-btn.active {
-            background: rgba(99,102,241,0.2) !important;
-            border-color: rgba(99,102,241,0.35) !important;
-            color: #818cf8 !important;
+            background: rgba(94,234,212,0.2) !important;
+            border-color: rgba(94,234,212,0.35) !important;
+            color: var(--ob-accent) !important;
         }
-        .tb-btn.tb-teal { background: rgba(45,212,191,0.08); border-color: rgba(45,212,191,0.15); color: #5eead4; }
-        .tb-btn.tb-teal:hover, .tb-btn.tb-teal.active { background: rgba(45,212,191,0.2); }
-        .tb-btn.tb-sky { background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.15); color: #818cf8; }
-        .tb-btn.tb-sky:hover, .tb-btn.tb-sky.active { background: rgba(99,102,241,0.2); }
-        .tb-btn.tb-pink { background: rgba(244,114,182,0.08); border-color: rgba(244,114,182,0.15); color: #f472b6; }
-        .tb-btn.tb-pink:hover { background: rgba(244,114,182,0.2); }
+        .tb-btn.tb-teal, .tb-btn.tb-sky, .tb-btn.tb-pink { background: var(--ob-bg-surface); border-color: var(--ob-border-default); color: var(--ob-text-secondary); }
+        .tb-btn.tb-teal:hover, .tb-btn.tb-teal.active,
+        .tb-btn.tb-sky:hover, .tb-btn.tb-sky.active,
+        .tb-btn.tb-pink:hover, .tb-btn.tb-pink.active { background: rgba(94,234,212,0.15); border-color: rgba(94,234,212,0.25); color: var(--ob-accent); }
         .tb-group {
             display: flex;
             align-items: center;
@@ -18450,8 +18555,8 @@
         }
         .tactical-filter-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
         .tactical-filter-btn.active {
-            background: rgba(255,255,255,0.12) !important;
-            color: #fff !important;
+            background: rgba(94,234,212,0.2) !important;
+            color: var(--ob-accent) !important;
         }
         /* Light theme toolbar */
         html[data-theme="light"] #unified-map-toolbar {
@@ -18470,7 +18575,7 @@
         }
         html[data-theme="light"] .tb-btn.active,
         html[data-theme="light"] .tactical-filter-btn.active {
-            background: #1e293b !important;
+            background: var(--ob-accent) !important;
             color: white !important;
             border-color: transparent !important;
         }
@@ -18864,33 +18969,44 @@
             transform: none !important;
         }
 
-        /* Primary/Success buttons - Green */
-        .v24-card-btn.whatsapp,
+        /* Primary buttons - Accent */
         .v24-card-btn.pipeline,
         .primary-btn,
         button.primary,
         .btn-primary,
         [class*="success"] {
-            background: #22c55e !important;
+            background: var(--ob-accent) !important;
             border: none !important;
-            color: #000 !important;
+            color: #fff !important;
             font-weight: 600 !important;
         }
 
-        .v24-card-btn.whatsapp:hover,
+        .v24-card-btn.whatsapp {
+            background: #25d366 !important;
+            border: none !important;
+            color: #fff !important;
+            font-weight: 600 !important;
+        }
+
+        .v24-card-btn.pipeline:hover,
         .primary-btn:hover {
-            background: #16a34a !important;
+            opacity: 0.9 !important;
             box-shadow: none !important;
         }
 
-        /* Edit/Warning buttons - Amber */
+        .v24-card-btn.whatsapp:hover {
+            background: #1da851 !important;
+            box-shadow: none !important;
+        }
+
+        /* Edit buttons - Primary accent */
         .v24-card-btn.edit,
         .btn-warning,
         [class*="warning"]:not([class*="subtle"]) {
-            background: linear-gradient(135deg, #ffab00, #ff9100) !important;
+            background: var(--ob-accent) !important;
             border: none !important;
-            color: #000 !important;
-            font-weight: 700 !important;
+            color: #fff !important;
+            font-weight: 600 !important;
         }
 
         /* Danger/Cancel buttons - Red */
@@ -18898,10 +19014,10 @@
         .btn-danger,
         [class*="danger"]:not([class*="subtle"]),
         [class*="delete"] {
-            background: linear-gradient(135deg, #ff5252, #e53935) !important;
+            background: var(--ob-danger, #ff6b6b) !important;
             border: none !important;
             color: #fff !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
         }
 
         /* ─────────────────────────────────────────────────────────────────────────────────
@@ -19768,13 +19884,12 @@
         
         /* ─── BUTTONS ─── */
         .hm-btn-primary {
-            background: linear-gradient(135deg, #14b8a6, #5a4bd1) !important;
-            box-shadow: 0 2px 8px rgba(108, 92, 231, 0.2) !important;
+            background: var(--ob-accent) !important;
+            box-shadow: none !important;
         }
         
         .hm-btn-primary:hover:not(:disabled) {
-            background: linear-gradient(135deg, #7c6df0, #14b8a6) !important;
-            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.35) !important;
+            opacity: 0.9 !important;
             transform: translateY(-1px) !important;
         }
         
@@ -19943,6 +20058,14 @@
             color: white !important;
         }
         .bento-btn-primary:hover { opacity: 0.85; }
+        
+        /* Unify inline gradient buttons to accent */
+        button[style*="linear-gradient(135deg, #2dd4bf"],
+        button[style*="linear-gradient(135deg,#2dd4bf"],
+        button[style*="linear-gradient(135deg, #3b82f6"] {
+            background: var(--ob-accent) !important;
+            color: white !important;
+        }
         
         /* Unify all body fonts */
         .helm-body, .helm-view, .bento-card, .helm-header,
@@ -24613,6 +24736,8 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                             </div>
                         </div>
 
+                        <div class="prop-card-photos" data-building-addr="${building.address}"></div>
+
                         <div class="studio-grid">
                             ${building.studios.map(studio => `
                                 <button onclick="toggleStudioStatus(${studio.id})"
@@ -24644,6 +24769,28 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                         </div>
                     </div>`;
                 }).join('');
+
+                // Async-load photo thumbnails into building cards
+                setTimeout(function() {
+                    document.querySelectorAll('.prop-card-photos[data-building-addr]').forEach(function(el) {
+                        var addr = el.getAttribute('data-building-addr');
+                        var buildingProps = window.properties.filter(function(p) {
+                            var parent = (p.address || p.name || '').replace(/Studio \d+[A-Za-z]?\s*/i, '').replace(/Flat \d+[A-Za-z]?\s*/i, '').trim();
+                            return parent === addr;
+                        });
+                        var allPhotos = [];
+                        buildingProps.forEach(function(p) {
+                            var photos = window.PropertyPhotos ? window.PropertyPhotos.getPhotos(p.id) : [];
+                            photos.forEach(function(ph) { allPhotos.push(ph); });
+                        });
+                        if (allPhotos.length > 0) {
+                            el.style.cssText = 'display:flex;gap:4px;padding:8px 12px;overflow-x:auto;';
+                            el.innerHTML = allPhotos.slice(0, 5).map(function(ph) {
+                                return '<img src="' + ph + '" style="width:52px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+                            }).join('') + (allPhotos.length > 5 ? '<span style="display:flex;align-items:center;color:#94a3b8;font-size:10px;white-space:nowrap;padding:0 4px;">+' + (allPhotos.length - 5) + '</span>' : '');
+                        }
+                    });
+                }, 50);
             };
 
             // v59: Delete building/property
@@ -24725,7 +24872,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                 <div id="studioEditModal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); z-index: 999999; display: flex; align-items: center; justify-content: center;" onclick="if(event.target === this) this.remove()">
                     <div style="background: linear-gradient(145deg, #121c24, #0a1018); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; max-width: 400px; width: 90%;" onclick="event.stopPropagation()">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3 style="margin: 0; color: white; font-size: 18px;">✏️ Edit Studio</h3>
+                            <h3 style="margin: 0; color: white; font-size: 18px;">Edit Studio</h3>
                             <button onclick="document.getElementById('studioEditModal').remove()" style="background: rgba(255,255,255,0.1); border: none; width: 32px; height: 32px; border-radius: 50%; color: white; cursor: pointer;">×</button>
                         </div>
                         
@@ -24934,7 +25081,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                         id: 1,
                         firstName: 'Admin',
                         lastName: 'User',
-                        email: 'admin@ridwanharir.com',
+                        email: 'admin@example.com',
                         password: 'admin123', // In production, this should be hashed
                         role: 'admin',
                         phone: '',
@@ -25512,7 +25659,8 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                             taken_by: prop.takenBy || '',
                             taken_date: prop.takenDate || null,
                             date_added: prop.dateAdded || new Date().toISOString(),
-                            updated_at: new Date().toISOString()
+                            updated_at: new Date().toISOString(),
+                            photos: prop.photos || []
                         }, { onConflict: 'id' });
                         if (error) {
                             console.error('[v70] Property sync error:', prop.id, error.message);
@@ -26065,7 +26213,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                     
                     // v65.8: ALSO sync to Supabase via HPMAuth
                     if (window.HPMAuth && typeof window.HPMAuth.awardXP === 'function') {
-                        window.// XP removed;
+                        // XP sync call removed
                     }
                 };
 
@@ -26751,6 +26899,9 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                 };
 
                 window.openEditPropertyModal = function (propertyId) {
+                    // Close any Leaflet popup first to prevent CSS conflicts
+                    if (window.map) try { window.map.closePopup(); } catch(e) {}
+
                     editingPropertyId = propertyId;
                     const property = properties.find(p => p.id === propertyId);
                     if (!property) return;
@@ -26836,7 +26987,68 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                         historySection.style.display = 'none';
                     }
 
-                    document.getElementById('property-modal').classList.add('show');
+                    // Ensure photo section exists (browser may drop it in large files)
+                    ensurePhotoSection();
+                    loadEditPhotos(propertyId);
+
+                    // Wire up photo upload input for this property
+                    var photoInput = document.getElementById('edit-photo-input');
+                    if (photoInput) {
+                        photoInput.onchange = function() {
+                            window.handlePropertyPhotoUpload(propertyId, this.files);
+                            this.value = '';
+                            setTimeout(function() { loadEditPhotos(propertyId); }, 500);
+                        };
+                    }
+
+                    var modal = document.getElementById('property-modal');
+                    modal.classList.add('show');
+                    // Safety net: force visibility in case animation doesn't fire
+                    modal.style.display = 'flex';
+                    modal.style.opacity = '1';
+                    var content = modal.querySelector('.modal-content');
+                    if (content) content.style.opacity = '1';
+                };
+
+                // Dynamically inject the photo section into the edit modal if missing
+                window.ensurePhotoSection = function() {
+                    if (document.getElementById('edit-photos-section')) return;
+                    var vh = document.getElementById('viewing-history-section');
+                    if (!vh) return;
+                    var section = document.createElement('div');
+                    section.id = 'edit-photos-section';
+                    section.style.cssText = 'background:rgba(139,92,246,0.08);padding:20px;border-radius:12px;margin-bottom:20px;border:1px dashed rgba(139,92,246,0.3);';
+                    section.innerHTML =
+                        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+                            '<h3 style="margin:0;font-size:15px;color:white;display:flex;align-items:center;gap:8px;">' +
+                                '<i class="fas fa-camera" style="color:#a78bfa;"></i> Property Photos</h3>' +
+                            '<label style="padding:8px 16px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(139,92,246,0.3);">' +
+                                '<i class="fas fa-upload" style="font-size:12px;"></i> Upload Photos' +
+                                '<input type="file" id="edit-photo-input" accept="image/*" multiple style="display:none;" />' +
+                            '</label>' +
+                        '</div>' +
+                        '<div id="edit-photos-grid" style="display:flex;gap:8px;flex-wrap:wrap;min-height:60px;">' +
+                            '<div style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:20px;background:rgba(0,0,0,0.2);border-radius:8px;width:100%;">No photos yet — upload property images</div>' +
+                        '</div>' +
+                        '<small style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:8px;display:block;">Max 10 photos per property. Images are resized and stored locally.</small>';
+                    vh.parentNode.insertBefore(section, vh);
+                };
+
+                // Load photos into the edit modal grid
+                window.loadEditPhotos = function(propertyId) {
+                    var container = document.getElementById('edit-photos-grid');
+                    if (!container) return;
+                    var photos = PropertyPhotos.getPhotos(propertyId);
+                    if (photos.length === 0) {
+                        container.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.4);text-align:center;padding:20px;background:rgba(0,0,0,0.2);border-radius:8px;width:100%;">No photos yet — upload property images</div>';
+                        return;
+                    }
+                    container.innerHTML = photos.map(function(p, i) {
+                        return '<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">' +
+                            '<img src="' + p + '" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="window.viewPropertyPhoto(this.src)" />' +
+                            '<button onclick="window.deletePropertyPhoto(' + propertyId + ',' + i + '); setTimeout(function(){loadEditPhotos(' + propertyId + ')},100);" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;cursor:pointer;font-size:10px;line-height:18px;text-align:center;">×</button>' +
+                            '</div>';
+                    }).join('');
                 };
 
                 // WhatsApp share function for map popup
@@ -28164,7 +28376,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                             <div class="suggestion-header">
                                 <div class="suggestion-name">
                                     ${prop.name}
-                                    ${prop.gender === 'female' ? '<span class="gender-badge">👩 Women</span>' : ''}
+                                    ${prop.gender === 'female' ? '<span class="gender-badge">Women</span>' : ''}
                                 </div>
                                 <div class="suggestion-rent">£${prop.rent}/mo</div>
                             </div>
@@ -28367,23 +28579,30 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                     let statusBadge = '';
                     switch (propStatus) {
                         case 'taken':
-                            statusBadge = '<div class="status-badge taken">✓ TAKEN</div>';
+                            statusBadge = '<div class="status-badge taken">TAKEN</div>';
                             break;
                         case 'viewing-scheduled':
-                            statusBadge = '<div class="status-badge viewing">📅 VIEWING</div>';
+                            statusBadge = '<div class="status-badge viewing">VIEWING</div>';
                             break;
                         case 'maintenance':
-                            statusBadge = '<div class="status-badge maintenance">🔧 MAINTENANCE</div>';
+                            statusBadge = '<div class="status-badge maintenance">MAINTENANCE</div>';
                             break;
                         default:
-                            statusBadge = '<div class="status-badge available">✓ AVAILABLE</div>';
+                            statusBadge = '<div class="status-badge available">AVAILABLE</div>';
                     }
+
+                    // Get property photos for thumbnail
+                    const cardPhotos = window.PropertyPhotos ? window.PropertyPhotos.getPhotos(property.id) : [];
+                    const photoThumb = cardPhotos.length > 0 ? `<div style="position:absolute;top:0;left:0;right:0;height:60px;overflow:hidden;border-radius:8px 8px 0 0;"><img src="${cardPhotos[0]}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display='none'"><div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,rgba(0,0,0,0.6));"></div>${cardPhotos.length > 1 ? '<span style="position:absolute;bottom:4px;right:8px;color:white;font-size:9px;font-weight:700;">+' + (cardPhotos.length - 1) + ' photos</span>' : ''}</div>` : '';
+                    const hasPhotoThumb = cardPhotos.length > 0;
 
                     const itemDiv = document.createElement('div');
                     itemDiv.className = `property-item ${takenProperties.has(property.id) ? 'taken' : ''} ${hasViewing ? 'has-viewing' : ''} ${property.gender === 'female' ? 'women-only' : ''} ${propStatus === 'taken' ? 'prop-taken' : ''}`;
                     itemDiv.style.borderLeft = `4px solid ${ageColor}`;
+                    if (hasPhotoThumb) itemDiv.style.paddingTop = '65px';
 
                     itemDiv.innerHTML = `
+                    ${photoThumb}
                     <div class="property-actions">
                         <button class="property-action-btn history-btn" onclick="showPropertyHistory(${property.id}); event.stopPropagation();" title="View History (${propHistory.length})">
                             <svg class="hm-icon"><use href="#hm-icon-history"/></svg>
@@ -28400,7 +28619,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                     
                     <!-- Age Indicator Badge -->
                     <div style="position: absolute; top: 35px; right: 8px; background: ${ageColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 9px; font-weight: 700; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                        ${age}d ${age > 35 ? '⚠️' : ''}
+                        ${age}d ${age > 35 ? '!' : ''}
                     </div>
                     
                     <div class="checkbox-wrapper">
@@ -28425,11 +28644,11 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                         <div class="property-address" style="font-size: 11px; color: #666; margin-bottom: 5px; line-height: 1.3;">${property.address}</div>
                         <div style="display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap;">
                             ${property.link ? `<a href="${property.link}" target="_blank" class="property-link" onclick="event.stopPropagation()"><svg class="hm-icon"><use href="#hm-icon-external"/></svg> Photos</a>` : ''}
-                            ${hasViewing ? `<div class="viewing-badge">📅 ${propViewings.length}</div>` : ''}
-                            ${hasVirtual ? `<div class="virtual-badge">📹 Virtual</div>` : ''}
-                            ${property.gender === 'female' ? '<div class="gender-badge">👩 Women</div>' : ''}
+                            ${hasViewing ? `<div class="viewing-badge">${propViewings.length} viewing${propViewings.length > 1 ? 's' : ''}</div>` : ''}
+                            ${hasVirtual ? `<div class="virtual-badge">Virtual</div>` : ''}
+                            ${property.gender === 'female' ? '<div class="gender-badge">Women</div>' : ''}
                         </div>
-                        ${propStatus !== 'taken' && propStatus !== 'maintenance' ? `<button class="book-btn" onclick="selectPropertyForBooking(${property.id}); event.stopPropagation()">📅 Book Viewing</button>` : ''}
+                        ${propStatus !== 'taken' && propStatus !== 'maintenance' ? `<button class="book-btn" onclick="selectPropertyForBooking(${property.id}); event.stopPropagation()">Book Viewing</button>` : ''}
                     </div>
                 `;
 
@@ -28650,7 +28869,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 font-size: ${group.length > 1 ? '13px' : '11px'};
                                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                                 text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-                            ">${group.length > 1 ? group.length : '🏠'}</span>
+                            ">${group.length > 1 ? group.length : '1'}</span>
                         </div>
                     `;
 
@@ -28685,8 +28904,13 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
 
                         // Status color
                         const statusColor = isTaken ? '#ef4444' : (councilLeased ? '#6b7280' : '#22c55e');
-                        const statusText = isTaken ? '🔴 Taken' : (councilLeased ? '🏛️ Council Lease' : '🟢 Available');
+                        const statusText = isTaken ? 'Taken' : (councilLeased ? 'Council Lease' : 'Available');
                         const ageColor = age <= 28 ? '#22c55e' : age <= 60 ? '#f59e0b' : '#ef4444';
+
+                        // Pre-fetch photos for popup
+                        const popupPhotos = (firstProp.photos && firstProp.photos.length > 0)
+                            ? firstProp.photos
+                            : JSON.parse(localStorage.getItem('propPhotos_' + firstProp.id) || '[]');
 
                         if (group.length > 1) {
                             const availableInGroup = group.filter(p => !takenProperties.has(p.id)).length;
@@ -28724,6 +28948,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 <div style="font-size: 16px; font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${safeAddress}</div>
                                 <div style="font-size: 12px; color: rgba(255,255,255,0.9); margin-top: 4px;">${group.length} units • ${availableInGroup} available</div>
                             </div>
+                            ${popupPhotos.length > 0 ? `<div style="padding:6px 16px;display:flex;gap:4px;overflow-x:auto;background:rgba(0,0,0,0.2);">${popupPhotos.slice(0,4).map(p => `<img src="${p}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer;" onclick="window.viewPropertyPhoto(this.src)" />`).join('')}</div>` : ''}
                             <!-- v59.7: Studio Grid Spider Display -->
                             <div style="padding: 12px 20px; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1);">
                                 <div style="font-size: 10px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Studios (click to book)</div>
@@ -28733,17 +28958,17 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                             </div>
                             <div style="padding: 16px 20px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <span style="color: #94a3b8; font-size: 13px;">💰 Rent</span>
+                                    <span style="color: #94a3b8; font-size: 13px;">Rent</span>
                                     <span style="color: #22c55e; font-weight: 800; font-size: 20px;">£${firstProp.rent}<small style="font-size: 11px; opacity: 0.7">/mo</small></span>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 11px; color: #cbd5e1;">
-                                    <div style="display: flex; align-items: center; gap: 4px;">🛏️ ${firstProp.bedrooms || 1} bed</div>
-                                    <div style="display: flex; align-items: center; gap: 4px;">👥 Max ${firstProp.maxOccupancy || 1}</div>
-                                    <div style="display: flex; align-items: center; gap: 4px;">💡 Bills ${firstProp.billsIncluded !== false ? '✅' : '❌'}</div>
-                                    <div style="display: flex; align-items: center; gap: 4px;">🐾 Pets ${firstProp.petsAllowed ? '✅' : '❌'}</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">${firstProp.bedrooms || 1} bed</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">Max ${firstProp.maxOccupancy || 1}</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">Bills ${firstProp.billsIncluded !== false ? '<span style="color:#22c55e;">Yes</span>' : '<span style="color:#ef4444;">No</span>'}</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">Pets ${firstProp.petsAllowed ? '<span style="color:#22c55e;">Yes</span>' : '<span style="color:#ef4444;">No</span>'}</div>
                                 </div>
                                 <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                                    <span style="padding: 6px 12px; background: ${ageColor}22; color: ${ageColor}; border-radius: 8px; font-size: 11px; font-weight: 700;">📅 ${age}d old</span>
+                                    <span style="padding: 6px 12px; background: ${ageColor}22; color: ${ageColor}; border-radius: 8px; font-size: 11px; font-weight: 700;">${age}d old</span>
                                 </div>
                                 <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; max-height: 100px; overflow-y: auto;">
                                     <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 8px;">UNITS:</div>`;
@@ -28751,7 +28976,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 const unitTaken = takenProperties.has(p.id);
                                 const unitName = p.name || p.address?.split(',')[0] || 'Unit ' + p.id;
                                 popupContent += `<div style="font-size: 12px; color: ${unitTaken ? '#ef4444' : '#22c55e'}; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                                <span>${unitTaken ? '❌' : '✅'}</span>
+                                <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${unitTaken ? '#ef4444' : '#22c55e'};"></span>
                                 <span>${unitName}</span>
                                 <span style="color: #64748b; font-size: 10px;">${p.floor || 'GF'}</span>
                             </div>`;
@@ -28778,7 +29003,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                     justify-content: center;
                                     gap: 8px;
                                 " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                                    📅 Book
+                                    Book
                                 </button>
                                 <button onclick="showLocationIntelModal(${firstProp.id}); event.stopPropagation();" style="
                                     flex: 1;
@@ -28797,7 +29022,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                     justify-content: center;
                                     gap: 8px;
                                 " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                                    💡 Intel
+                                    Intel
                                 </button>
                                 <button onclick="sharePropertyWhatsApp(${firstProp.id}); event.stopPropagation();" style="
                                     flex: 1;
@@ -28818,7 +29043,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                                 </button>
-                                <button class="popup-edit-btn" onclick="event.stopPropagation(); openEditPropertyModal(${firstProp.id});" data-property-id="${firstProp.id}" style="
+                                <button class="popup-edit-btn" onclick="event.stopPropagation(); openBuildingEditModal('${firstProp.address.replace(/^(Studio \d+[a-z]?|Flat \d+)\s*/i, '').trim().replace(/'/g, "\\'")}');" data-property-id="${firstProp.id}" style="
                                     flex: 1;
                                     padding: 12px;
                                     background: linear-gradient(135deg, var(--ui-blue), var(--ui-blue-dark));
@@ -28835,7 +29060,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                     justify-content: center;
                                     gap: 8px;
                                 " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                                    ✏️
+                                    Edit
                                 </button>
                             </div>`;
                         } else {
@@ -28846,43 +29071,53 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 <div style="font-size: 16px; font-weight: 800; color: white;">${safeName}</div>
                                 <div style="font-size: 12px; color: rgba(255,255,255,0.9); margin-top: 4px;">${statusText}</div>
                             </div>
+                            ${(function() {
+                                var singlePhotos = window.PropertyPhotos ? window.PropertyPhotos.getPhotos(firstProp.id) : [];
+                                if (singlePhotos.length > 0) {
+                                    var thumbs = singlePhotos.slice(0, 4).map(function(ph) {
+                                        var src = ph.startsWith && ph.startsWith('data:') ? ph : ph;
+                                        return '<img src="' + src + '" style="width:60px;height:45px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+                                    }).join('');
+                                    return '<div style="padding:8px 20px;display:flex;gap:6px;overflow-x:auto;background:rgba(0,0,0,0.2);">' + thumbs + (singlePhotos.length > 4 ? '<span style="display:flex;align-items:center;color:#94a3b8;font-size:11px;white-space:nowrap;">+' + (singlePhotos.length - 4) + ' more</span>' : '') + '</div>';
+                                }
+                                return '';
+                            })()}
                             <div style="padding: 16px 20px;">
-                                <div style="color: #94a3b8; font-size: 12px; margin-bottom: 8px;">📍 ${safeAddress}</div>
+                                <div style="color: #94a3b8; font-size: 12px; margin-bottom: 8px;">${safeAddress}</div>
                                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <span style="color: #94a3b8; font-size: 13px;">💰 Rent</span>
+                                    <span style="color: #94a3b8; font-size: 13px;">Rent</span>
                                     <span style="color: #22c55e; font-weight: 800; font-size: 20px;">£${firstProp.rent}<small style="font-size: 11px; opacity: 0.7">/mo</small></span>
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; font-size: 11px; color: #cbd5e1;">
-                                    <div style="display: flex; align-items: center; gap: 4px;">🛏️ ${firstProp.bedrooms || 1} bed</div>
-                                    <div style="display: flex; align-items: center; gap: 4px;">👥 Max ${firstProp.maxOccupancy || 1}</div>
-                                    <div style="display: flex; align-items: center; gap: 4px;">💡 Bills ${firstProp.billsIncluded !== false ? '✅' : '❌'}</div>
-                                    <div style="display: flex; align-items: center; gap: 4px;">🐾 Pets ${firstProp.petsAllowed ? '✅' : '❌'}</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">${firstProp.bedrooms || 1} bed</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">Max ${firstProp.maxOccupancy || 1}</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">Bills ${firstProp.billsIncluded !== false ? '<span style="color:#22c55e;font-weight:700">Yes</span>' : '<span style="color:#ef4444;font-weight:700">No</span>'}</div>
+                                    <div style="display: flex; align-items: center; gap: 4px;">Pets ${firstProp.petsAllowed ? '<span style="color:#22c55e;font-weight:700">Yes</span>' : '<span style="color:#ef4444;font-weight:700">No</span>'}</div>
                                 </div>
                                 <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
-                                    <span style="padding: 6px 12px; background: ${ageColor}22; color: ${ageColor}; border-radius: 8px; font-size: 11px; font-weight: 700;">📅 ${age}d old</span>
-                                    ${firstProp.floor ? `<span style="padding: 6px 12px; background: rgba(59,130,246,0.2); color: #3b82f6; border-radius: 8px; font-size: 11px; font-weight: 700;">🏢 ${firstProp.floor}</span>` : ''}
-                                    ${firstProp.gender === 'female' ? `<span style="padding: 6px 12px; background: rgba(236,72,153,0.2); color: #ec4899; border-radius: 8px; font-size: 11px; font-weight: 700;">👩 Women Only</span>` : ''}
+                                    <span style="padding: 6px 12px; background: ${ageColor}22; color: ${ageColor}; border-radius: 8px; font-size: 11px; font-weight: 700;">${age}d old</span>
+                                    ${firstProp.floor ? `<span style="padding: 6px 12px; background: rgba(59,130,246,0.2); color: #3b82f6; border-radius: 8px; font-size: 11px; font-weight: 700;">${firstProp.floor}</span>` : ''}
+                                    ${firstProp.gender === 'female' ? `<span style="padding: 6px 12px; background: rgba(236,72,153,0.2); color: #ec4899; border-radius: 8px; font-size: 11px; font-weight: 700;">Women Only</span>` : ''}
                                 </div>
                             </div>
                             <div style="padding: 12px 20px; background: rgba(255,255,255,0.05); display: flex; gap: 8px; flex-wrap: wrap;">
                                 <button onclick="AppState.bookViewingWithContext(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,#2dd4bf,#7c3aed);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(45,212,191,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                                    📅 Book
+                                    Book
                                 </button>
                                 <button onclick="showLocationIntelModal(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(245,158,11,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                                    💡 Intel
+                                    Intel
                                 </button>
                                 <button onclick="sharePropertyWhatsApp(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(37,211,102,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                                 </button>
                                 <button onclick="event.stopPropagation(); openEditPropertyModal(${firstProp.id});" style="flex:1;padding:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                     Edit
                                 </button>
                             </div>`;
                         }
 
                         if (firstProp.link) {
-                            popupContent += `<div style="padding: 0 20px 12px;"><a href="${firstProp.link}" target="_blank" style="font-size: 12px; color: #3b82f6; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">📷 View Photos</a></div>`;
+                            popupContent += `<div style="padding: 0 20px 12px;"><a href="${firstProp.link}" target="_blank" style="font-size: 12px; color: #3b82f6; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">View Photos</a></div>`;
                         }
 
                         popupContent += `</div>`;
@@ -31151,10 +31386,10 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                             statusBadgeHtml = '<span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">✓ TAKEN</span>';
                             break;
                         case 'viewing-scheduled':
-                            statusBadgeHtml = '<span style="background: var(--primary-orange); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">📅 VIEWING SCHEDULED</span>';
+                            statusBadgeHtml = '<span style="background: var(--primary-orange); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">VIEWING SCHEDULED</span>';
                             break;
                         case 'maintenance':
-                            statusBadgeHtml = '<span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">🔧 MAINTENANCE</span>';
+                            statusBadgeHtml = '<span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">MAINTENANCE</span>';
                             break;
                         default:
                             statusBadgeHtml = '<span style="background: #2ecc71; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">✓ AVAILABLE</span>';
@@ -31214,7 +31449,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                     </div>
                                     <div class="detail-row">
                                         <span class="detail-label">Gender Restriction:</span>
-                                        <span class="detail-value">${property.gender === 'female' ? '👩 Women Only' : 'Any'}</span>
+                                        <span class="detail-value">${property.gender === 'female' ? 'Women Only' : 'Any'}</span>
                                     </div>
                                 </div>
                                 
@@ -31254,12 +31489,12 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 </div>
                                 
                                 <!-- v83: Property Photos Section -->
-                                <div class="detail-section">
+                                <div class="detail-section" style="background:rgba(139,92,246,0.08);border:1px dashed rgba(139,92,246,0.3);border-radius:12px;padding:16px;">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                                        <h3 style="margin:0;font-size:16px;color:#333;">📷 Photos</h3>
-                                        <label style="padding:6px 12px;background:var(--primary-orange);color:white;border:none;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;">
-                                            + Add Photo
-                                            <input type="file" accept="image/*" multiple onchange="window.handlePropertyPhotoUpload(${propertyId}, this.files)" style="display:none;" />
+                                        <h3 style="margin:0;font-size:16px;color:#333;display:flex;align-items:center;gap:8px;"><span class="material-symbols-rounded" style="font-size:20px;color:#8b5cf6;">add_a_photo</span> Photos</h3>
+                                        <label style="padding:8px 16px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(139,92,246,0.3);">
+                                            <span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload Photos
+                                            <input type="file" accept="image/*" multiple onchange="window.handlePropertyPhotoUpload(${propertyId}, this.files); this.value='';" style="display:none;" />
                                         </label>
                                     </div>
                                     <div id="prop-photos-${propertyId}" style="display:flex;gap:8px;flex-wrap:wrap;min-height:60px;">
@@ -31278,7 +31513,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
 
                                 <!-- v83: Property Notes Section -->
                                 <div class="detail-section">
-                                    <h3 style="margin:0 0 12px 0;font-size:16px;color:#333;">📝 Notes</h3>
+                                    <h3 style="margin:0 0 12px 0;font-size:16px;color:#333;">Notes</h3>
                                     <textarea id="prop-notes-${propertyId}" placeholder="Add notes about this property..."
                                         style="width:100%;min-height:80px;padding:10px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;resize:vertical;background:rgba(0,0,0,0.02);"
                                         oninput="window.savePropertyNotes(${propertyId}, this.value)"
@@ -31308,18 +31543,100 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                     document.body.insertAdjacentHTML('beforeend', html);
                 };
 
-                // v83: Property photo upload — stores as base64 in localStorage
+                // Property photo upload — Supabase Storage with localStorage fallback
                 window.handlePropertyPhotoUpload = function(propertyId, files) {
                     if (!files || files.length === 0) return;
-                    var photos = JSON.parse(localStorage.getItem('propPhotos_' + propertyId) || '[]');
+                    var currentPhotos = PropertyPhotos.getPhotos(propertyId);
                     var loaded = 0;
-                    var total = Math.min(files.length, 10 - photos.length); // max 10 photos
+                    var total = Math.min(files.length, 10 - currentPhotos.length);
                     if (total <= 0) { alert('Maximum 10 photos per property.'); return; }
                     for (var i = 0; i < total; i++) {
                         (function(file) {
                             var reader = new FileReader();
                             reader.onload = function(e) {
-                                // Resize to max 400px for storage efficiency
+                                var img = new Image();
+                                img.onload = async function() {
+                                    var canvas = document.createElement('canvas');
+                                    var maxSize = 400;
+                                    var w = img.width, h = img.height;
+                                    if (w > maxSize || h > maxSize) {
+                                        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                                        else { w = Math.round(w * maxSize / h); h = maxSize; }
+                                    }
+                                    canvas.width = w; canvas.height = h;
+                                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                                    // Try Supabase Storage upload
+                                    var url = null;
+                                    try {
+                                        var blob = await PropertyPhotos.canvasToBlob(canvas);
+                                        url = await PropertyPhotos.uploadPhoto(propertyId, blob, file.name || 'photo.jpg');
+                                    } catch(err) { console.warn('[Photos] Upload failed, using base64:', err); }
+                                    // Fallback to base64 if upload failed
+                                    if (!url) url = canvas.toDataURL('image/jpeg', 0.7);
+                                    currentPhotos.push(url);
+                                    loaded++;
+                                    if (loaded === total) {
+                                        await PropertyPhotos.savePhotoUrls(propertyId, currentPhotos);
+                                        // Refresh all photo UIs
+                                        if (typeof loadEditPhotos === 'function') loadEditPhotos(propertyId);
+                                        if (typeof loadBuildingPhotos === 'function') loadBuildingPhotos(propertyId);
+                                        var container = document.getElementById('prop-photos-' + propertyId);
+                                        if (container) window.refreshPhotoGrid(container, propertyId, currentPhotos);
+                                        if (typeof showToast === 'function') showToast('Photos Added', total + ' photo' + (total > 1 ? 's' : '') + ' uploaded');
+                                    }
+                                };
+                                img.src = e.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        })(files[i]);
+                    }
+                };
+
+                // Helper to refresh a photo grid container
+                window.refreshPhotoGrid = function(container, propertyId, photos) {
+                    container.innerHTML = photos.map(function(p, idx) {
+                        return '<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">' +
+                            '<img src="' + p + '" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="window.viewPropertyPhoto(this.src)" />' +
+                            '<button onclick="window.deletePropertyPhoto(' + propertyId + ',' + idx + ')" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;cursor:pointer;font-size:10px;line-height:18px;text-align:center;">x</button>' +
+                            '</div>';
+                    }).join('');
+                };
+
+                // v83: View photo fullscreen
+                window.viewPropertyPhoto = function(src) {
+                    var overlay = document.createElement('div');
+                    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(8px);';
+                    overlay.onclick = function() { overlay.remove(); };
+                    overlay.innerHTML = '<img src="' + src + '" style="max-width:90%;max-height:90%;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);" />';
+                    document.body.appendChild(overlay);
+                };
+
+                // Delete a property photo (Supabase Storage + localStorage)
+                window.deletePropertyPhoto = async function(propertyId, index) {
+                    var photos = PropertyPhotos.getPhotos(propertyId);
+                    var removed = photos.splice(index, 1)[0];
+                    await PropertyPhotos.savePhotoUrls(propertyId, photos);
+                    // Delete from Supabase Storage if it's a URL
+                    if (removed && removed.startsWith('http')) {
+                        PropertyPhotos.deletePhoto(propertyId, removed);
+                    }
+                    // Refresh all photo UIs
+                    if (typeof loadEditPhotos === 'function') loadEditPhotos(propertyId);
+                    if (typeof loadBuildingPhotos === 'function') loadBuildingPhotos(propertyId);
+                    var modal = document.querySelector('.property-detail-modal');
+                    if (modal) { modal.remove(); window.showPropertyDetails(propertyId); }
+                };
+
+                // Viewing photos - upload
+                window.handleViewingPhotoUpload = function(viewingId, files) {
+                    if (!files || files.length === 0) return;
+                    var photos = JSON.parse(localStorage.getItem('viewingPhotos_' + viewingId) || '[]');
+                    var total = Math.min(files.length, 10 - photos.length);
+                    if (total <= 0) { if (typeof showToast === 'function') showToast('Limit', 'Max 10 photos per viewing'); return; }
+                    for (var i = 0; i < total; i++) {
+                        (function(file) {
+                            var reader = new FileReader();
+                            reader.onload = function(e) {
                                 var img = new Image();
                                 img.onload = function() {
                                     var canvas = document.createElement('canvas');
@@ -31332,21 +31649,14 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                     canvas.width = w; canvas.height = h;
                                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                                     photos.push(canvas.toDataURL('image/jpeg', 0.7));
-                                    loaded++;
-                                    if (loaded === total) {
-                                        localStorage.setItem('propPhotos_' + propertyId, JSON.stringify(photos));
-                                        // Refresh the photo container
-                                        var container = document.getElementById('prop-photos-' + propertyId);
-                                        if (container) {
-                                            container.innerHTML = photos.map(function(p, idx) {
-                                                return '<div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);">' +
-                                                    '<img src="' + p + '" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="window.viewPropertyPhoto(this.src)" />' +
-                                                    '<button onclick="window.deletePropertyPhoto(' + propertyId + ',' + idx + ')" style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;cursor:pointer;font-size:10px;line-height:18px;text-align:center;">×</button>' +
-                                                '</div>';
-                                            }).join('');
-                                        }
-                                        if (typeof showToast === 'function') showToast('Photos Added', total + ' photo' + (total > 1 ? 's' : '') + ' uploaded');
+                                    localStorage.setItem('viewingPhotos_' + viewingId, JSON.stringify(photos));
+                                    var container = document.getElementById('viewing-photos-' + viewingId);
+                                    if (container) {
+                                        container.innerHTML = photos.map(function(p, idx) {
+                                            return '<div style="position:relative;"><img src="' + p + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.15);" onclick="window.viewPropertyPhoto(this.src)"><button onclick="window.deleteViewingPhoto(' + viewingId + ',' + idx + ')" style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#ef4444;color:white;border:none;border-radius:50%;cursor:pointer;font-size:11px;line-height:18px;">×</button></div>';
+                                        }).join('');
                                     }
+                                    if (typeof showToast === 'function') showToast('Photo Added', 'Uploaded to viewing');
                                 };
                                 img.src = e.target.result;
                             };
@@ -31355,24 +31665,17 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                     }
                 };
 
-                // v83: View photo fullscreen
-                window.viewPropertyPhoto = function(src) {
-                    var overlay = document.createElement('div');
-                    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(8px);';
-                    overlay.onclick = function() { overlay.remove(); };
-                    overlay.innerHTML = '<img src="' + src + '" style="max-width:90%;max-height:90%;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.5);" />';
-                    document.body.appendChild(overlay);
-                };
-
-                // v83: Delete a property photo
-                window.deletePropertyPhoto = function(propertyId, index) {
-                    var photos = JSON.parse(localStorage.getItem('propPhotos_' + propertyId) || '[]');
+                // Viewing photos - delete
+                window.deleteViewingPhoto = function(viewingId, index) {
+                    var photos = JSON.parse(localStorage.getItem('viewingPhotos_' + viewingId) || '[]');
                     photos.splice(index, 1);
-                    localStorage.setItem('propPhotos_' + propertyId, JSON.stringify(photos));
-                    // Re-open the property details to refresh
-                    var modal = document.querySelector('.property-detail-modal');
-                    if (modal) modal.remove();
-                    window.showPropertyDetails(propertyId);
+                    localStorage.setItem('viewingPhotos_' + viewingId, JSON.stringify(photos));
+                    var container = document.getElementById('viewing-photos-' + viewingId);
+                    if (container) {
+                        container.innerHTML = photos.length === 0 ? '<div style="font-size:12px;color:rgba(255,255,255,0.4);">No photos yet. Add condition photos, ID docs, etc.</div>' : photos.map(function(p, idx) {
+                            return '<div style="position:relative;"><img src="' + p + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.15);" onclick="window.viewPropertyPhoto(this.src)"><button onclick="window.deleteViewingPhoto(' + viewingId + ',' + idx + ')" style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#ef4444;color:white;border:none;border-radius:50%;cursor:pointer;font-size:11px;line-height:18px;">×</button></div>';
+                        }).join('');
+                    }
                 };
 
                 // v83: Save property notes
@@ -31410,13 +31713,13 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                         ✓ Available
                                     </button>
                                     <button onclick="setPropertyStatus(${propertyId}, 'viewing-scheduled'); this.closest('.property-detail-modal').remove();" style="flex: 1; padding: 8px; background: ${status === 'viewing-scheduled' ? 'var(--primary-orange)' : '#e0e0e0'}; color: ${status === 'viewing-scheduled' ? 'white' : '#666'}; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                                        📅 Viewing
+                                        Viewing
                                     </button>
                                     <button onclick="setPropertyStatus(${propertyId}, 'taken'); this.closest('.property-detail-modal').remove();" style="flex: 1; padding: 8px; background: ${status === 'taken' ? '#e74c3c' : '#e0e0e0'}; color: ${status === 'taken' ? 'white' : '#666'}; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
                                         ✓ Taken
                                     </button>
                                     <button onclick="setPropertyStatus(${propertyId}, 'maintenance'); this.closest('.property-detail-modal').remove();" style="flex: 1; padding: 8px; background: ${status === 'maintenance' ? '#f39c12' : '#e0e0e0'}; color: ${status === 'maintenance' ? 'white' : '#666'}; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                                        🔧 Maintenance
+                                        Maintenance
                                     </button>
                                 </div>
                                 
@@ -31433,12 +31736,12 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                         }[item.outcome] || 'var(--primary-orange)';
 
                         const outcomeText = {
-                            'scheduled': '📅 Scheduled',
-                            'completed': '✓ Completed',
-                            'cancelled': '✗ Cancelled',
-                            'no-show': '⚠️ No Show',
-                            'interested': '👍 Interested',
-                            'taken': '✓ TAKEN'
+                            'scheduled': 'Scheduled',
+                            'completed': 'Completed',
+                            'cancelled': 'Cancelled',
+                            'no-show': 'No Show',
+                            'interested': 'Interested',
+                            'taken': 'TAKEN'
                         }[item.outcome] || item.outcome;
 
                         return `
@@ -34037,6 +34340,13 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                                         onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
                                     🏛️
                                 </button>
+                                <!-- Photos -->
+                                <button onclick="event.stopPropagation(); showPropertyDetails(${group.properties[0].id})" 
+                                        style="padding: 10px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white;"
+                                        title="Add / View Photos"
+                                        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                                    📷 Photos
+                                </button>
                                 <!-- Map -->
                                 <button onclick="event.stopPropagation(); viewOnMap(${group.lat}, ${group.lng})" 
                                         style="padding: 10px 14px; font-size: 12px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"
@@ -34068,6 +34378,9 @@ Report generated: ${new Date().toLocaleString('en-GB')}
 
                 // Bulk edit all studios at an address - IMPROVED MODAL VERSION
                 window.openBuildingEditModal = function (mainAddress) {
+                    // Close any Leaflet popup first
+                    if (window.map) try { window.map.closePopup(); } catch(e) {}
+
                     const group = properties.filter(p => {
                         const cleanedAddress = p.address.replace(/^(Studio \d+[a-z]?|Flat \d+)\s*/i, '').trim();
                         return cleanedAddress === mainAddress;
@@ -34081,7 +34394,7 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     const firstProp = group[0];
                     const studioList = group.map(p => {
                         const isTaken = takenProperties.has(p.id);
-                        return `${p.name} (${isTaken ? '❌ Taken' : '✅ Available'})`;
+                        return `${p.name} (${isTaken ? 'Taken' : 'Available'})`;
                     }).join('\\n');
 
                     const modalHTML = `
@@ -34089,13 +34402,13 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                         <div style="background: linear-gradient(145deg, #121c24, #0a1018); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 80px rgba(0,0,0,0.6);" onclick="event.stopPropagation()">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                                 <h2 style="margin: 0; color: white; font-size: 22px; font-weight: 800;">
-                                    🏢 Edit Building
+                                    Edit Building
                                 </h2>
                                 <button onclick="document.getElementById('buildingEditModal').remove()" style="background: rgba(255,255,255,0.1); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; color: white;">×</button>
                             </div>
                             
                             <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);">
-                                <div style="font-weight: 700; color: white; margin-bottom: 5px;">📍 ${mainAddress}</div>
+                                <div style="font-weight: 700; color: white; margin-bottom: 5px;">${mainAddress}</div>
                                 <div style="font-size: 13px; color: rgba(255,255,255,0.6);">${group.length} studios at this address</div>
                             </div>
                             
@@ -34149,16 +34462,16 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                                 
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                     <div>
-                                        <label style="display: block; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 6px;">📍 Latitude</label>
+                                        <label style="display: block; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 6px;">Latitude</label>
                                         <input type="number" id="editBuildingLat" value="${firstProp.lat || ''}" step="0.000001" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 14px; color: white; box-sizing: border-box;">
                                     </div>
                                     <div>
-                                        <label style="display: block; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 6px;">📍 Longitude</label>
+                                        <label style="display: block; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 6px;">Longitude</label>
                                         <input type="number" id="editBuildingLng" value="${firstProp.lng || ''}" step="0.000001" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 14px; color: white; box-sizing: border-box;">
                                     </div>
                                 </div>
                                 <p style="font-size: 11px; color: rgba(255,255,255,0.5); margin: -5px 0 5px 0; text-align: center;">
-                                    💡 Get coords from Google Maps: Right-click → "What's here?"
+                                    Get coords from Google Maps: Right-click → "What's here?"
                                 </p>
                                 
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -34179,9 +34492,22 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                                 </div>
                             </div>
                             
+                            <!-- Property Photos -->
+                            <div style="background:rgba(139,92,246,0.1);padding:16px;border-radius:12px;margin-top:15px;border:1px dashed rgba(139,92,246,0.3);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                    <label style="font-weight:600;color:rgba(255,255,255,0.8);display:flex;align-items:center;gap:6px;">Photos</label>
+                                    <label style="padding:6px 14px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;">
+                                        Upload
+                                        <input type="file" id="building-photo-input" accept="image/*" multiple style="display:none;" onchange="window.handlePropertyPhotoUpload(${firstProp.id}, this.files); this.value=''; setTimeout(function(){window.loadBuildingPhotos(${firstProp.id})},500);" />
+                                    </label>
+                                </div>
+                                <div id="building-photos-grid" style="display:flex;gap:8px;flex-wrap:wrap;min-height:50px;"></div>
+                                <small style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px;display:block;">Max 10 photos. Stored locally.</small>
+                            </div>
+
                             <div style="display: flex; gap: 10px; margin-top: 25px;">
                                 <button onclick="saveBuildingEdits('${mainAddress.replace(/'/g, "\\'")}', ${group.length})" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;">
-                                    💾 Save All ${group.length} Studios
+                                    Save All ${group.length} Studios
                                 </button>
                                 <button onclick="document.getElementById('buildingEditModal').remove()" style="padding: 14px 20px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
                                     Cancel
@@ -34196,6 +34522,25 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                     if (existing) existing.remove();
 
                     document.body.insertAdjacentHTML('beforeend', modalHTML);
+                    // Load existing photos
+                    loadBuildingPhotos(firstProp.id);
+                };
+
+                // Load photos into the building edit modal
+                window.loadBuildingPhotos = function(propertyId) {
+                    var container = document.getElementById('building-photos-grid');
+                    if (!container) return;
+                    var photos = PropertyPhotos.getPhotos(propertyId);
+                    if (photos.length === 0) {
+                        container.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.35);text-align:center;padding:16px;background:rgba(0,0,0,0.15);border-radius:8px;width:100%;">No photos yet</div>';
+                        return;
+                    }
+                    container.innerHTML = photos.map(function(p, i) {
+                        return '<div style="position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">' +
+                            '<img src="' + p + '" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onclick="window.viewPropertyPhoto(this.src)" />' +
+                            '<button onclick="window.deletePropertyPhoto(' + propertyId + ',' + i + '); setTimeout(function(){loadBuildingPhotos(' + propertyId + ')},100);" style="position:absolute;top:2px;right:2px;width:16px;height:16px;background:rgba(0,0,0,0.7);color:white;border:none;border-radius:50%;cursor:pointer;font-size:9px;line-height:16px;text-align:center;">×</button>' +
+                            '</div>';
+                    }).join('');
                 };
 
                 // Save building edits
@@ -34922,6 +35267,24 @@ Report generated: ${new Date().toLocaleString('en-GB')}
                                     placeholder="Any additional information about this property (e.g., special features, nearby amenities, condition notes)"
                                     style="width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-family: inherit; color: white; resize: vertical;"></textarea>
                             </div>
+                        </div>
+
+                        <!-- Property Photos -->
+                        <div id="edit-photos-section"
+                            style="background: rgba(139, 92, 246, 0.08); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed rgba(139, 92, 246, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; font-size: 15px; color: white; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-camera" style="color: #a78bfa;"></i> Property Photos
+                                </h3>
+                                <label style="padding: 8px 16px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(139,92,246,0.3);">
+                                    <i class="fas fa-upload" style="font-size: 12px;"></i> Upload Photos
+                                    <input type="file" id="edit-photo-input" accept="image/*" multiple style="display: none;" />
+                                </label>
+                            </div>
+                            <div id="edit-photos-grid" style="display: flex; gap: 8px; flex-wrap: wrap; min-height: 60px;">
+                                <div style="font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 8px; width: 100%;">No photos yet — upload property images</div>
+                            </div>
+                            <small style="font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 8px; display: block;">Max 10 photos per property. Images are resized and stored locally.</small>
                         </div>
 
                         <!-- Viewing History (only show when editing) -->
@@ -37328,7 +37691,7 @@ ${report.commutes}
 NEARBY AMENITIES
 ${report.amenities}
 
-GENERATED BY RIDWAN HARIR'S PROPERTY MANAGEMENT
+GENERATED BY ${getCurrentAgentName()}'S PROPERTY MANAGEMENT
         `;
 
                 const blob = new Blob([content], { type: 'text/plain' });
@@ -37389,7 +37752,7 @@ GENERATED BY RIDWAN HARIR'S PROPERTY MANAGEMENT
             ${amenities}
             
             <div style="margin-top: 50px; text-align: center; color: #999; font-size: 12px;">
-                <p>Generated by Ridwan Harir's Property Management System</p>
+                <p>Generated by ${getCurrentAgentName()}'s Property Management System</p>
             </div>
         </body>
         </html>
@@ -43382,7 +43745,7 @@ Please reply to confirm you're still coming, or let me know if you need to resch
 
 See you there! 🔑
 
-- Ridwan, Harir Industries`;
+- ${getCurrentAgentName()}, Harir Industries`;
 
             const phone = (row.phone || '').replace(/\D/g, '');
             if (phone.length >= 10) {
@@ -44452,7 +44815,7 @@ Here's the details:
 ${eligibilityNote ? eligibilityNote + '\n\n' : ''}Fancy a viewing? Just reply YES and I'll get you booked in! 📅
 
 Chat soon,
-Ridwan @ Harir Industries 😊`,
+${getCurrentAgentName()} @ Harir Industries 😊`,
 
                 urgent: `🔥 *URGENT - DON'T MISS OUT* 🔥
 
@@ -44472,7 +44835,7 @@ This property is getting LOTS of interest and I wanted to give you first refusal
 
 ${eligibilityNote ? eligibilityNote + '\n\n' : ''}⏰ Reply ASAP to secure your viewing before it's gone!
 
-Ridwan - Harir Industries
+${getCurrentAgentName()} - Harir Industries
 📞 Call NOW`,
 
                 minimal: `Hi {name}
@@ -49176,7 +49539,7 @@ Time: ${viewTime}
 Please let me know if you need to reschedule.
 
 Thanks,
-Ridwan Harir
+${getCurrentAgentName()}
 Harir Industries`;
 
             // Clean phone number
@@ -49217,7 +49580,7 @@ Please arrive 5 minutes early. If you need to reschedule or cancel, please let u
 If you have any questions, feel free to reply to this email or call us.
 
 Kind regards,
-Ridwan Harir
+${getCurrentAgentName()}
 Senior Lettings Manager
 Harir Industries
 Tel: 020 XXXX XXXX`;
@@ -50714,7 +51077,7 @@ Harir Industries`;
             });
 
             message += 'Let me know which ones interest you and I will arrange viewings!\n\n' +
-                'Kind regards,\nRidwan Harir\nHarir Industries';
+                'Kind regards,\n' + getCurrentAgentName() + '\nHarir Industries';
 
             let phone = (clientPhone || '').replace(/\D/g, '');
             if (phone.startsWith('0')) phone = '44' + phone.substring(1);
@@ -53222,9 +53585,11 @@ Harir Industries`;
                 { id: 1015, name: "Flat A 55 Station Road", address: "55 Station Road, Barking IG11 8TU", borough: "Barking", rent: 1050, lat: 51.5400, lng: 0.0810, status: "available", type: "Flat", bedrooms: 1, maxOccupancy: 2, floor: "GF", lift: false, billsIncluded: true, petsAllowed: true, gender: "any", dateAdded: "2024-12-28" }
             ];
 
-            // Demo Agents
+            // Demo Agents (agent 1 uses current user name)
+            const agent1Name = getCurrentAgentName();
+            const agent1Initials = agent1Name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() || 'AG';
             const demoAgents = [
-                { id: 1, name: "Ridwan Harir", initials: "RH", color: "#f59e0b", phone: "07123456789", email: "ridwan@elevateestates.co.uk", role: "Senior Lettings Manager" },
+                { id: 1, name: agent1Name, initials: agent1Initials, color: "#f59e0b", phone: "07123456789", email: "agent1@elevateestates.co.uk", role: "Senior Lettings Manager" },
                 { id: 2, name: "Sarah Johnson", initials: "SJ", color: "#3b82f6", phone: "07234567890", email: "sarah@elevateestates.co.uk", role: "Lettings Negotiator" },
                 { id: 3, name: "Marcus Thompson", initials: "MT", color: "#10b981", phone: "07345678901", email: "marcus@elevateestates.co.uk", role: "Viewing Agent" },
                 { id: 4, name: "Priya Patel", initials: "PP", color: "#2dd4bf", phone: "07456789012", email: "priya@elevateestates.co.uk", role: "Lettings Coordinator" }
@@ -53238,12 +53603,12 @@ Harir Industries`;
             const lastWeek = new Date(Date.now() - 604800000).toISOString().split('T')[0];
 
             const demoViewings = [
-                { id: 2001, propertyId: 1007, property: "80 Darwin Road, W5 4BH", propertyName: "Studio 1 80 Darwin Road", propertyAddress: "80 Darwin Road, Ealing W5 4BH", visitor: "Abdibasit Mohamed", visitorName: "Abdibasit Mohamed", clientName: "Abdibasit Mohamed", name: "Abdibasit Mohamed", phone: "07891234567", visitorPhone: "07891234567", clientPhone: "07891234567", email: "abdi.m@email.com", date: today, time: "15:30", status: "scheduled", viewingType: "in-person", agentId: 1, agentName: "Ridwan Harir", referralSource: "council", createdAt: new Date().toISOString() },
+                { id: 2001, propertyId: 1007, property: "80 Darwin Road, W5 4BH", propertyName: "Studio 1 80 Darwin Road", propertyAddress: "80 Darwin Road, Ealing W5 4BH", visitor: "Abdibasit Mohamed", visitorName: "Abdibasit Mohamed", clientName: "Abdibasit Mohamed", name: "Abdibasit Mohamed", phone: "07891234567", visitorPhone: "07891234567", clientPhone: "07891234567", email: "abdi.m@email.com", date: today, time: "15:30", status: "scheduled", viewingType: "in-person", agentId: 1, agentName: agent1Name, referralSource: "council", createdAt: new Date().toISOString() },
                 { id: 2002, propertyId: 1009, property: "24 St. Francis Close EN6 2RH", propertyName: "Studio 4a 24 St. Francis Close", propertyAddress: "Studio 4a 24 St. Francis Close EN6 2RH", visitor: "Raymond Asante", visitorName: "Raymond Asante", clientName: "Raymond Asante", name: "Raymond Asante", phone: "07892345678", visitorPhone: "07892345678", clientPhone: "07892345678", email: "ray.a@email.com", date: yesterday, time: "09:00", status: "completed", viewingType: "in-person", agentId: 2, agentName: "Sarah Johnson", referralSource: "charity", createdAt: new Date(Date.now() - 604800000).toISOString(), completedAt: new Date(Date.now() - 86400000).toISOString(), outcome: "interested" },
-                { id: 2003, propertyId: 1010, property: "15 Walton Dr, Harrow HA1 4XB", propertyName: "Studio 2 15 Walton Dr", propertyAddress: "Studio 2 15 Walton Dr, Harrow HA1 4XB", visitor: "Lisa Chen", visitorName: "Lisa Chen", clientName: "Lisa Chen", name: "Lisa Chen", phone: "07893456789", visitorPhone: "07893456789", clientPhone: "07893456789", email: "lisa.c@email.com", date: lastWeek, time: "10:45", status: "completed", viewingType: "in-person", agentId: 1, agentName: "Ridwan Harir", referralSource: "rightmove", createdAt: new Date(Date.now() - 1209600000).toISOString(), completedAt: new Date(Date.now() - 604800000).toISOString(), outcome: "declined" },
+                { id: 2003, propertyId: 1010, property: "15 Walton Dr, Harrow HA1 4XB", propertyName: "Studio 2 15 Walton Dr", propertyAddress: "Studio 2 15 Walton Dr, Harrow HA1 4XB", visitor: "Lisa Chen", visitorName: "Lisa Chen", clientName: "Lisa Chen", name: "Lisa Chen", phone: "07893456789", visitorPhone: "07893456789", clientPhone: "07893456789", email: "lisa.c@email.com", date: lastWeek, time: "10:45", status: "completed", viewingType: "in-person", agentId: 1, agentName: agent1Name, referralSource: "rightmove", createdAt: new Date(Date.now() - 1209600000).toISOString(), completedAt: new Date(Date.now() - 604800000).toISOString(), outcome: "declined" },
                 { id: 2004, propertyId: 1001, property: "85 Clarence Road, Grays RM17 6RA", propertyName: "Studio 1 85 Clarence Road", propertyAddress: "85 Clarence Road, Grays RM17 6RA", visitor: "Emmanuel Obi", visitorName: "Emmanuel Obi", clientName: "Emmanuel Obi", name: "Emmanuel Obi", phone: "07894567890", visitorPhone: "07894567890", clientPhone: "07894567890", email: "emmanuel.o@email.com", date: tomorrow, time: "11:00", status: "scheduled", viewingType: "in-person", agentId: 3, agentName: "Marcus Thompson", referralSource: "council", createdAt: new Date().toISOString() },
-                { id: 2005, propertyId: 1004, property: "126a High Street, Harefield UB9 6BU", propertyName: "Flat 1 26a High Street", propertyAddress: "126a High Street, Harefield, Uxbridge UB9 6BU", visitor: "Fatima Hassan", visitorName: "Fatima Hassan", clientName: "Fatima Hassan", name: "Fatima Hassan", phone: "07895678901", visitorPhone: "07895678901", clientPhone: "07895678901", email: "fatima.h@email.com", date: lastWeek, time: "14:00", status: "completed", viewingType: "in-person", agentId: 1, agentName: "Ridwan Harir", referralSource: "charity", createdAt: new Date(Date.now() - 1814400000).toISOString(), completedAt: new Date(Date.now() - 604800000).toISOString(), outcome: "signed" },
-                { id: 2006, propertyId: 1011, property: "29 Bridge Road NW10 9DG", propertyName: "29 Bridge Road NW10", propertyAddress: "29 Bridge Road NW10 9DG", visitor: "Jennifer Adeyemi", visitorName: "Jennifer Adeyemi", clientName: "Jennifer Adeyemi", name: "Jennifer Adeyemi", phone: "07897890123", visitorPhone: "07897890123", clientPhone: "07897890123", email: "jen.a@email.com", date: dayAfter, time: "10:00", status: "scheduled", viewingType: "in-person", agentId: 1, agentName: "Ridwan Harir", referralSource: "council", createdAt: new Date().toISOString() },
+                { id: 2005, propertyId: 1004, property: "126a High Street, Harefield UB9 6BU", propertyName: "Flat 1 26a High Street", propertyAddress: "126a High Street, Harefield, Uxbridge UB9 6BU", visitor: "Fatima Hassan", visitorName: "Fatima Hassan", clientName: "Fatima Hassan", name: "Fatima Hassan", phone: "07895678901", visitorPhone: "07895678901", clientPhone: "07895678901", email: "fatima.h@email.com", date: lastWeek, time: "14:00", status: "completed", viewingType: "in-person", agentId: 1, agentName: agent1Name, referralSource: "charity", createdAt: new Date(Date.now() - 1814400000).toISOString(), completedAt: new Date(Date.now() - 604800000).toISOString(), outcome: "signed" },
+                { id: 2006, propertyId: 1011, property: "29 Bridge Road NW10 9DG", propertyName: "29 Bridge Road NW10", propertyAddress: "29 Bridge Road NW10 9DG", visitor: "Jennifer Adeyemi", visitorName: "Jennifer Adeyemi", clientName: "Jennifer Adeyemi", name: "Jennifer Adeyemi", phone: "07897890123", visitorPhone: "07897890123", clientPhone: "07897890123", email: "jen.a@email.com", date: dayAfter, time: "10:00", status: "scheduled", viewingType: "in-person", agentId: 1, agentName: agent1Name, referralSource: "council", createdAt: new Date().toISOString() },
                 { id: 2007, propertyId: 1014, property: "99 High Road, Wood Green N22 6BB", propertyName: "Studio 1 99 High Road", propertyAddress: "99 High Road, Wood Green N22 6BB", visitor: "Daniel Kim", visitorName: "Daniel Kim", clientName: "Daniel Kim", name: "Daniel Kim", phone: "07898901234", visitorPhone: "07898901234", clientPhone: "07898901234", email: "dan.k@email.com", date: yesterday, time: "11:30", status: "completed", viewingType: "in-person", agentId: 2, agentName: "Sarah Johnson", referralSource: "zoopla", createdAt: new Date(Date.now() - 1209600000).toISOString(), completedAt: new Date(Date.now() - 86400000).toISOString(), outcome: "interested" },
                 { id: 2008, propertyId: 1015, property: "55 Station Road, Barking IG11 8TU", propertyName: "Flat A 55 Station Road", propertyAddress: "55 Station Road, Barking IG11 8TU", visitor: "Grace Mensah", visitorName: "Grace Mensah", clientName: "Grace Mensah", name: "Grace Mensah", phone: "07899012345", visitorPhone: "07899012345", clientPhone: "07899012345", email: "grace.m@email.com", date: lastWeek, time: "09:30", status: "completed", viewingType: "in-person", agentId: 3, agentName: "Marcus Thompson", referralSource: "council", createdAt: new Date(Date.now() - 1814400000).toISOString(), completedAt: new Date(Date.now() - 604800000).toISOString(), outcome: "signed" }
             ];
@@ -53773,7 +54138,7 @@ Harir Industries`;
                 message += `\nView online: ${prop.link}\n`;
             }
             message += `\n------------------------\n`;
-            message += `Contact: Ridwan Harir\n`;
+            message += `Contact: ${getCurrentAgentName()}\n`;
             message += `Harir Industries\n`;
             message += `Book a viewing today!\n`;
 
@@ -57048,7 +57413,6 @@ html[data-theme="light"] .tools-grid .tool-card .tool-desc {
 .v75-viewing-card,
 .v24-viewing-card {
     -webkit-user-drag: none !important;
-    draggable: false !important;
 }
 
 /* ─── V75 VIEWINGS HEADER OVERHAUL ─── */
@@ -57875,8 +58239,16 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,
    V75 LIGHT MODE — QUICK BOOK MODAL FIX
    ═══════════════════════════════════════════════════════════════ */
 html[data-theme="light"] .helm-quick-book-btn {
-    background: #2C3E50 !important;
-    color: white !important;
+    background: linear-gradient(145deg, #e8f4fd, #dbeafe) !important;
+    color: #1e3a5f !important;
+    border: 1px solid rgba(30,58,95,0.16) !important;
+    box-shadow: 0 2px 8px rgba(30,58,95,0.08) !important;
+}
+html[data-theme="light"] .helm-quick-book-btn:hover {
+    background: linear-gradient(145deg, #dbeafe, #bfdbfe) !important;
+    color: #0f2d4d !important;
+    border-color: rgba(30,58,95,0.22) !important;
+    box-shadow: 0 6px 14px rgba(30,58,95,0.14) !important;
 }
 html[data-theme="light"] .bento-input,
 html[data-theme="light"] .bento-select {
@@ -60216,6 +60588,7 @@ Harir Industries`;
             if (!grouped[label]) return;
 
             const labelColor = label === 'Today' ? '#22c55e' : label === 'Tomorrow' ? '#3b82f6' : label === 'Past' ? '#64748b' : '#2dd4bf';
+            const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
 
             // v63: Cleaner inline date badge instead of full-width header
             html += `
@@ -60258,39 +60631,45 @@ Harir Industries`;
                     'no-show': { bg: 'rgba(245,158,11,0.15)', color: '#fbbf24', text: 'No Show' }
                 };
                 const status = statusColors[v.status] || statusColors.scheduled;
+                const cardBg = isLightTheme ? '#f5f2eb' : 'rgba(10, 16, 24, 0.85)';
+                const cardBorder = isLightTheme ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.12)';
+                const textPrimary = isLightTheme ? '#1a1a1a' : 'white';
+                const textSecondary = isLightTheme ? '#6B7280' : 'rgba(255,255,255,0.7)';
+                const textMid = isLightTheme ? '#2C3E50' : 'rgba(255,255,255,0.9)';
+                const rowBorder = isLightTheme ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)';
 
                 html += `
                 <div style="
                     padding: 14px 16px;
-                    background: rgba(10, 16, 24, 0.85);
-                    border: 1px solid rgba(255,255,255,0.12);
+                    background: ${cardBg};
+                    border: 1px solid ${cardBorder};
                     border-left: 3px solid ${agentColor};
                     border-radius: 10px;
                     margin-bottom: 8px;
                     backdrop-filter: blur(8px);
-                " onmouseover="this.style.background='rgba(18, 28, 36, 0.9)'" onmouseout="this.style.background='rgba(10, 16, 24, 0.85)'">
+                ">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                         <div style="cursor: pointer; flex: 1;" onclick="showViewingInfoModal(${v.id})">
-                            <div style="font-weight: 700; color: white; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">${propName}</div>
-                            <div style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px;">${propAddress}</div>
+                            <div style="font-weight: 700; color: ${textPrimary}; font-size: 14px;">${propName}</div>
+                            <div style="font-size: 12px; color: ${textSecondary}; margin-top: 2px;">${propAddress}</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="padding: 4px 10px; background: ${status.bg}; color: ${status.color}; border-radius: 12px; font-size: 10px; font-weight: 600;">${status.text}</span>
-                            <span style="font-weight: 700; color: white; font-size: 13px;">${viewingTime}</span>
+                            <span style="font-weight: 700; color: ${textPrimary}; font-size: 13px;">${viewingTime}</span>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="showViewingInfoModal(${v.id})">
-                            <span class="material-symbols-rounded" style="font-size: 16px; color: rgba(255,255,255,0.7);">person</span>
-                            <span style="font-size: 13px; color: rgba(255,255,255,0.9);">${clientName}</span>
+                            <span class="material-symbols-rounded" style="font-size: 16px; color: ${textSecondary};">person</span>
+                            <span style="font-size: 13px; color: ${textMid};">${clientName}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <div style="width: 20px; height: 20px; background: ${agentColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: 700;">${agent?.initials || '?'}</div>
-                            <span style="font-size: 11px; color: rgba(255,255,255,0.7);">${agentName}</span>
+                            <span style="font-size: 11px; color: ${textSecondary};">${agentName}</span>
                         </div>
                     </div>
                     <!-- v63: Compact Action Buttons -->
-                    <div style="display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); justify-content: flex-start;">
+                    <div style="display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid ${rowBorder}; justify-content: flex-start;">
                         <button onclick="event.stopPropagation(); editViewing(${v.id})" style="padding: 8px 14px; background: linear-gradient(135deg, #3b82f6, #2563eb) !important; color: white !important; border: none; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(59,130,246,0.3);">
                             <span class="material-symbols-rounded" style="font-size: 14px;">edit</span> Edit
                         </button>
@@ -61150,6 +61529,20 @@ Harir Industries`;
                 <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <div style="font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Notes</div>
                     <div style="font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.6;">${notes}</div>
+                </div>
+                
+                <!-- Photos Section -->
+                <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">📷 Photos</div>
+                        <label style="padding:8px 14px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+                            <span class="material-symbols-rounded" style="font-size:16px;">add_a_photo</span> Add Photo
+                            <input type="file" accept="image/*" multiple style="display:none;" onchange="window.handleViewingPhotoUpload(${viewingId}, this.files); this.value='';">
+                        </label>
+                    </div>
+                    <div id="viewing-photos-${viewingId}" style="display:flex;gap:8px;flex-wrap:wrap;min-height:50px;align-items:center;">
+                        ${(() => { var vid = viewingId; var p = JSON.parse(localStorage.getItem('viewingPhotos_' + vid) || '[]'); if (p.length === 0) return '<div style="font-size:12px;color:rgba(255,255,255,0.4);">No photos yet. Add condition photos, ID docs, etc.</div>'; return p.map((img, i) => '<div style="position:relative;"><img src="' + img + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.15);" onclick="window.viewPropertyPhoto(this.src)"><button onclick="window.deleteViewingPhoto(' + vid + ',' + i + ')" style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#ef4444;color:white;border:none;border-radius:50%;cursor:pointer;font-size:11px;line-height:18px;">×</button></div>').join(''); })()}
+                    </div>
                 </div>
                 
                 <!-- TIMELINE SECTION v61 -->
@@ -63599,7 +63992,7 @@ Available now! Contact for viewing.`;
                 report += 'We\'ve had ' + ytdNoShows + ' no-shows which I\'m working to reduce through reminder calls.\n\n';
             } else { report += '\n\n'; }
             report += 'Portfolio status: ' + availableCount + ' properties available, ' + takenCount + ' occupied out of ' + properties.length + ' total.\n\n';
-            report += 'Kind regards,\nRidwan Harir\nSenior Lettings Manager\nHarir Industries';
+            report += 'Kind regards,\n' + getCurrentAgentName() + '\nSenior Lettings Manager\nHarir Industries';
 
         } else if (style === 'bullet') {
             report = recipient ? 'To: ' + recipient + '\n' : '';
@@ -63617,7 +64010,7 @@ Available now! Contact for viewing.`;
             report += '  - Available: ' + availableCount + '\n';
             report += '  - Occupied: ' + takenCount + '\n';
             report += '  - Total: ' + properties.length + '\n\n';
-            report += '-- Ridwan Harir, Harir Industries';
+            report += '-- ' + getCurrentAgentName() + ', Harir Industries';
 
         } else if (style === 'executive') {
             report = 'EXECUTIVE SUMMARY\n';
@@ -63630,13 +64023,13 @@ Available now! Contact for viewing.`;
             if (availableCount > properties.length * 0.3) {
                 report += 'Note: Vacancy rate above target. Recommend increased marketing focus.\n\n';
             }
-            report += 'Prepared by: Ridwan Harir\nHarir Industries';
+            report += 'Prepared by: ' + getCurrentAgentName() + '\nHarir Industries';
 
         } else if (style === 'detailed') {
             report = 'DETAILED DAILY REPORT\n';
             report += '========================================\n';
             report += 'Date: ' + dateStr + '\n';
-            report += 'Agent: Ridwan Harir\n';
+            report += 'Agent: ' + getCurrentAgentName() + '\n';
             report += 'Company: Harir Industries\n';
             report += '========================================\n\n';
             report += 'SECTION 1: TODAY\'S VIEWINGS (' + todayViewings.length + ')\n';
@@ -63706,7 +64099,7 @@ Available now! Contact for viewing.`;
         }
 
         const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const subject = 'Daily Activity Report - ' + today + ' - Ridwan Harir';
+        const subject = 'Daily Activity Report - ' + today + ' - ' + getCurrentAgentName();
         const body = window.currentDailyReport;
 
         const mailtoLink = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
@@ -63723,7 +64116,7 @@ Available now! Contact for viewing.`;
         }
 
         const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const subject = 'Daily Activity Report - ' + today + ' - Ridwan Harir';
+        const subject = 'Daily Activity Report - ' + today + ' - ' + getCurrentAgentName();
         const body = window.currentDailyReport;
 
         // mailto: works for Outlook if it's the default mail client
@@ -65704,7 +66097,7 @@ Write the email now:`;
             });
 
             body += `─────────────────────────────\n\n`;
-            body += `Kind regards,\nRidwan Harir\nSenior Lettings Manager\nHarir Industries`;
+            body += `Kind regards,\n${getCurrentAgentName()}\nSenior Lettings Manager\nHarir Industries`;
 
             window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
         };
@@ -71709,6 +72102,68 @@ html,body{
 
 </style>
 
+<style id="helm-v76-mobile-polish">
+/* Additional mobile polish: reduce horizontal overflow and improve safe spacing */
+html,body{width:100%;max-width:100%}
+body{overflow-x:hidden}
+img,video,canvas,svg{max-width:100%;height:auto}
+.helm-view.active>*{min-width:0;max-width:100%}
+
+@media(max-width:768px){
+    .mobile-menu-btn{
+        display:none!important;
+    }
+    .helm-view.active:not(#helm-view-map){
+        padding-bottom:calc(var(--mobile-nav) + var(--safe-bottom) + 10px)!important;
+    }
+    .helm-view.active:not(#helm-view-map)>div:first-child{
+        padding:14px clamp(10px,3.5vw,16px) calc(var(--mobile-nav) + var(--safe-bottom) + 14px)!important;
+    }
+
+    .helm-section-card,
+    .bento-card,
+    .helm-metric-card,
+    .property-browse-card,
+    .v24-viewing-card,
+    .v75-viewing-card{
+        width:100%!important;
+        max-width:100%!important;
+    }
+
+    .property-browse-card,
+    .v24-viewing-card,
+    .v75-viewing-card{
+        overflow-wrap:anywhere;
+        word-break:break-word;
+    }
+
+    button,.btn,.ob-btn,.hm-btn,[role="button"],a[role="button"]{
+        touch-action:manipulation;
+    }
+
+    .custom-modal-overlay{
+        padding:12px max(10px,var(--safe-right)) max(12px,var(--safe-bottom)) max(10px,var(--safe-left))!important;
+    }
+}
+
+@media(max-width:480px){
+    .mobile-menu-btn{
+        display:none!important;
+    }
+    .custom-modal-overlay{
+        padding:0!important;
+    }
+    .custom-modal-overlay>div,
+    .modal-panel,
+    .dark-modal-content{
+        padding-bottom:max(12px,var(--safe-bottom))!important;
+    }
+    .property-card-actions{
+        row-gap:8px!important;
+    }
+}
+</style>
+
 <!-- ═══════════════════════════════════════════════════════════════
      v82: SUPABASE STORAGE SYNC LAYER
      Intercepts localStorage writes and mirrors data to Supabase.
@@ -72271,6 +72726,120 @@ html[data-theme="light"] .helm-design-handle {
         bottom: 70px;
         padding: 10px 14px;
     }
+}
+</style>
+
+<style id="helm-v76-theme-unify">
+/* Unified theme tokens for overlays/surfaces/buttons */
+html:not([data-theme="light"]) {
+    --hmx-overlay: rgba(2, 6, 23, 0.65);
+    --hmx-surface: rgba(10, 16, 24, 0.94);
+    --hmx-surface-soft: rgba(15, 23, 35, 0.86);
+    --hmx-border: rgba(148, 163, 184, 0.24);
+    --hmx-text: #e5e7eb;
+    --hmx-text-muted: #94a3b8;
+    --hmx-btn-bg: rgba(37, 99, 235, 0.28);
+    --hmx-btn-border: rgba(96, 165, 250, 0.45);
+    --hmx-btn-text: #eff6ff;
+}
+html[data-theme="light"] {
+    --hmx-overlay: rgba(15, 23, 42, 0.24);
+    --hmx-surface: rgba(248, 245, 239, 0.98);
+    --hmx-surface-soft: #eef2f7;
+    --hmx-border: rgba(30, 58, 95, 0.16);
+    --hmx-text: #1f2937;
+    --hmx-text-muted: #64748b;
+    --hmx-btn-bg: #dbeafe;
+    --hmx-btn-border: rgba(59, 130, 246, 0.3);
+    --hmx-btn-text: #1e3a5f;
+}
+
+/* Overlays */
+html[data-theme="light"] :is(.custom-modal-overlay, .modal-overlay, [id*="modal-overlay"], #helm-intel-modal-overlay) {
+    background: var(--hmx-overlay) !important;
+    backdrop-filter: blur(8px) !important;
+}
+html:not([data-theme="light"]) :is(.custom-modal-overlay, .modal-overlay, [id*="modal-overlay"], #helm-intel-modal-overlay) {
+    background: var(--hmx-overlay) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Modal and menu surfaces */
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content > *, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) {
+    background: var(--hmx-surface) !important;
+    border-color: var(--hmx-border) !important;
+    color: var(--hmx-text) !important;
+}
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content > *, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) * {
+    border-color: var(--hmx-border);
+}
+
+/* Text consistency in modal/menu contexts */
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) :is(h1,h2,h3,h4,h5,h6,[style*="color: white"],[style*="color:white"]) {
+    color: var(--hmx-text) !important;
+}
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) [style*="color: rgba(255,255,255"], 
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) [style*="color:rgba(255,255,255"] {
+    color: var(--hmx-text-muted) !important;
+}
+
+/* Inputs in modal/menu contexts */
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) :is(input,select,textarea,.helm-map-search) {
+    background: var(--hmx-surface-soft) !important;
+    color: var(--hmx-text) !important;
+    border: 1px solid var(--hmx-border) !important;
+}
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content) :is(input,textarea)::placeholder {
+    color: var(--hmx-text-muted) !important;
+}
+
+/* Non-primary buttons in modal/menu contexts */
+:is(.modal-content, .modal-panel, .dark-modal-content, #helm-intel-modal-content, #hpm-user-menu, .floating-menu, .helm-floating-menu, .toolbar-dropdown-menu) button:not([style*="linear-gradient"]):not(.bento-btn-primary):not(.v75-btn):not(.helm-nav-item) {
+    background: var(--hmx-btn-bg) !important;
+    color: var(--hmx-btn-text) !important;
+    border: 1px solid var(--hmx-btn-border) !important;
+}
+
+/* Quick book button consistency */
+html[data-theme="light"] .helm-quick-book-btn {
+    background: linear-gradient(145deg, #e8f4fd, #dbeafe) !important;
+    color: #1e3a5f !important;
+    border: 1px solid rgba(30,58,95,0.16) !important;
+    box-shadow: 0 2px 8px rgba(30,58,95,0.08) !important;
+}
+html[data-theme="light"] .helm-quick-book-btn:hover {
+    background: linear-gradient(145deg, #dbeafe, #bfdbfe) !important;
+    color: #0f2d4d !important;
+}
+html:not([data-theme="light"]) .helm-quick-book-btn {
+    background: linear-gradient(145deg, #2563eb, #1d4ed8) !important;
+    color: #f8fbff !important;
+    border: 1px solid rgba(96, 165, 250, 0.38) !important;
+}
+html:not([data-theme="light"]) .helm-quick-book-btn:hover {
+    background: linear-gradient(145deg, #3b82f6, #2563eb) !important;
+}
+
+/* Intel modal block contrast */
+#helm-intel-modal-content .helm-intel-results {
+    background: var(--hmx-surface-soft) !important;
+    color: var(--hmx-text) !important;
+    border: 1px solid var(--hmx-border) !important;
+}
+#helm-intel-modal-content .helm-intel-section h5 {
+    color: var(--hmx-text-muted) !important;
+}
+
+/* Booking view header contrast (from screenshot) */
+html[data-theme="light"] #helm-view-booking .helm-booking-title h2,
+html[data-theme="light"] #helm-view-booking .helm-booking-title p,
+html[data-theme="light"] #helm-view-booking [style*="color: white"],
+html[data-theme="light"] #helm-view-booking [style*="color:white"] {
+    color: #1f2937 !important;
+}
+html[data-theme="light"] #helm-view-booking [style*="color: rgba(255,255,255"],
+html[data-theme="light"] #helm-view-booking [style*="color:rgba(255,255,255"] {
+    color: #64748b !important;
 }
 </style>
 
