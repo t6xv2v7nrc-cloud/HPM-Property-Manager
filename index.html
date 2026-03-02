@@ -3659,7 +3659,7 @@
                         console.log('[HPM] Inactivity - returning to welcome (remembered session)');
                         if (typeof showHelmWelcome === 'function') showHelmWelcome();
                     }
-                }, 10 * 60 * 1000); // 10 min to welcome screen
+                }, INACTIVITY_TIMEOUT_REMEMBERED); // 1 week to welcome screen
                 return;
             }
             inactivityTimer = setTimeout(autoLogout, INACTIVITY_TIMEOUT_DEFAULT);
@@ -11328,23 +11328,28 @@
         }
 
         .v24-card-btn.whatsapp {
-            background: #25d366;
-            color: white;
+            background: #e6f0e8;
+            color: #3d6b4f;
         }
 
         .v24-card-btn.edit {
-            background: var(--ob-accent);
-            color: white;
+            background: #f0ebe4;
+            color: #5c4f3d;
+        }
+
+        .v24-card-btn.reschedule {
+            background: #e8efe6;
+            color: #3d6b4f;
         }
 
         .v24-card-btn.cancel {
-            background: var(--ob-danger, #ff6b6b);
-            color: white;
+            background: #f5e8e6;
+            color: #8b4f4a;
         }
 
         .v24-card-btn.pipeline {
-            background: var(--ob-accent);
-            color: white;
+            background: #f0ebe4;
+            color: #5c4f3d;
         }
 
         /* v24 Referrals CSS — REMOVED v76 (legacy v16-24) */
@@ -21758,14 +21763,14 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 </div>
                             </div>
 
-                            <!-- Toggle Pills -->
+                            <!-- Toggle Pills - Agent Rankings only -->
                             <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                                 <button id="leaderboard-toggle-agents" onclick="toggleLeaderboardView('agents')"
                                     class="bento-pill active" style="flex: 1; justify-content: center; padding: 12px;">
                                     Agent Rankings
                                 </button>
                                 <button id="leaderboard-toggle-properties" onclick="toggleLeaderboardView('properties')"
-                                    class="bento-pill" style="flex: 1; justify-content: center; padding: 12px;">
+                                    class="bento-pill" style="flex: 1; justify-content: center; padding: 12px; display: none;">
                                     Property Rankings
                                 </button>
                             </div>
@@ -29104,7 +29109,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                                 <button onclick="AppState.bookViewingWithContext(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,#2dd4bf,#7c3aed);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(45,212,191,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
                                     Book
                                 </button>
-                                <button onclick="showLocationIntelModal(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(245,158,11,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+                                <button onclick="showLocationIntelModal(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,var(--color-gold,#d4a853),var(--color-light-gold,#c4973d));color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(212,168,83,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
                                     Intel
                                 </button>
                                 <button onclick="sharePropertyWhatsApp(${firstProp.id}); event.stopPropagation();" style="flex:1;min-width:80px;padding:12px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(37,211,102,0.3);display:flex;align-items:center;justify-content:center;gap:8px;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
@@ -32719,7 +32724,7 @@ Harir Industries`;
                         <button class="v24-card-btn whatsapp" onclick="event.stopPropagation(); shareViewingWhatsApp(${viewing.id})">
                             <svg class="hm-icon hm-icon-sm"><use href="#hm-icon-whatsapp"/></svg> Share
                         </button>
-                        <button class="v24-card-btn" style="background: var(--hm-status-active);" onclick="event.stopPropagation(); rescheduleViewing(${viewing.id})">
+                        <button class="v24-card-btn reschedule" onclick="event.stopPropagation(); rescheduleViewing(${viewing.id})">
                             <svg class="hm-icon hm-icon-sm"><use href="#hm-icon-calendar"/></svg> Reschedule
                         </button>
                         <button class="v24-card-btn edit" onclick="event.stopPropagation(); editViewing(${viewing.id})">
@@ -57618,23 +57623,23 @@ html:not([data-theme="light"]) .v75-status.completed { background: rgba(127,176,
 .v75-btn:active { transform: scale(0.95); }
 .v75-btn .material-symbols-rounded { font-size: 14px !important; }
 
-html[data-theme="light"] .v75-btn.edit { background: #E8F4FD; color: #2874A6; }
-html[data-theme="light"] .v75-btn.edit:hover { background: #D1E8FA; }
-html[data-theme="light"] .v75-btn.reschedule { background: #EDE9FE; color: #5B21B6; }
-html[data-theme="light"] .v75-btn.reschedule:hover { background: #DDD6FE; }
-html[data-theme="light"] .v75-btn.cancel { background: #FFEBEE; color: #C62828; }
-html[data-theme="light"] .v75-btn.cancel:hover { background: #FFCDD2; }
-html[data-theme="light"] .v75-btn.whatsapp { background: #E8F5E9; color: #2E7D32; }
-html[data-theme="light"] .v75-btn.whatsapp:hover { background: #C8E6C9; }
-html[data-theme="light"] .v75-btn.pipeline { background: #E8F4FD; color: #2874A6; }
-html[data-theme="light"] .v75-btn.delete { background: #FFEBEE; color: #C62828; }
+html[data-theme="light"] .v75-btn.edit { background: #f0ebe4; color: #5c4f3d; }
+html[data-theme="light"] .v75-btn.edit:hover { background: #e6dfd5; }
+html[data-theme="light"] .v75-btn.reschedule { background: #e8efe6; color: #3d6b4f; }
+html[data-theme="light"] .v75-btn.reschedule:hover { background: #dce6d9; }
+html[data-theme="light"] .v75-btn.cancel { background: #f5e8e6; color: #8b4f4a; }
+html[data-theme="light"] .v75-btn.cancel:hover { background: #eddbd8; }
+html[data-theme="light"] .v75-btn.whatsapp { background: #e6f0e8; color: #3d6b4f; }
+html[data-theme="light"] .v75-btn.whatsapp:hover { background: #d9e8dc; }
+html[data-theme="light"] .v75-btn.pipeline { background: #f0ebe4; color: #5c4f3d; }
+html[data-theme="light"] .v75-btn.delete { background: #f5e8e6; color: #8b4f4a; }
 
-html:not([data-theme="light"]) .v75-btn.edit { background: rgba(74,144,226,0.15); color: #93C5FD; }
-html:not([data-theme="light"]) .v75-btn.reschedule { background: rgba(45,212,191,0.15); color: #C4B5FD; }
-html:not([data-theme="light"]) .v75-btn.cancel { background: rgba(229,115,115,0.15); color: #FCA5A5; }
-html:not([data-theme="light"]) .v75-btn.whatsapp { background: rgba(37,211,102,0.15); color: #86EFAC; }
-html:not([data-theme="light"]) .v75-btn.pipeline { background: rgba(74,144,226,0.15); color: #93C5FD; }
-html:not([data-theme="light"]) .v75-btn.delete { background: rgba(229,115,115,0.15); color: #FCA5A5; }
+html:not([data-theme="light"]) .v75-btn.edit { background: rgba(180,160,130,0.12); color: #d4c4a8; }
+html:not([data-theme="light"]) .v75-btn.reschedule { background: rgba(120,170,130,0.12); color: #a8d4b0; }
+html:not([data-theme="light"]) .v75-btn.cancel { background: rgba(190,120,110,0.12); color: #d4a8a0; }
+html:not([data-theme="light"]) .v75-btn.whatsapp { background: rgba(120,170,130,0.12); color: #a8d4b0; }
+html:not([data-theme="light"]) .v75-btn.pipeline { background: rgba(180,160,130,0.12); color: #d4c4a8; }
+html:not([data-theme="light"]) .v75-btn.delete { background: rgba(190,120,110,0.12); color: #d4a8a0; }
 
 /* ─── V75 CLIENT AVATAR ─── */
 .v75-avatar {
@@ -60668,15 +60673,15 @@ Harir Industries`;
                             <span style="font-size: 11px; color: ${textSecondary};">${agentName}</span>
                         </div>
                     </div>
-                    <!-- v63: Compact Action Buttons -->
+                    <!-- v63: Compact Action Buttons - Redesigned warm tones -->
                     <div style="display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid ${rowBorder}; justify-content: flex-start;">
-                        <button onclick="event.stopPropagation(); editViewing(${v.id})" style="padding: 8px 14px; background: linear-gradient(135deg, #3b82f6, #2563eb) !important; color: white !important; border: none; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(59,130,246,0.3);">
+                        <button onclick="event.stopPropagation(); editViewing(${v.id})" style="padding: 8px 14px; background: ${isLightTheme ? '#f0ebe4' : 'rgba(180,160,130,0.15)'} !important; color: ${isLightTheme ? '#5c4f3d' : '#d4c4a8'} !important; border: 1px solid ${isLightTheme ? 'rgba(180,160,130,0.15)' : 'rgba(180,160,130,0.12)'}; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: none; transition: all 0.15s;">
                             <span class="material-symbols-rounded" style="font-size: 14px;">edit</span> Edit
                         </button>
-                        <button onclick="event.stopPropagation(); rescheduleViewing(${v.id})" style="padding: 8px 14px; background: linear-gradient(135deg, #2dd4bf, #7c3aed) !important; color: white !important; border: none; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(45,212,191,0.3);">
+                        <button onclick="event.stopPropagation(); rescheduleViewing(${v.id})" style="padding: 8px 14px; background: ${isLightTheme ? '#e8efe6' : 'rgba(120,170,130,0.15)'} !important; color: ${isLightTheme ? '#3d6b4f' : '#a8d4b0'} !important; border: 1px solid ${isLightTheme ? 'rgba(120,170,130,0.12)' : 'rgba(120,170,130,0.1)'}; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: none; transition: all 0.15s;">
                             <span class="material-symbols-rounded" style="font-size: 14px;">event</span> Reschedule
                         </button>
-                        <button onclick="event.stopPropagation(); cancelViewing(${v.id})" style="padding: 8px 14px; background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: white !important; border: none; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(239,68,68,0.3);">
+                        <button onclick="event.stopPropagation(); cancelViewing(${v.id})" style="padding: 8px 14px; background: ${isLightTheme ? '#f5e8e6' : 'rgba(190,120,110,0.15)'} !important; color: ${isLightTheme ? '#8b4f4a' : '#d4a8a0'} !important; border: 1px solid ${isLightTheme ? 'rgba(190,120,110,0.12)' : 'rgba(190,120,110,0.1)'}; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: none; transition: all 0.15s;">
                             <span class="material-symbols-rounded" style="font-size: 14px;">close</span> Cancel
                         </button>
                     </div>
@@ -72840,6 +72845,181 @@ html[data-theme="light"] #helm-view-booking [style*="color:white"] {
 html[data-theme="light"] #helm-view-booking [style*="color: rgba(255,255,255"],
 html[data-theme="light"] #helm-view-booking [style*="color:rgba(255,255,255"] {
     color: #64748b !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROPERTY CARD REDESIGN — Animations, Subtler Colors, Consistency
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Entrance animation */
+@keyframes cardFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Base card animation */
+.property-browse-card {
+    animation: cardFadeInUp 0.4s ease-out both;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Stagger animation for cards in grid */
+.property-browse-card:nth-child(1) { animation-delay: 0.02s; }
+.property-browse-card:nth-child(2) { animation-delay: 0.06s; }
+.property-browse-card:nth-child(3) { animation-delay: 0.10s; }
+.property-browse-card:nth-child(4) { animation-delay: 0.14s; }
+.property-browse-card:nth-child(5) { animation-delay: 0.18s; }
+.property-browse-card:nth-child(6) { animation-delay: 0.22s; }
+.property-browse-card:nth-child(7) { animation-delay: 0.26s; }
+.property-browse-card:nth-child(8) { animation-delay: 0.30s; }
+.property-browse-card:nth-child(9) { animation-delay: 0.34s; }
+.property-browse-card:nth-child(10) { animation-delay: 0.38s; }
+.property-browse-card:nth-child(n+11) { animation-delay: 0.40s; }
+
+/* Light mode property cards */
+html[data-theme="light"] .property-browse-card {
+    background: #faf8f5 !important;
+    border: 1px solid rgba(180,160,130,0.15) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+    border-left-width: 3px !important;
+    border-left-style: solid !important;
+}
+
+html[data-theme="light"] .property-browse-card:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.03) !important;
+    border-color: rgba(180,160,130,0.25) !important;
+}
+
+html[data-theme="light"] .property-browse-card.taken {
+    opacity: 0.55 !important;
+}
+
+/* Dark mode property cards */
+html:not([data-theme="light"]) .property-browse-card {
+    background: rgba(255,255,255,0.025) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 14px !important;
+    border-left-width: 3px !important;
+    border-left-style: solid !important;
+}
+
+html:not([data-theme="light"]) .property-browse-card:hover {
+    transform: translateY(-3px) !important;
+    background: rgba(255,255,255,0.04) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Softer status badge colors on property cards */
+html[data-theme="light"] .property-browse-card [style*="background: rgba(34,197,94"] {
+    background: rgba(61,107,79,0.08) !important;
+}
+html[data-theme="light"] .property-browse-card [style*="color: #86efac"] {
+    color: #3d6b4f !important;
+}
+html[data-theme="light"] .property-browse-card [style*="background: rgba(239,68,68"] {
+    background: rgba(139,79,74,0.08) !important;
+}
+html[data-theme="light"] .property-browse-card [style*="color: #fca5a5"] {
+    color: #8b4f4a !important;
+}
+
+/* Property card action buttons - warm subtle style */
+html[data-theme="light"] .property-card-actions button[style*="linear-gradient"] {
+    background: #f0ebe4 !important;
+    color: #5c4f3d !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(180,160,130,0.12) !important;
+}
+html[data-theme="light"] .property-card-actions button[style*="linear-gradient"]:hover {
+    background: #e6dfd5 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
+}
+
+/* Keep the share/whatsapp button slightly green-tinted */
+html[data-theme="light"] .property-card-actions button[title="Share via WhatsApp"] {
+    background: #e8efe6 !important;
+    color: #3d6b4f !important;
+}
+
+/* Toggle taken/available keeps subtle state colors */
+html[data-theme="light"] .property-card-actions button[title="Mark All Taken"] {
+    background: #f5e8e6 !important;
+    color: #8b4f4a !important;
+}
+html[data-theme="light"] .property-card-actions button[title="Mark All Available"] {
+    background: #e8efe6 !important;
+    color: #3d6b4f !important;
+}
+
+/* Studio items inside cards - softer borders */
+html[data-theme="light"] .property-browse-card [style*="border-left: 3px solid #22c55e"] {
+    border-left-color: #6b9e7a !important;
+}
+html[data-theme="light"] .property-browse-card [style*="border-left: 3px solid #ef4444"] {
+    border-left-color: #b87a75 !important;
+}
+html[data-theme="light"] .property-browse-card [style*="border-left: 3px solid #6b7280"] {
+    border-left-color: #9a9084 !important;
+}
+
+/* Rent color - softer green */
+html[data-theme="light"] .property-browse-card [style*="color: #22c55e"][style*="font-weight: 800"],
+html[data-theme="light"] .property-browse-card [style*="color:#22c55e"][style*="font-weight:800"] {
+    color: #3d8b56 !important;
+}
+
+/* Studio grid background */
+html[data-theme="light"] .property-browse-card [style*="background: var(--bg-grey)"] {
+    background: rgba(180,160,130,0.05) !important;
+}
+
+/* Dark mode property card action buttons */
+html:not([data-theme="light"]) .property-card-actions button[style*="linear-gradient"] {
+    background: rgba(255,255,255,0.06) !important;
+    color: rgba(255,255,255,0.75) !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+}
+html:not([data-theme="light"]) .property-card-actions button[style*="linear-gradient"]:hover {
+    background: rgba(255,255,255,0.1) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* v24 viewing button improvements for dark mode */
+html:not([data-theme="light"]) .v24-card-btn.whatsapp {
+    background: rgba(120,170,130,0.12) !important;
+    color: #a8d4b0 !important;
+    border: none !important;
+}
+html:not([data-theme="light"]) .v24-card-btn.edit {
+    background: rgba(180,160,130,0.12) !important;
+    color: #d4c4a8 !important;
+    border: none !important;
+}
+html:not([data-theme="light"]) .v24-card-btn.reschedule {
+    background: rgba(120,170,130,0.12) !important;
+    color: #a8d4b0 !important;
+    border: none !important;
+}
+html:not([data-theme="light"]) .v24-card-btn.cancel {
+    background: rgba(190,120,110,0.12) !important;
+    color: #d4a8a0 !important;
+    border: none !important;
+}
+html:not([data-theme="light"]) .v24-card-btn.pipeline {
+    background: rgba(180,160,130,0.12) !important;
+    color: #d4c4a8 !important;
+    border: none !important;
 }
 </style>
 
