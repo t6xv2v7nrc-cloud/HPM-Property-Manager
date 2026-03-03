@@ -74103,5 +74103,137 @@ html:not([data-theme="light"]) .v24-card-btn.pipeline {
 })();
 </script>
 
+
+<script>
+// HELM v77.1  |  Viewing Registration Fix
+(function helmViewingRegistrationFix() {
+    'use strict';
+
+    function normaliseStatus(raw) {
+        if (!raw) return 'confirmed';
+        const s = String(raw).toLowerCase().trim();
+        const map = {
+            'confirmed':'confirmed','pending':'pending','declined':'declined',
+            'cancelled':'cancelled','canceled':'cancelled',
+            'signed up':'signed_up','signed-up':'signed_up','signed_up':'signed_up','signed':'signed_up',
+            'no show':'no_show','no-show':'no_show','no_show':'no_show',
+            'ineligible':'ineligible',
+            'not interested':'not_interested','not-interested':'not_interested','not_interested':'not_interested',
+            'viewed':'viewed','completed':'viewed','scheduled':'confirmed'
+        };
+        return map[s] || 'confirmed';
+    }
+
+    function buildViewingPayload(v) {
+        return {
+            id: String(v.id),
+            client_name: v.clientName || v.visitorName || v.name || v.visitor || '',
+            client_phone: v.clientPhone || v.visitorPhone || v.phone || '',
+            client_email: v.clientEmail || v.email || '',
+            property_id: v.propertyId ? String(v.propertyId) : null,
+            property_name: v.propertyName || v.property || v.studioName || '',
+            property_address: v.propertyAddress || v.address || '',
+            viewing_date: v.date || v.viewingDate || null,
+            viewing_time: v.time || v.viewingTime || '',
+            viewing_type: v.viewingType || 'in-person',
+            status: normaliseStatus(v.status || v.outcome),
+            notes: v.notes || '',
+            agent_id: v.agentId ? String(v.agentId) : null,
+            agent_name: v.agentName || v.agent || '',
+            referral_source: v.referralSource || null,
+            booked_by: v.bookedBy || null,
+            booked_by_name: v.bookedByName || null,
+            outcome_notes: v.outcomeNotes || v.outcome_notes || null,
+            updated_at: new Date().toISOString()
+        };
+    }
+
+    // FIX 1: Replace syncViewingsToSupabaseNow — no more dropped columns
+    window.syncViewingsToSupabaseNow = async function(viewingsArray) {
+        if (!window.supabase) return;
+        if (!await window.hpmHasAuth()) return;
+        if (window._hpmSyncingToCloud) return;
+        const now = Date.now();
+        if (window._lastViewingsSync && now - window._lastViewingsSync < 2000) return;
+        window._lastViewingsSync = now;
+        window._hpmSyncingToCloud = true;
+        try {
+            const batch = (viewingsArray || []).filter(v => v && v.id).map(v => buildViewingPayload(v));
+            const CHUNK = 50;
+            let synced = 0;
+            for (let i = 0; i < batch.length; i += CHUNK) {
+                const { error } = await window.supabase.from('viewings').upsert(batch.slice(i, i + CHUNK), { onConflict: 'id' });
+                if (!error) synced += Math.min(CHUNK, batch.length - i);
+                else console.error('[v77.1 Sync] Error:', error.message);
+            }
+            if (synced > 0) console.log('[v77.1 Sync] ✅', synced, 'viewings synced');
+        } catch (err) { console.error('[v77.1 Sync]', err); }
+        window._hpmSyncingToCloud = false;
+    };
+
+    // FIX 2: Replace HELMData.saveViewing + updateViewingStatus
+    function patchHELMData() {
+        if (!window.HELMData) return;
+        window.HELMData.saveViewing = async function(viewing) {
+            if (!window.supabase) { this.updateLocalViewing(viewing); return { success: false, offline: true }; }
+            const dbData = buildViewingPayload(viewing);
+            console.log('[HELMData v77.1] Saving:', viewing.id, '| status:', dbData.status);
+            const { error } = await window.supabase.from('viewings').upsert(dbData, { onConflict: 'id' });
+            if (error) {
+                console.error('[HELMData v77.1] ❌', error.message);
+                this.updateLocalViewing(viewing);
+                return { success: false, error: error.message };
+            }
+            console.log('[HELMData v77.1] ✅ Saved:', viewing.id);
+            this.updateLocalViewing(viewing);
+            return { success: true };
+        };
+        window.HELMData.updateViewingStatus = async function(viewingId, status, outcome) {
+            const viewing = this.viewings.find(v => v.id === viewingId || String(v.id) === String(viewingId));
+            if (!viewing) return { success: false, error: 'Viewing not found' };
+            viewing.status = normaliseStatus(status || outcome);
+            viewing.updatedAt = new Date().toISOString();
+            if (outcome && outcome !== status) viewing.outcomeNotes = outcome;
+            return await this.saveViewing(viewing);
+        };
+    }
+    patchHELMData();
+    document.addEventListener('helmdata:ready', patchHELMData);
+
+    // FIX 3: Normalise status before saveViewingsToStorage — stops 'Pending' violating CHECK
+    const _origSave = window.saveViewingsToStorage;
+    if (typeof _origSave === 'function') {
+        window.saveViewingsToStorage = function() {
+            (window.viewings || []).forEach(v => { v.status = normaliseStatus(v.status) || 'confirmed'; });
+            return _origSave.apply(this, arguments);
+        };
+    }
+
+    // FIX 4: renderHelmViewingsList — read window.viewings not stale localStorage
+    const _origRender = window.renderHelmViewingsList;
+    window.renderHelmViewingsList = function() {
+        const live = window.viewings && window.viewings.length > 0 ? window.viewings : null;
+        if (!live) { if (typeof _origRender === 'function') _origRender.apply(this, arguments); return; }
+        const _origGet = localStorage.getItem.bind(localStorage);
+        localStorage.getItem = function(key) {
+            if (key === 'propertyViewings') return JSON.stringify(live);
+            return _origGet(key);
+        };
+        try { if (typeof _origRender === 'function') _origRender.apply(this, arguments); }
+        finally { localStorage.getItem = _origGet; }
+    };
+
+    // Immediately fix any in-memory viewings with bad statuses
+    setTimeout(() => {
+        let fixed = 0;
+        (window.viewings || []).forEach(v => { const c = normaliseStatus(v.status); if (v.status !== c) { v.status = c; fixed++; } });
+        if (fixed > 0) console.log('[v77.1] Fixed', fixed, 'in-memory statuses');
+        if (typeof window.renderHelmViewingsList === 'function') window.renderHelmViewingsList();
+    }, 1500);
+
+    console.log('[HELM v77.1] Viewing registration patch loaded ✅');
+})();
+</script>
+
 </body>
 </html>
