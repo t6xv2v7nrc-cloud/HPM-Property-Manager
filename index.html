@@ -2684,14 +2684,16 @@
                     return { success: false, offline: true };
                 }
                 
+                // v77: Unified column names — use client_phone, viewing_date, viewing_time
+                // to match batch-sync and download mapping (fixes data loss on roundtrip)
                 const dbData = {
                     id: String(viewing.id),
                     property_id: viewing.propertyId ? String(viewing.propertyId) : null,
-                    property_name: viewing.propertyName || viewing.property || '',
+                    property_name: viewing.propertyName || viewing.property || viewing.studioName || viewing.address || '',
+                    property_address: viewing.propertyAddress || viewing.address || '',
                     client_name: viewing.clientName || viewing.visitor || viewing.name || '',
-                    phone: viewing.phone || '',
-                    date: viewing.date,
-                    time: viewing.time,
+                    client_phone: viewing.phone || viewing.visitorPhone || viewing.clientPhone || '',
+                    client_email: viewing.email || viewing.clientEmail || '',
                     viewing_date: viewing.date,
                     viewing_time: viewing.time,
                     status: viewing.status || 'Pending',
@@ -4117,20 +4119,24 @@
                         const existingViewings = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
                         const viewingsMap = new Map(existingViewings.map(v => [String(v.id), v]));
                         
+                        // v77: Check BOTH phone and client_phone columns for backward compat
                         viewings.forEach(v => {
+                            const thePhone = v.client_phone || v.phone || '';
+                            const theName = v.client_name || '';
+                            const thePropName = v.property_name || '';
                             viewingsMap.set(String(v.id), {
                                 id: v.id,
-                                name: v.client_name, clientName: v.client_name, visitor: v.client_name,
-                                phone: v.client_phone, visitorPhone: v.client_phone, clientPhone: v.client_phone,
-                                email: v.client_email, clientEmail: v.client_email,
-                                propertyId: v.property_id, propertyName: v.property_name, property: v.property_name,
-                                propertyAddress: v.property_address, address: v.property_address,
-                                date: v.viewing_date || v.date, time: v.viewing_time || v.time,
-                                status: v.status, outcome: v.outcome, notes: v.notes,
-                                agentId: v.agent_id,
-                                agentName: v.agent_name, // v68.1: Get agent name from cloud
-                                agent: v.agent_name, // v68.1: Alias for matching
-                                updatedAt: v.updated_at
+                                name: theName, clientName: theName, visitor: theName,
+                                phone: thePhone, visitorPhone: thePhone, clientPhone: thePhone,
+                                email: v.client_email || '', clientEmail: v.client_email || '',
+                                propertyId: v.property_id, propertyName: thePropName, property: thePropName, studioName: thePropName,
+                                propertyAddress: v.property_address || '', address: v.property_address || '',
+                                date: v.viewing_date || v.date || '', time: v.viewing_time || v.time || '',
+                                status: v.status || 'scheduled', outcome: v.outcome || null, notes: v.notes || '',
+                                agentId: v.agent_id || null,
+                                agentName: v.agent_name || '',
+                                agent: v.agent_name || '',
+                                updatedAt: v.updated_at || ''
                             });
                         });
                         
@@ -20500,250 +20506,769 @@
     html.has-session #helm-ui-shell{display:flex!important;flex-direction:column!important}
     </style>
 
-<!-- ═══ v76: HELM VISUAL OVERHAUL — Clean Minimal Design System ═══ -->
-<style id="v76-overhaul">
-/* ────────────────────────────────────────────────────────
-   v76 DESIGN TOKENS — Neutral, clean, professional
-   ──────────────────────────────────────────────────────── */
-:root {
-    --h76-bg: #0b0f14;
-    --h76-surface: rgba(255,255,255,0.025);
-    --h76-surface-2: rgba(255,255,255,0.04);
-    --h76-surface-3: rgba(255,255,255,0.07);
-    --h76-border: rgba(255,255,255,0.06);
-    --h76-border-hover: rgba(255,255,255,0.12);
-    --h76-text-1: rgba(255,255,255,0.92);
-    --h76-text-2: rgba(255,255,255,0.55);
-    --h76-text-3: rgba(255,255,255,0.30);
-    --h76-accent: #5eead4;
-    --h76-accent-soft: rgba(94,234,212,0.08);
-    --h76-accent-mid: rgba(94,234,212,0.18);
-    --h76-success: #34d399;
-    --h76-warning: #fbbf24;
-    --h76-danger: #f87171;
-    --h76-info: #60a5fa;
-    --h76-r-sm: 8px; --h76-r: 12px; --h76-r-lg: 16px; --h76-r-xl: 20px;
-    --h76-sh: 0 1px 3px rgba(0,0,0,0.3);
-    --h76-sh-lg: 0 8px 32px rgba(0,0,0,0.35);
-    --h76-font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+<!-- ═══ v77: HELM COMPLETE REDESIGN — Clean, Consistent, Modern ═══ -->
+<style id="v77-redesign">
+/* ══════════════════════════════════════════════════════════════════
+   v77 DESIGN SYSTEM — Single source of truth
+   All tokens, all components, all themes in one place.
+   No bento. No glass. No chaos. Just clean.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── DARK THEME (default) ── */
+:root, html:not([data-theme="light"]) {
+    --hds-bg:         #0c0f15;
+    --hds-bg-raised:  #12151e;
+    --hds-bg-overlay: #181c28;
+    --hds-bg-inset:   #0a0c12;
+    --hds-surface:    #1a1e2b;
+    --hds-surface-2:  #222737;
+    --hds-surface-3:  #2a3042;
+    --hds-border:     rgba(255,255,255,0.07);
+    --hds-border-2:   rgba(255,255,255,0.12);
+    --hds-border-3:   rgba(255,255,255,0.18);
+    --hds-text:       #e8eaf0;
+    --hds-text-2:     #9399ad;
+    --hds-text-3:     #5c6278;
+    --hds-text-4:     #3d4355;
+    --hds-accent:     #5eead4;
+    --hds-accent-2:   #2dd4bf;
+    --hds-accent-bg:  rgba(94,234,212,0.08);
+    --hds-accent-bg2: rgba(94,234,212,0.14);
+    --hds-accent-bg3: rgba(94,234,212,0.22);
+    --hds-success:    #34d399;
+    --hds-success-bg: rgba(52,211,153,0.10);
+    --hds-warning:    #fbbf24;
+    --hds-warning-bg: rgba(251,191,36,0.10);
+    --hds-danger:     #f87171;
+    --hds-danger-bg:  rgba(248,113,113,0.10);
+    --hds-info:       #60a5fa;
+    --hds-info-bg:    rgba(96,165,250,0.10);
+    --hds-purple:     #a78bfa;
+    --hds-purple-bg:  rgba(167,139,250,0.10);
+    /* Radius */
+    --hds-r-xs: 6px;
+    --hds-r-sm: 8px;
+    --hds-r:    10px;
+    --hds-r-md: 12px;
+    --hds-r-lg: 16px;
+    --hds-r-xl: 20px;
+    --hds-r-2xl:24px;
+    --hds-r-full:999px;
+    /* Shadows */
+    --hds-sh-sm: 0 1px 2px rgba(0,0,0,0.25);
+    --hds-sh:    0 2px 8px rgba(0,0,0,0.30);
+    --hds-sh-md: 0 4px 16px rgba(0,0,0,0.35);
+    --hds-sh-lg: 0 12px 40px rgba(0,0,0,0.45);
+    --hds-sh-xl: 0 24px 64px rgba(0,0,0,0.55);
+    /* Font */
+    --hds-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    /* Spacing */
+    --hds-gap: 16px;
+    --hds-gap-sm: 10px;
+    --hds-gap-xs: 6px;
+    --hds-gap-lg: 24px;
+    /* Transitions */
+    --hds-ease: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --hds-ease-spring: 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Overlay */
+    --hds-modal-bg: rgba(0,0,0,0.55);
+    --hds-modal-blur: blur(10px);
+    /* Scrollbar */
+    --hds-scroll: rgba(255,255,255,0.08);
+    --hds-scroll-hover: rgba(255,255,255,0.16);
 }
+
+/* ── LIGHT THEME ── */
 html[data-theme="light"] {
-    --h76-bg: #f8f7f4;
-    --h76-surface: rgba(255,255,255,0.65);
-    --h76-surface-2: rgba(0,0,0,0.025);
-    --h76-surface-3: rgba(0,0,0,0.05);
-    --h76-border: rgba(0,0,0,0.06);
-    --h76-border-hover: rgba(0,0,0,0.12);
-    --h76-text-1: #1a1a1a;
-    --h76-text-2: #6b6560;
-    --h76-text-3: #a09890;
-    --h76-accent: #0d9488;
-    --h76-accent-soft: rgba(13,148,136,0.06);
-    --h76-accent-mid: rgba(13,148,136,0.14);
-    --h76-sh: 0 1px 3px rgba(0,0,0,0.04);
-    --h76-sh-lg: 0 8px 32px rgba(0,0,0,0.06);
+    --hds-bg:         #f6f5f2;
+    --hds-bg-raised:  #ffffff;
+    --hds-bg-overlay: #edeae5;
+    --hds-bg-inset:   #efede9;
+    --hds-surface:    #ffffff;
+    --hds-surface-2:  #f0eee9;
+    --hds-surface-3:  #e5e2dc;
+    --hds-border:     rgba(0,0,0,0.07);
+    --hds-border-2:   rgba(0,0,0,0.12);
+    --hds-border-3:   rgba(0,0,0,0.20);
+    --hds-text:       #1a1a1a;
+    --hds-text-2:     #5c564e;
+    --hds-text-3:     #9a9488;
+    --hds-text-4:     #c5bfb4;
+    --hds-accent:     #0d9488;
+    --hds-accent-2:   #0f766e;
+    --hds-accent-bg:  rgba(13,148,136,0.06);
+    --hds-accent-bg2: rgba(13,148,136,0.12);
+    --hds-accent-bg3: rgba(13,148,136,0.20);
+    --hds-success:    #059669;
+    --hds-success-bg: rgba(5,150,105,0.08);
+    --hds-warning:    #d97706;
+    --hds-warning-bg: rgba(217,119,6,0.08);
+    --hds-danger:     #dc2626;
+    --hds-danger-bg:  rgba(220,38,38,0.06);
+    --hds-info:       #2563eb;
+    --hds-info-bg:    rgba(37,99,235,0.06);
+    --hds-purple:     #7c3aed;
+    --hds-purple-bg:  rgba(124,58,237,0.06);
+    --hds-sh-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --hds-sh:    0 2px 8px rgba(0,0,0,0.06);
+    --hds-sh-md: 0 4px 16px rgba(0,0,0,0.06);
+    --hds-sh-lg: 0 12px 40px rgba(0,0,0,0.08);
+    --hds-sh-xl: 0 24px 64px rgba(0,0,0,0.10);
+    --hds-modal-bg: rgba(0,0,0,0.18);
+    --hds-modal-blur: blur(6px);
+    --hds-scroll: rgba(0,0,0,0.08);
+    --hds-scroll-hover: rgba(0,0,0,0.16);
 }
 
-/* ── Base ── */
-body, html { font-family: var(--h76-font) !important; }
-body.authenticated { background: var(--h76-bg) !important; }
+/* ══════════════════════════════════════════════════════════
+   GLOBAL RESETS
+   ══════════════════════════════════════════════════════════ */
+body, html { font-family: var(--hds-font) !important; -webkit-font-smoothing: antialiased; }
+body.authenticated { background: var(--hds-bg) !important; }
 #helm-ui-shell::before, #helm-ui-shell::after { display: none !important; }
+* { scrollbar-width: thin; scrollbar-color: var(--hds-scroll) transparent; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: var(--hds-scroll); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--hds-scroll-hover); }
+::-webkit-scrollbar-track { background: transparent; }
 
-/* ── BENTO CARDS — No colored left borders, clean flat ── */
+/* ══════════════════════════════════════════════════════════
+   TYPOGRAPHY — Consistent, no Yanone Kaffeesatz
+   ══════════════════════════════════════════════════════════ */
+h1, h2, h3, h4, h5, h6,
+.modal-panel-header h2, .section-title, .card-title,
+button, .btn, .tab-btn, .toolbar-btn, .sidebar-tab, .floating-menu-btn {
+    font-family: var(--hds-font) !important;
+    text-transform: none !important;
+    letter-spacing: -0.01em !important;
+}
+/* Preserve icon fonts — NEVER override these */
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-icons,
+.material-icons-round,
+[class*="material-symbols"],
+[class*="material-icons"] {
+    font-family: 'Material Symbols Rounded', 'Material Icons Round', 'Material Icons', sans-serif !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+}
+.helm-header *, #helm-header * { font-family: var(--hds-font) !important; }
+.helm-header .material-symbols-rounded,
+#helm-header .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded' !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   UNIFIED CARDS — Replaces ALL bento-card variants
+   ══════════════════════════════════════════════════════════ */
 .bento-card, .bento-card-stat,
 .bento-card-blue, .bento-card-green, .bento-card-purple,
-.bento-card-amber, .bento-card-red, .bento-card-teal {
-    background: var(--h76-surface) !important;
-    border: 1px solid var(--h76-border) !important;
-    border-left: 1px solid var(--h76-border) !important;
-    border-radius: var(--h76-r-lg) !important;
-    box-shadow: none !important;
+.bento-card-amber, .bento-card-red, .bento-card-teal,
+.helm-section-card, .helm-metric-card, .dash-metric,
+.agent-card, .tools-grid .tool-card, .write-card {
+    background: var(--hds-surface) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-left: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-md) !important;
+    box-shadow: var(--hds-sh-sm) !important;
     backdrop-filter: none !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    -webkit-backdrop-filter: none !important;
+    padding: var(--hds-gap) !important;
+    transition: border-color var(--hds-ease), box-shadow var(--hds-ease), transform var(--hds-ease) !important;
 }
 .bento-card:hover, .bento-card-stat:hover,
 .bento-card-blue:hover, .bento-card-green:hover, .bento-card-purple:hover,
-.bento-card-amber:hover, .bento-card-red:hover {
-    border-color: var(--h76-border-hover) !important;
-    box-shadow: var(--h76-sh) !important;
+.bento-card-amber:hover, .bento-card-red:hover, .bento-card-teal:hover,
+.helm-section-card:hover, .agent-card:hover, .tools-grid .tool-card:hover, .write-card:hover {
+    border-color: var(--hds-border-2) !important;
+    box-shadow: var(--hds-sh) !important;
 }
-.bento-title { color: var(--h76-text-1) !important; font-weight: 600 !important; }
-.bento-subtitle, .bento-label, .bento-stat-label { color: var(--h76-text-2) !important; }
-.bento-value, .bento-value-sm { color: var(--h76-text-1) !important; }
-.bento-icon { background: var(--h76-accent-soft) !important; border-radius: 10px !important; }
-.bento-pill, .helm-tool-pill {
-    background: var(--h76-surface-2) !important;
-    border: 1px solid var(--h76-border) !important;
-    border-radius: var(--h76-r-sm) !important;
-    color: var(--h76-text-1) !important;
+.helm-metric-card:hover, .dash-metric:hover {
+    border-color: var(--hds-border-2) !important;
+    box-shadow: var(--hds-sh) !important;
+    transform: translateY(-2px) !important;
+}
+/* v77: No more metric accents anywhere */
+.metric-accent {
+    display: none !important;
+}
+
+/* Card text */
+.bento-title, .section-title { color: var(--hds-text) !important; font-weight: 600 !important; font-size: 14px !important; }
+.bento-subtitle, .bento-label, .bento-stat-label, .section-subtitle { color: var(--hds-text-2) !important; font-size: 11px !important; }
+/* v77: Metric values — no colored accents, uniform text color */
+.bento-value, .bento-value-sm, .metric-value { color: var(--hds-text) !important; font-variant-numeric: tabular-nums !important; }
+.metric-label { color: var(--hds-text-2) !important; font-size: 11px !important; font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; }
+.bento-icon { background: var(--hds-accent-bg) !important; border-radius: var(--hds-r-sm) !important; }
+
+/* Grid layouts — even gaps everywhere */
+.bento-grid, .helm-metrics-grid { gap: var(--hds-gap) !important; }
+.bento-grid-2, .helm-metrics-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+.bento-grid-3, .helm-metrics-grid-3 { grid-template-columns: repeat(3, 1fr) !important; }
+.bento-grid-4, .helm-metrics-grid-4 { grid-template-columns: repeat(4, 1fr) !important; }
+.bento-grid-5, .helm-metrics-grid-5 { grid-template-columns: repeat(5, 1fr) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   BUTTONS — Complete redesign
+   ══════════════════════════════════════════════════════════ */
+/* Reset all buttons */
+button, .btn {
+    font-family: var(--hds-font) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    cursor: pointer;
+    transition: all var(--hds-ease) !important;
+}
+
+/* Primary action button */
+.bento-btn-primary, .hm-btn-primary, .ob-btn-primary, .auth-btn,
+button[style*="linear-gradient(145deg, #2563eb"],
+button[style*="linear-gradient(145deg, #e8f4fd"] {
+    background: var(--hds-accent) !important;
+    color: #0c0f15 !important;
+    border: none !important;
+    border-radius: var(--hds-r) !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    box-shadow: 0 2px 8px rgba(94,234,212,0.20) !important;
+}
+html[data-theme="light"] .bento-btn-primary,
+html[data-theme="light"] .hm-btn-primary,
+html[data-theme="light"] .ob-btn-primary,
+html[data-theme="light"] .auth-btn {
+    background: var(--hds-accent) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(13,148,136,0.15) !important;
+}
+.bento-btn-primary:hover, .hm-btn-primary:hover, .ob-btn-primary:hover, .auth-btn:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(94,234,212,0.25) !important;
+}
+
+/* Secondary / Ghost button */
+.bento-btn, .hm-btn-secondary, .ob-btn-secondary, .bento-pill, .helm-tool-pill, .helm-ghost-btn,
+.v73-action-btn, .cc-act-btn, .cc-hbtn {
+    background: var(--hds-surface-2) !important;
+    color: var(--hds-text) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r) !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
     font-weight: 500 !important;
 }
-.bento-pill:hover, .helm-tool-pill:hover { background: var(--h76-surface-3) !important; }
-.bento-input, .bento-select {
-    background: var(--h76-surface-2) !important;
-    border: 1px solid var(--h76-border) !important;
-    border-radius: var(--h76-r-sm) !important;
-    color: var(--h76-text-1) !important;
+.bento-btn:hover, .hm-btn-secondary:hover, .ob-btn-secondary:hover, .bento-pill:hover, .helm-tool-pill:hover, .helm-ghost-btn:hover,
+.v73-action-btn:hover, .cc-act-btn:hover, .cc-hbtn:hover {
+    background: var(--hds-surface-3) !important;
+    border-color: var(--hds-border-2) !important;
 }
-.bento-input:focus, .bento-select:focus {
-    border-color: var(--h76-accent) !important;
-    box-shadow: 0 0 0 3px var(--h76-accent-soft) !important;
-    outline: none !important;
-}
-.bento-btn, .bento-btn-primary { border-radius: var(--h76-r) !important; font-weight: 600 !important; }
 
-/* ── VIEWING CARDS — Clean, no colored left border ── */
+/* Danger button */
+.hm-btn-danger, .ob-btn-danger {
+    background: var(--hds-danger-bg) !important;
+    color: var(--hds-danger) !important;
+    border: 1px solid rgba(248,113,113,0.2) !important;
+    border-radius: var(--hds-r) !important;
+}
+.hm-btn-danger:hover, .ob-btn-danger:hover {
+    background: var(--hds-danger) !important;
+    color: #fff !important;
+}
+
+/* Tab buttons / filter buttons */
+.viewings-tab-btn, .filter-btn, .browse-filter-btn {
+    background: var(--hds-surface-2) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-full) !important;
+    color: var(--hds-text-2) !important;
+    padding: 7px 16px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    transition: all var(--hds-ease) !important;
+}
+.viewings-tab-btn.active, .filter-btn.active, .browse-filter-btn.active {
+    background: var(--hds-accent) !important;
+    border-color: var(--hds-accent) !important;
+    color: #0c0f15 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 8px var(--hds-accent-bg2) !important;
+}
+html[data-theme="light"] .viewings-tab-btn.active,
+html[data-theme="light"] .filter-btn.active,
+html[data-theme="light"] .browse-filter-btn.active {
+    background: var(--hds-accent) !important;
+    color: #fff !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   INPUTS, SELECTS, TEXTAREAS, DROPDOWNS — Full redesign
+   ══════════════════════════════════════════════════════════ */
+input[type="text"], input[type="email"], input[type="tel"],
+input[type="number"], input[type="date"], input[type="time"],
+input[type="search"], input[type="password"],
+textarea, select,
+.glass-input, .hm-input, .ob-input,
+.bento-input, .bento-select, .helm-filter-select {
+    background: var(--hds-bg-inset) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r) !important;
+    color: var(--hds-text) !important;
+    font-family: var(--hds-font) !important;
+    font-size: 13px !important;
+    padding: 10px 14px !important;
+    outline: none !important;
+    transition: border-color var(--hds-ease), box-shadow var(--hds-ease) !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+input:focus, textarea:focus, select:focus,
+.glass-input:focus, .hm-input:focus, .ob-input:focus,
+.bento-input:focus, .bento-select:focus {
+    border-color: var(--hds-accent) !important;
+    box-shadow: 0 0 0 3px var(--hds-accent-bg) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--hds-text-4) !important; }
+select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%239399ad' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding-right: 36px !important;
+}
+html[data-theme="light"] select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%235c564e' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 4.5l3 3 3-3'/%3E%3C/svg%3E") !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODALS — Clean, centered, consistent
+   ══════════════════════════════════════════════════════════ */
+.modal, [id$="-modal"][style*="position:fixed"],
+.custom-modal-overlay, .modal-overlay,
+[id*="modal-overlay"], #helm-intel-modal-overlay {
+    background: var(--hds-modal-bg) !important;
+    backdrop-filter: var(--hds-modal-blur) !important;
+    -webkit-backdrop-filter: var(--hds-modal-blur) !important;
+}
+.modal-content, .modal-panel, .dark-modal-content {
+    background: var(--hds-bg-raised) !important;
+    border: 1px solid var(--hds-border-2) !important;
+    border-radius: var(--hds-r-xl) !important;
+    box-shadow: var(--hds-sh-xl) !important;
+    backdrop-filter: none !important;
+    color: var(--hds-text) !important;
+    overflow: hidden;
+}
+.modal-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--hds-border) !important;
+    padding: 20px 24px !important;
+}
+.modal-header h2, .modal-header h3 {
+    color: var(--hds-text) !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    margin: 0 !important;
+}
+.modal-body {
+    color: var(--hds-text-2) !important;
+    padding: 20px 24px !important;
+}
+.modal-footer {
+    border-top: 1px solid var(--hds-border) !important;
+    padding: 16px 24px !important;
+    background: transparent !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEWING CARDS — Clean, modern
+   ══════════════════════════════════════════════════════════ */
 .v24-viewing-card {
-    background: var(--h76-surface) !important;
-    border: 1px solid var(--h76-border) !important;
-    border-left: 1px solid var(--h76-border) !important;
-    border-radius: var(--h76-r-lg) !important;
+    background: var(--hds-surface) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-left: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-md) !important;
+    backdrop-filter: none !important;
+    box-shadow: var(--hds-sh-sm) !important;
+    transition: all var(--hds-ease) !important;
+}
+.v24-viewing-card:hover { border-color: var(--hds-border-2) !important; box-shadow: var(--hds-sh) !important; }
+.v24-viewing-card.today-card {
+    background: var(--hds-accent-bg) !important;
+    border-color: var(--hds-accent-bg2) !important;
+    border-left: 3px solid var(--hds-accent) !important;
+}
+.v24-viewing-card.past-card { opacity: 0.55; }
+.v24-card-title { color: var(--hds-text) !important; }
+.v24-card-info { color: var(--hds-text-2) !important; }
+.v24-viewings-title { color: var(--hds-text) !important; }
+.v24-viewings-subtitle { color: var(--hds-text-3) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   HEADER — Clean bar
+   ══════════════════════════════════════════════════════════ */
+.helm-header, #helm-header, .helm-top-bar {
+    background: var(--hds-bg-raised) !important;
+    border-bottom: 1px solid var(--hds-border) !important;
+    backdrop-filter: none !important;
+    box-shadow: var(--hds-sh-sm) !important;
+}
+.helm-header *:not(.material-symbols-rounded), #helm-header *:not(.material-symbols-rounded) { font-family: var(--hds-font) !important; }
+#helm-header-search {
+    background: var(--hds-surface-2) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r) !important;
+}
+#helm-header-search:hover {
+    background: var(--hds-surface-3) !important;
+    border-color: var(--hds-border-2) !important;
+}
+#helm-design-toggle, #helm-theme-toggle {
+    background: var(--hds-surface-2) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r) !important;
+}
+#helm-design-toggle:hover, #helm-theme-toggle:hover {
+    background: var(--hds-surface-3) !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BOTTOM NAV — Pill-style active, even spacing
+   ══════════════════════════════════════════════════════════ */
+.helm-bottom-nav {
+    background: var(--hds-bg-raised) !important;
+    border-top: 1px solid var(--hds-border) !important;
+    backdrop-filter: none !important;
+    box-shadow: 0 -1px 4px rgba(0,0,0,0.06) !important;
+    gap: 2px !important;
+    padding: 6px 8px !important;
+}
+.helm-nav-item {
+    color: var(--hds-text-3) !important;
+    border-radius: var(--hds-r) !important;
+    padding: 6px 10px !important;
+    transition: all var(--hds-ease) !important;
+    font-size: 10px !important;
+}
+.helm-nav-item span { color: inherit !important; }
+.helm-nav-item .helm-nav-label { color: inherit !important; font-size: 10px !important; font-weight: 500 !important; }
+.helm-nav-item:hover { color: var(--hds-text-2) !important; background: var(--hds-surface-2) !important; }
+.helm-nav-item.active {
+    color: var(--hds-accent) !important;
+    background: var(--hds-accent-bg) !important;
+    font-weight: 600 !important;
+}
+.helm-nav-item.active span { color: var(--hds-accent) !important; }
+.helm-nav-item.active .helm-nav-label { color: var(--hds-accent) !important; }
+.helm-nav-item.active::after { background: var(--hds-accent) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   TABLES — Consistent, readable
+   ══════════════════════════════════════════════════════════ */
+table { border-collapse: separate !important; border-spacing: 0 !important; width: 100%; }
+thead th, thead td {
+    background: var(--hds-surface-2) !important;
+    color: var(--hds-text-3) !important;
+    font-weight: 600 !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    padding: 10px 14px !important;
+    border-bottom: 1px solid var(--hds-border) !important;
+}
+tbody td {
+    color: var(--hds-text) !important;
+    border-bottom: 1px solid var(--hds-border) !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+}
+tbody tr { transition: background var(--hds-ease) !important; }
+tbody tr:hover { background: var(--hds-accent-bg) !important; }
+
+/* Pipeline */
+#v73-pipeline-header {
+    background: var(--hds-surface) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-md) !important;
+}
+.v73-pipeline-row:hover { background: var(--hds-accent-bg) !important; }
+.v73-pipeline-row td { color: var(--hds-text) !important; border-bottom: 1px solid var(--hds-border) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   STATUS BADGES — Pill-shaped, semantic
+   ══════════════════════════════════════════════════════════ */
+.status-badge, .v24-status-badge, .hm-badge {
+    border-radius: var(--hds-r-full) !important;
+    font-weight: 600 !important;
+    font-size: 10px !important;
+    padding: 3px 10px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+}
+.v24-card-badge.today { background: var(--hds-accent-bg) !important; color: var(--hds-accent) !important; border-radius: var(--hds-r-full) !important; }
+.v24-card-badge.past { background: var(--hds-surface-2) !important; color: var(--hds-text-3) !important; border-radius: var(--hds-r-full) !important; }
+.nav-badge { background: var(--hds-danger) !important; color: #fff !important; border-radius: var(--hds-r-full) !important; font-size: 9px !important; font-weight: 700 !important; min-width: 16px !important; height: 16px !important; padding: 0 4px !important; }
+
+/* ══════════════════════════════════════════════════════════
+   TOASTS / NOTIFICATIONS
+   ══════════════════════════════════════════════════════════ */
+.hm-toast {
+    background: var(--hds-bg-raised) !important;
+    border: 1px solid var(--hds-border-2) !important;
+    border-radius: var(--hds-r-md) !important;
+    box-shadow: var(--hds-sh-lg) !important;
     backdrop-filter: none !important;
 }
-.v24-viewing-card:hover { border-color: var(--h76-border-hover) !important; box-shadow: var(--h76-sh) !important; }
-.v24-viewing-card.today-card {
-    background: var(--h76-accent-soft) !important;
-    border-color: var(--h76-accent-mid) !important;
-    border-left-color: var(--h76-accent-mid) !important;
+.hm-toast-title { color: var(--hds-text) !important; }
+.hm-toast-message { color: var(--hds-text-2) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   COMMAND CENTER
+   ══════════════════════════════════════════════════════════ */
+.cc-panel {
+    background: var(--hds-bg-raised) !important;
+    border: 1px solid var(--hds-border-2) !important;
+    border-radius: var(--hds-r-2xl) !important;
+    box-shadow: var(--hds-sh-xl) !important;
+    backdrop-filter: none !important;
 }
-.v24-viewing-card.past-card { opacity: 0.6; border-left-color: var(--h76-border) !important; }
-.v24-card-title { color: var(--h76-text-1) !important; }
-.v24-card-info { color: var(--h76-text-2) !important; }
-.v24-viewings-title { color: var(--h76-text-1) !important; }
-.v24-viewings-subtitle { color: var(--h76-text-3) !important; }
-
-/* ── MODALS — Unified clean design ── */
-.modal, [id$="-modal"][style*="position:fixed"] { backdrop-filter: blur(8px) !important; }
-.modal-content, .modal-panel {
-    background: var(--h76-surface) !important;
-    border: 1px solid var(--h76-border) !important;
-    border-radius: var(--h76-r-xl) !important;
-    box-shadow: var(--h76-sh-lg) !important;
-    backdrop-filter: blur(40px) !important;
+.cc-greet, .cc-w-title { color: var(--hds-text) !important; }
+.cc-date, .cc-period { color: var(--hds-text-3) !important; }
+.cc-widget {
+    background: var(--hds-surface) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-md) !important;
 }
-html[data-theme="light"] .modal-content, html[data-theme="light"] .modal-panel {
-    background: rgba(255,255,255,0.88) !important;
+.cc-widget:hover { border-color: var(--hds-border-2) !important; }
+.cc-close-btn {
+    background: var(--hds-surface-2) !important;
+    border: 1px solid var(--hds-border) !important;
+    color: var(--hds-text-3) !important;
 }
-.modal-header { background: transparent !important; border-bottom: 1px solid var(--h76-border) !important; }
-.modal-header h2, .modal-header h3 { color: var(--h76-text-1) !important; font-weight: 700 !important; font-size: 18px !important; }
-.modal-body { color: var(--h76-text-2) !important; }
-.modal { background: rgba(0,0,0,0.5) !important; backdrop-filter: blur(6px) !important; }
-html[data-theme="light"] .modal { background: rgba(0,0,0,0.15) !important; }
+.cc-close-btn:hover { background: var(--hds-surface-3) !important; color: var(--hds-text) !important; }
 
-/* ── NAV ── */
-.helm-nav, .helm-dock, #helm-bottom-nav, .helm-bottom-nav {
-    background: var(--h76-surface) !important;
-    border-top: 1px solid var(--h76-border) !important;
-    backdrop-filter: blur(24px) !important;
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR, TOOLBARS, MENUS
+   ══════════════════════════════════════════════════════════ */
+.sidebar, .helm-sidebar, #property-sidebar {
+    background: var(--hds-bg-raised) !important;
+    border-color: var(--hds-border) !important;
+    backdrop-filter: none !important;
+    box-shadow: var(--hds-sh-lg) !important;
 }
-html[data-theme="light"] .helm-nav, html[data-theme="light"] .helm-dock, html[data-theme="light"] #helm-bottom-nav {
-    background: rgba(255,255,255,0.88) !important;
+.map-toolbar, #map-filter-bar, #unified-map-toolbar {
+    background: var(--hds-bg-raised) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-md) !important;
+    box-shadow: var(--hds-sh) !important;
+    backdrop-filter: none !important;
 }
-.helm-nav-item.active, .nav-item.active, .dock-item.active {
-    color: var(--h76-accent) !important;
-    background: var(--h76-accent-soft) !important;
+#hpm-user-menu {
+    background: var(--hds-bg-raised) !important;
+    border: 1px solid var(--hds-border-2) !important;
+    border-radius: var(--hds-r-lg) !important;
+    box-shadow: var(--hds-sh-xl) !important;
+    backdrop-filter: none !important;
+}
+#hpm-user-menu button:hover { background: var(--hds-surface-2) !important; }
+.floating-menu, .helm-floating-menu {
+    background: var(--hds-bg-raised) !important;
+    border: 1px solid var(--hds-border-2) !important;
+    border-radius: var(--hds-r-lg) !important;
+    box-shadow: var(--hds-sh-xl) !important;
+    backdrop-filter: none !important;
 }
 
-/* ── HEADER ── */
-.helm-header, #helm-header, .helm-top-bar {
-    background: var(--h76-surface) !important;
-    border-bottom: 1px solid var(--h76-border) !important;
-    backdrop-filter: blur(24px) !important;
+/* ══════════════════════════════════════════════════════════
+   PROPERTY CARDS
+   ══════════════════════════════════════════════════════════ */
+.property-browse-card {
+    background: var(--hds-surface) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r-md) !important;
+    border-left-width: 3px !important;
+    transition: all var(--hds-ease) !important;
 }
-html[data-theme="light"] .helm-header, html[data-theme="light"] #helm-header {
-    background: rgba(255,255,255,0.88) !important;
+.property-browse-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--hds-sh-md) !important;
+    border-color: var(--hds-border-2) !important;
 }
+.property-browse-card.taken { opacity: 0.5 !important; }
 
-/* ── PIPELINE ── */
-#v73-pipeline-header { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; }
-.v73-pipeline-row:hover { background: var(--h76-accent-soft) !important; }
-.v73-pipeline-row td { color: var(--h76-text-1) !important; border-bottom: 1px solid var(--h76-border) !important; }
-.v73-action-btn { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-sm) !important; }
-.v73-action-btn:hover { background: var(--h76-surface-3) !important; }
+/* ══════════════════════════════════════════════════════════
+   STUDIO CHIPS
+   ══════════════════════════════════════════════════════════ */
+.studio-bubble, .studio-chip { background: var(--hds-surface) !important; border: 1px solid var(--hds-border) !important; border-radius: var(--hds-r) !important; box-shadow: none !important; }
+.studio-chip.avail { background: var(--hds-success-bg) !important; border-color: rgba(52,211,153,0.25) !important; }
+.studio-chip.taken { background: var(--hds-danger-bg) !important; border-color: rgba(248,113,113,0.25) !important; }
 
-/* ── TABLES ── */
-thead th, thead td { background: var(--h76-surface-2) !important; color: var(--h76-text-2) !important; font-weight: 600 !important; font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; border-bottom: 1px solid var(--h76-border) !important; }
-tbody tr:hover { background: var(--h76-accent-soft) !important; }
-tbody td { color: var(--h76-text-1) !important; border-bottom: 1px solid var(--h76-border) !important; }
+/* ══════════════════════════════════════════════════════════
+   AGENT NOTIFICATIONS
+   ══════════════════════════════════════════════════════════ */
+.agent-notif-item { border-radius: var(--hds-r) !important; background: var(--hds-surface-2) !important; transition: background var(--hds-ease) !important; }
+.agent-notif-item:hover { background: var(--hds-surface-3) !important; }
+.agent-notif-item.unread { background: var(--hds-accent-bg) !important; border-left: 3px solid var(--hds-accent) !important; }
 
-/* ── BUTTONS ── */
-.viewings-tab-btn, .filter-btn { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-sm) !important; color: var(--h76-text-2) !important; }
-.viewings-tab-btn.active, .filter-btn.active { background: var(--h76-accent) !important; border-color: var(--h76-accent) !important; color: #0b0f14 !important; font-weight: 600 !important; }
-html[data-theme="light"] .viewings-tab-btn.active, html[data-theme="light"] .filter-btn.active { background: #0d9488 !important; color: #fff !important; }
+/* ══════════════════════════════════════════════════════════
+   LOGIN & WELCOME
+   ══════════════════════════════════════════════════════════ */
+#hpm-login-screen { background: var(--hds-bg) !important; }
+.helm-welcome-overlay { background: var(--hds-bg) !important; }
+html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !important; }
 
-/* ── INPUTS ── */
-input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], input[type="time"], input[type="search"], input[type="password"], textarea, select, .glass-input, .hm-input {
-    background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-sm) !important; color: var(--h76-text-1) !important; outline: none !important;
-}
-input:focus, textarea:focus, select:focus { border-color: var(--h76-accent) !important; box-shadow: 0 0 0 3px var(--h76-accent-soft) !important; }
-input::placeholder, textarea::placeholder { color: var(--h76-text-3) !important; }
-
-/* ── TOASTS ── */
-.hm-toast { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(24px) !important; }
-.hm-toast-title { color: var(--h76-text-1) !important; }
-.hm-toast-message { color: var(--h76-text-2) !important; }
-
-/* ── COMMAND CENTER ── */
-.cc-panel { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-xl) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(40px) !important; }
-html[data-theme="light"] .cc-panel { background: rgba(255,255,255,0.85) !important; }
-.cc-greet, .cc-w-title { color: var(--h76-text-1) !important; }
-.cc-date, .cc-period { color: var(--h76-text-3) !important; }
-.cc-widget { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r) !important; }
-.cc-act-btn, .cc-hbtn { background: var(--h76-surface-2) !important; border: 1px solid var(--h76-border) !important; color: var(--h76-text-1) !important; border-radius: var(--h76-r-sm) !important; }
-.cc-act-btn:hover, .cc-hbtn:hover { background: var(--h76-surface-3) !important; }
-
-/* ── MISC ── */
-.sidebar, .helm-sidebar, #property-sidebar { background: var(--h76-surface) !important; border-color: var(--h76-border) !important; backdrop-filter: blur(24px) !important; }
-.map-toolbar, #map-filter-bar, #unified-map-toolbar { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh) !important; backdrop-filter: blur(24px) !important; }
-.agent-card { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; }
-.tools-grid .tool-card, .write-card { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; }
-#hpm-user-menu { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(24px) !important; }
-html[data-theme="light"] #hpm-user-menu { background: rgba(255,255,255,0.9) !important; }
-#hpm-user-menu button:hover { background: var(--h76-surface-2) !important; }
-.floating-menu, .helm-floating-menu { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: var(--h76-sh-lg) !important; backdrop-filter: blur(24px) !important; }
-.helm-section-card { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r-lg) !important; box-shadow: none !important; }
-.helm-metric-card, .dash-metric { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-left: 1px solid var(--h76-border) !important; border-radius: var(--h76-r) !important; }
-.empty-state { color: var(--h76-text-3) !important; }
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD VIEW
+   ══════════════════════════════════════════════════════════ */
+#helm-view-dashboard { background: var(--hds-bg) !important; }
+.empty-state { color: var(--hds-text-3) !important; }
 .team-leaderboard-widget { background: transparent !important; }
 
-/* ── STUDIO BUBBLES ── */
-.studio-bubble, .studio-chip { background: var(--h76-surface) !important; border: 1px solid var(--h76-border) !important; border-radius: var(--h76-r) !important; box-shadow: none !important; }
-.studio-chip.avail { background: rgba(52,211,153,0.1) !important; border-color: rgba(52,211,153,0.25) !important; }
-.studio-chip.taken { background: rgba(248,113,113,0.1) !important; border-color: rgba(248,113,113,0.25) !important; }
-
-/* ── AGENT NOTIFS ── */
-.agent-notif-item { border-radius: var(--h76-r) !important; background: var(--h76-surface-2) !important; }
-.agent-notif-item:hover { background: var(--h76-surface-3) !important; }
-.agent-notif-item.unread { background: var(--h76-accent-soft) !important; border-left-color: var(--h76-accent) !important; }
-
-/* ── LOGIN & Welcome ── */
-#hpm-login-screen { background: #0b0f14 !important; }
-html[data-theme="light"] #hpm-login-screen { background: #f8f7f4 !important; }
-.helm-welcome-overlay { background: #0b0f14 !important; }
-html[data-theme="light"] .helm-welcome-overlay { background: #f8f7f4 !important; }
-html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
-
-/* ── STATUS BADGES ── */
-.status-badge, .v24-status-badge, .hm-badge { border-radius: 6px !important; font-weight: 600 !important; font-size: 10px !important; padding: 3px 8px !important; text-transform: uppercase !important; letter-spacing: 0.04em !important; }
-.v24-card-badge.today { background: var(--h76-accent-soft) !important; color: var(--h76-accent) !important; border-radius: 6px !important; }
-.v24-card-badge.past { background: var(--h76-surface-2) !important; color: var(--h76-text-3) !important; border-radius: 6px !important; }
-
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: var(--h76-border-hover); border-radius: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-
-/* ── HIDE XP ── */
+/* ══════════════════════════════════════════════════════════
+   HIDE XP — Fully removed
+   ══════════════════════════════════════════════════════════ */
 #xp-notification, .xp-progress, .xp-progress-section, .xp-notification, .xp-badge, #xp-badge,
 .header-user-xp-badge, [onclick*="showXPStats"], .lb-xp-col, #xp-stats-modal, #menu-user-xp,
 #welcome-xp, .user-xp, #user-xp, div[id="dash-lb-xp"],
 .helm-welcome-overlay div:has(> #welcome-xp) { display: none !important; }
 
-/* ── MOBILE ── */
+/* ══════════════════════════════════════════════════════════
+   SETTINGS VIEW — New proper settings page
+   ══════════════════════════════════════════════════════════ */
+#helm-view-settings {
+    padding: 24px !important;
+    max-width: 720px;
+    margin: 0 auto;
+}
+.settings-section {
+    background: var(--hds-surface);
+    border: 1px solid var(--hds-border);
+    border-radius: var(--hds-r-md);
+    padding: 0;
+    margin-bottom: var(--hds-gap);
+    overflow: hidden;
+}
+.settings-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hds-text-3);
+    padding: 16px 20px 8px;
+}
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--hds-border);
+    gap: 16px;
+    transition: background var(--hds-ease);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row:hover { background: var(--hds-surface-2); }
+.settings-row-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+.settings-row-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--hds-r);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.settings-row-icon .material-symbols-rounded { font-size: 18px; }
+.settings-row-label { font-size: 14px; font-weight: 500; color: var(--hds-text); }
+.settings-row-desc { font-size: 12px; color: var(--hds-text-3); margin-top: 2px; }
+.settings-row-right { flex-shrink: 0; }
+
+/* Toggle switch — compact */
+.hds-toggle {
+    width: 34px; height: 18px;
+    border-radius: 9px;
+    background: var(--hds-surface-3);
+    cursor: pointer;
+    position: relative;
+    transition: background var(--hds-ease);
+    border: none;
+    padding: 0;
+    flex-shrink: 0;
+}
+.hds-toggle.on { background: var(--hds-accent); }
+.hds-toggle::after {
+    content: '';
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform var(--hds-ease);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.hds-toggle.on::after { transform: translateX(16px); }
+
+/* Settings select */
+.settings-select {
+    background: var(--hds-bg-inset) !important;
+    border: 1px solid var(--hds-border) !important;
+    border-radius: var(--hds-r) !important;
+    color: var(--hds-text) !important;
+    padding: 8px 32px 8px 12px !important;
+    font-size: 13px !important;
+    font-family: var(--hds-font) !important;
+    width: auto !important;
+    min-width: 140px;
+}
+
+/* Settings color swatch */
+.settings-swatch-row { display: flex; gap: 8px; }
+.settings-swatch {
+    width: 28px; height: 28px;
+    border-radius: var(--hds-r-sm);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all var(--hds-ease);
+}
+.settings-swatch:hover { transform: scale(1.15); }
+.settings-swatch.active { border-color: var(--hds-text); box-shadow: 0 0 0 2px var(--hds-accent-bg2); }
+
+/* Settings version & footer */
+.settings-footer {
+    text-align: center;
+    padding: 24px 0;
+    color: var(--hds-text-4);
+    font-size: 11px;
+}
+.settings-footer a { color: var(--hds-accent); text-decoration: none; }
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile
+   ══════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-    .bento-card, .helm-section-card, .v24-viewing-card, .agent-card, .tool-card { border-radius: var(--h76-r) !important; }
-    .modal-content, .modal-panel { border-radius: var(--h76-r-lg) !important; margin: 8px !important; }
-    .bento-grid, .bento-grid-2, .bento-grid-3, .bento-grid-4, .bento-grid-5 { grid-template-columns: 1fr !important; gap: 8px !important; }
+    .bento-card, .bento-card-stat, .helm-section-card, .helm-metric-card,
+    .v24-viewing-card, .agent-card, .tool-card, .settings-section {
+        border-radius: var(--hds-r) !important;
+    }
+    .modal-content, .modal-panel { border-radius: var(--hds-r-lg) !important; margin: 8px !important; }
+    .bento-grid, .bento-grid-2, .bento-grid-3, .bento-grid-4, .bento-grid-5,
+    .helm-metrics-grid, .helm-metrics-grid-2, .helm-metrics-grid-3, .helm-metrics-grid-4, .helm-metrics-grid-5 {
+        grid-template-columns: 1fr !important;
+        gap: var(--hds-gap-sm) !important;
+    }
+    .helm-metrics-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+    .helm-metrics-grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
+    #helm-view-settings { padding: 16px !important; }
+}
+@media (max-width: 480px) {
+    .helm-metrics-grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
+    .helm-metrics-grid-2 { grid-template-columns: 1fr !important; }
 }
 </style>
 
@@ -21050,7 +21575,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                     <button id="btn-user-management" onclick="openUserManagement();toggleUserMenu();" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.8);font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;display:none;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'" data-requires="admin">
                         <span class="material-symbols-rounded" style="font-size:16px;color:rgba(255,255,255,0.5);">group</span> Manage Users
                     </button>
-                    <button onclick="helmSwitchView('tools');toggleUserMenu();" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.8);font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+                    <button onclick="helmSwitchView('settings');toggleUserMenu();" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,0.8);font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                         <span class="material-symbols-rounded" style="font-size:16px;color:rgba(255,255,255,0.5);">settings</span> Settings
                     </button>
                     <div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:8px;padding-top:8px;">
@@ -23040,6 +23565,249 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
                 </div>
             </div>
 
+            <!-- ═══════════════════════════════════════════════════════════
+                 SETTINGS — Proper full settings view
+                 ═══════════════════════════════════════════════════════════ -->
+            <div id="helm-view-settings" class="helm-view">
+                <div style="max-width:720px;margin:0 auto;width:100%;">
+                    <!-- Settings Header -->
+                    <div style="margin-bottom:28px;">
+                        <h2 style="font-size:24px;font-weight:700;color:var(--hds-text);margin:0 0 4px;">Settings</h2>
+                        <p style="font-size:13px;color:var(--hds-text-3);margin:0;">Manage your preferences, appearance, and data</p>
+                    </div>
+
+                    <!-- Appearance -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Appearance</div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-purple-bg);color:var(--hds-purple);">
+                                    <span class="material-symbols-rounded">palette</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Theme</div>
+                                    <div class="settings-row-desc">Choose your preferred color scheme</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <select class="settings-select" id="settings-theme" onchange="window._settingsSetTheme(this.value)">
+                                    <option value="dark">Dark</option>
+                                    <option value="light">Light</option>
+                                    <option value="auto">Auto (System)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-accent-bg);color:var(--hds-accent);">
+                                    <span class="material-symbols-rounded">colorize</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Accent Color</div>
+                                    <div class="settings-row-desc">Customize your accent color</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <div class="settings-swatch-row" id="settings-accent-swatches">
+                                    <div class="settings-swatch active" data-accent="teal" style="background:#5eead4;" onclick="window._settingsSetAccent('teal')" title="Teal"></div>
+                                    <div class="settings-swatch" data-accent="blue" style="background:#60a5fa;" onclick="window._settingsSetAccent('blue')" title="Blue"></div>
+                                    <div class="settings-swatch" data-accent="purple" style="background:#a78bfa;" onclick="window._settingsSetAccent('purple')" title="Purple"></div>
+                                    <div class="settings-swatch" data-accent="amber" style="background:#fbbf24;" onclick="window._settingsSetAccent('amber')" title="Amber"></div>
+                                    <div class="settings-swatch" data-accent="rose" style="background:#fb7185;" onclick="window._settingsSetAccent('rose')" title="Rose"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-info-bg);color:var(--hds-info);">
+                                    <span class="material-symbols-rounded">text_fields</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Compact Mode</div>
+                                    <div class="settings-row-desc">Reduce spacing for more content on screen</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <button class="hds-toggle" id="settings-compact" onclick="window._settingsToggleCompact()"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Notifications</div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-success-bg);color:var(--hds-success);">
+                                    <span class="material-symbols-rounded">home</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Property Alerts</div>
+                                    <div class="settings-row-desc">Get notified when new properties are added</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <button class="hds-toggle on" id="settings-prop-alerts" onclick="window._settingsToggle(this,'propertyAlerts')"></button>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-warning-bg);color:var(--hds-warning);">
+                                    <span class="material-symbols-rounded">event</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Viewing Reminders</div>
+                                    <div class="settings-row-desc">Reminders before scheduled viewings</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <button class="hds-toggle on" id="settings-viewing-reminders" onclick="window._settingsToggle(this,'viewingReminders')"></button>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-info-bg);color:var(--hds-info);">
+                                    <span class="material-symbols-rounded">campaign</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Daily Briefing</div>
+                                    <div class="settings-row-desc">Show command center on login</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <button class="hds-toggle on" id="settings-daily-briefing" onclick="window._settingsToggle(this,'dailyBriefing')"></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data & Display -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Data & Display</div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-accent-bg);color:var(--hds-accent);">
+                                    <span class="material-symbols-rounded">view_list</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Default View</div>
+                                    <div class="settings-row-desc">Which view to show on app launch</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <select class="settings-select" id="settings-default-view" onchange="window._settingsSave('defaultView',this.value)">
+                                    <option value="dashboard">Dashboard</option>
+                                    <option value="map">Map</option>
+                                    <option value="viewings">Viewings</option>
+                                    <option value="pipeline">Pipeline</option>
+                                    <option value="property-manager">Properties</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-purple-bg);color:var(--hds-purple);">
+                                    <span class="material-symbols-rounded">format_list_numbered</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Items Per Page</div>
+                                    <div class="settings-row-desc">Number of items to show in lists</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <select class="settings-select" id="settings-items-per-page" onchange="window._settingsSave('itemsPerPage',this.value)">
+                                    <option value="10">10</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-warning-bg);color:var(--hds-warning);">
+                                    <span class="material-symbols-rounded">calendar_month</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Working Days</div>
+                                    <div class="settings-row-desc">Days to include in heatmaps and analytics</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <div id="settings-working-days" style="display:flex;gap:4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Account & Data -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Account & Data</div>
+                        <div class="settings-row" style="cursor:pointer;" onclick="HPMSync.showSyncModal()">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-success-bg);color:var(--hds-success);">
+                                    <span class="material-symbols-rounded">cloud_sync</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Cloud Sync</div>
+                                    <div class="settings-row-desc">Sync your data across devices</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <span class="material-symbols-rounded" style="color:var(--hds-text-4);font-size:18px;">chevron_right</span>
+                            </div>
+                        </div>
+                        <div class="settings-row" style="cursor:pointer;" onclick="exportAllData()">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-info-bg);color:var(--hds-info);">
+                                    <span class="material-symbols-rounded">download</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Export Data</div>
+                                    <div class="settings-row-desc">Download all your data as JSON</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <span class="material-symbols-rounded" style="color:var(--hds-text-4);font-size:18px;">chevron_right</span>
+                            </div>
+                        </div>
+                        <div class="settings-row" style="cursor:pointer;" onclick="importAllData()">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-purple-bg);color:var(--hds-purple);">
+                                    <span class="material-symbols-rounded">upload</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Import Data</div>
+                                    <div class="settings-row-desc">Restore from a backup file</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <span class="material-symbols-rounded" style="color:var(--hds-text-4);font-size:18px;">chevron_right</span>
+                            </div>
+                        </div>
+                        <div class="settings-row" style="cursor:pointer;" onclick="if(confirm('Clear local cache? This will refresh from the server.')){localStorage.removeItem('propertySystemProperties');localStorage.removeItem('propertyViewings');localStorage.removeItem('pipelineData');localStorage.removeItem('takenPropertiesSet');location.reload();}">
+                            <div class="settings-row-left">
+                                <div class="settings-row-icon" style="background:var(--hds-danger-bg);color:var(--hds-danger);">
+                                    <span class="material-symbols-rounded">delete_forever</span>
+                                </div>
+                                <div>
+                                    <div class="settings-row-label">Clear Local Cache</div>
+                                    <div class="settings-row-desc">Remove cached data and reload from server</div>
+                                </div>
+                            </div>
+                            <div class="settings-row-right">
+                                <span class="material-symbols-rounded" style="color:var(--hds-text-4);font-size:18px;">chevron_right</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- About -->
+                    <div class="settings-footer">
+                        <div style="font-size:18px;font-weight:800;letter-spacing:6px;color:var(--hds-text-4);margin-bottom:6px;font-family:'Big Shoulders Stencil',sans-serif;">HELM</div>
+                        <div>Version 77 &middot; Made in London</div>
+                        <div style="margin-top:4px;">&copy; 2026 Harir Industries</div>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <!-- HELM BOTTOM NAV -->
@@ -23079,6 +23847,10 @@ html[data-theme="light"] .helm-welcome-overlay * { color: #1a1a1a !important; }
             <div class="helm-nav-item" data-view="tools" onclick="helmSwitchView('tools')">
                 <span class="helm-nav-icon"><span class="material-symbols-rounded">build</span></span>
                 <span class="helm-nav-label">Tools</span>
+            </div>
+            <div class="helm-nav-item" data-view="settings" onclick="helmSwitchView('settings')">
+                <span class="helm-nav-icon"><span class="material-symbols-rounded">settings</span></span>
+                <span class="helm-nav-label">Settings</span>
             </div>
         </nav>
     </div>
@@ -32242,16 +33014,21 @@ Harir Industries`;
                     text += `Total: ${upcomingViewings.length} viewings\n`;
                     text += `${'─'.repeat(30)}\n\n`;
 
+                    // v77: Robust field access — check ALL possible field name variants
                     upcomingViewings.forEach((viewing, index) => {
                         const dateObj = new Date(viewing.date);
                         const dayName = dateObj.toLocaleDateString('en-GB', { weekday: 'short' });
                         const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                        const propName = viewing.propertyName || viewing.property || viewing.studioName || viewing.address || 'Unknown Property';
+                        const addr = viewing.propertyAddress || viewing.address || '';
+                        const clientName = viewing.name || viewing.clientName || viewing.visitor || 'Unknown';
+                        const phone = viewing.phone || viewing.visitorPhone || viewing.clientPhone || 'N/A';
 
-                        text += `${index + 1}. ${viewing.propertyName}\n`;
-                        text += `   ${dayName} ${dateStr} at ${viewing.time}\n`;
-                        text += `   ${viewing.address}\n`;
-                        text += `   Client: ${viewing.name}\n`;
-                        text += `   Phone: ${viewing.phone || 'N/A'}\n`;
+                        text += `${index + 1}. ${propName}\n`;
+                        text += `   ${dayName} ${dateStr} at ${viewing.time || 'TBC'}\n`;
+                        if (addr) text += `   ${addr}\n`;
+                        text += `   Client: ${clientName}\n`;
+                        text += `   Phone: ${phone}\n`;
                         if (viewing.notes) text += `   Notes: ${viewing.notes}\n`;
                         text += `\n`;
                     });
@@ -32960,6 +33737,7 @@ ${viewing.notes ? `📝 Notes: ${viewing.notes}` : ''}`.trim();
                         message += `   🏠 ${viewing.propertyName}\n`;
                         message += `   👤 ${clientName}\n`;
                         message += `   📱 ${viewing.phone || 'N/A'}\n`;
+                        message += `   📱 ${viewing.client_phone || 'N/A'}\n`;
                     });
 
                     message += `_Total: ${tomorrowsViewings.length} viewing(s)_`;
@@ -50107,12 +50885,12 @@ Harir Industries`;
             );
 
             sorted.forEach(v => {
-                const clientName = (v.clientName || v.name || '').replace(/,/g, ';');
-                const phone = (v.clientPhone || v.phone || '').replace(/,/g, ';');
-                const email = (v.email || '').replace(/,/g, ';');
+                const clientName = (v.clientName || v.name || v.visitor || '').replace(/,/g, ';');
+                const phone = (v.phone || v.visitorPhone || v.clientPhone || '').replace(/,/g, ';');
+                const email = (v.email || v.clientEmail || '').replace(/,/g, ';');
                 const prop = properties.find(p => p.id == v.propertyId);
-                const propName = (prop ? (prop.name || '') : (v.propertyName || '')).replace(/,/g, ';');
-                const address = (prop ? prop.address : (v.address || '')).replace(/,/g, ';');
+                const propName = (prop ? (prop.name || '') : (v.propertyName || v.property || v.studioName || '')).replace(/,/g, ';');
+                const address = (prop ? prop.address : (v.propertyAddress || v.address || '')).replace(/,/g, ';');
                 const status = v.status || 'confirmed';
                 const notes = (v.notes || '').replace(/,/g, ';').replace(/\n/g, ' ');
 
@@ -68566,27 +69344,29 @@ Write the email now:`;
         const CHUNK_SIZE = 50;
         
         if (viewings.length > 0) {
+            // v77: Unified batch upload — include ALL field variants + agent_name
             const viewingBatch = viewings.map(v => {
-                let propName = v.propertyName || v.property;
-                let propAddress = v.propertyAddress || v.address;
+                let propName = v.propertyName || v.property || v.studioName || '';
+                let propAddress = v.propertyAddress || v.address || '';
                 if ((!propName || propName === 'NULL') && v.propertyId) {
                     const prop = properties.find(p => p.id === parseInt(v.propertyId));
-                    if (prop) { propName = prop.name; propAddress = propAddress || prop.address; }
+                    if (prop) { propName = prop.name || ''; propAddress = propAddress || prop.address || ''; }
                 }
                 return {
-                    id: v.id,
-                    client_name: v.clientName || v.name || v.visitor,
-                    client_phone: v.phone || v.clientPhone,
-                    client_email: v.email || v.clientEmail,
-                    property_id: v.propertyId,
+                    id: String(v.id),
+                    client_name: v.clientName || v.name || v.visitor || '',
+                    client_phone: v.phone || v.visitorPhone || v.clientPhone || v.client_phone || '',
+                    client_email: v.email || v.clientEmail || v.client_email || '',
+                    property_id: v.propertyId ? String(v.propertyId) : null,
                     property_name: propName,
                     property_address: propAddress,
-                    viewing_date: v.date,
-                    viewing_time: v.time,
+                    viewing_date: v.date || v.viewing_date || null,
+                    viewing_time: v.time || v.viewing_time || null,
                     status: v.status || 'scheduled',
-                    outcome: v.outcome,
-                    agent_id: v.agentId,
-                    notes: v.notes,
+                    outcome: v.outcome || null,
+                    agent_id: v.agentId || v.agent_id || null,
+                    agent_name: v.agentName || v.agent || v.agent_name || null,
+                    notes: v.notes || '',
                     updated_at: v.updatedAt || new Date().toISOString()
                 };
             });
@@ -68598,20 +69378,27 @@ Write the email now:`;
         
         // Upload properties in batch
         if (properties.length > 0) {
+            // v77: Include ALL property fields to prevent data loss
             const propBatch = properties.map(p => ({
                 id: p.id,
-                name: p.name,
-                address: p.address,
-                postcode: p.postcode,
-                borough: p.borough,
-                rent: p.rent,
-                lha_rate: p.lhaRate,
+                name: p.name || '',
+                address: p.address || '',
+                postcode: p.postcode || '',
+                borough: p.borough || '',
+                rent: p.rent || 0,
+                lha_rate: p.lhaRate || p.lha_rate || 0,
                 bedrooms: p.bedrooms || 0,
+                type: p.type || 'Studio',
                 status: p.status || 'available',
-                lat: p.lat,
-                lng: p.lng,
-                landlord: p.landlord,
-                notes: p.notes
+                lat: p.lat || null,
+                lng: p.lng || null,
+                landlord: p.landlord || '',
+                notes: p.notes || '',
+                client_name: p.clientName || p.client_name || null,
+                taken_by: p.takenBy || p.taken_by || null,
+                taken_date: p.takenDate || p.taken_date || null,
+                taken: p.taken || false,
+                updated_at: p.updatedAt || new Date().toISOString()
             }));
             for (let i = 0; i < propBatch.length; i += CHUNK_SIZE) {
                 await window.supabase.from('properties').upsert(propBatch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
@@ -68662,27 +69449,32 @@ Write the email now:`;
         // Download viewings
         const { data: viewings } = await window.supabase.from('viewings').select('*');
         if (viewings) {
+            // v77: Map ALL field variants — check both phone and client_phone columns
             const localViewings = viewings.map(v => ({
                 id: v.id,
-                name: v.client_name,
-                clientName: v.client_name,
-                visitor: v.client_name,
-                phone: v.client_phone,
-                clientPhone: v.client_phone,
-                email: v.client_email,
-                clientEmail: v.client_email,
+                name: v.client_name || '',
+                clientName: v.client_name || '',
+                visitor: v.client_name || '',
+                phone: v.client_phone || v.phone || '',
+                visitorPhone: v.client_phone || v.phone || '',
+                clientPhone: v.client_phone || v.phone || '',
+                email: v.client_email || '',
+                clientEmail: v.client_email || '',
                 propertyId: v.property_id,
-                propertyName: v.property_name,
-                property: v.property_name,
-                propertyAddress: v.property_address,
-                address: v.property_address,
-                date: v.viewing_date || v.date,  // v67.7: Fallback
-                time: v.viewing_time || v.time,  // v67.7: Fallback
-                status: v.status,
-                outcome: v.outcome,
-                agentId: v.agent_id,
-                notes: v.notes,
-                updatedAt: v.updated_at
+                propertyName: v.property_name || '',
+                property: v.property_name || '',
+                studioName: v.property_name || '',
+                propertyAddress: v.property_address || '',
+                address: v.property_address || '',
+                date: v.viewing_date || v.date || '',
+                time: v.viewing_time || v.time || '',
+                status: v.status || 'scheduled',
+                outcome: v.outcome || null,
+                agentId: v.agent_id || null,
+                agentName: v.agent_name || '',
+                agent: v.agent_name || '',
+                notes: v.notes || '',
+                updatedAt: v.updated_at || ''
             }));
             localStorage.setItem('propertyViewings', JSON.stringify(localViewings));
             console.log(`[HPM Sync] Downloaded ${localViewings.length} viewings`);
@@ -68691,20 +69483,30 @@ Write the email now:`;
         // Download properties
         const { data: properties } = await window.supabase.from('properties').select('*');
         if (properties) {
+            // v77: Download ALL property fields — prevents data loss
             const localProps = properties.map(p => ({
                 id: p.id,
-                name: p.name,
-                address: p.address,
-                postcode: p.postcode,
-                borough: p.borough,
-                rent: p.rent,
-                lhaRate: p.lha_rate,
-                bedrooms: p.bedrooms,
-                status: p.status,
-                lat: p.lat,
-                lng: p.lng,
-                landlord: p.landlord,
-                notes: p.notes
+                name: p.name || '',
+                address: p.address || '',
+                postcode: p.postcode || '',
+                borough: p.borough || '',
+                rent: p.rent || 0,
+                lhaRate: p.lha_rate || 0,
+                bedrooms: p.bedrooms || 0,
+                type: p.type || 'Studio',
+                status: p.status || 'available',
+                lat: p.lat || null,
+                lng: p.lng || null,
+                landlord: p.landlord || '',
+                notes: p.notes || '',
+                clientName: p.client_name || null,
+                client_name: p.client_name || null,
+                takenBy: p.taken_by || null,
+                taken_by: p.taken_by || null,
+                takenDate: p.taken_date || null,
+                taken_date: p.taken_date || null,
+                taken: p.taken || false,
+                updatedAt: p.updated_at || ''
             }));
             localStorage.setItem('elevate_properties', JSON.stringify(localProps));
             console.log(`[HPM Sync] Downloaded ${localProps.length} properties`);
@@ -68753,24 +69555,32 @@ Write the email now:`;
         if (cloudViewings) {
             cloudViewings.forEach(cv => {
                 const local = viewingsMap.get(cv.id);
+                // v77: Map ALL field variants from cloud
                 const cloudItem = {
                     id: cv.id,
-                    name: cv.client_name,
-                    clientName: cv.client_name,
-                    phone: cv.client_phone,
-                    email: cv.client_email,
+                    name: cv.client_name || '',
+                    clientName: cv.client_name || '',
+                    visitor: cv.client_name || '',
+                    phone: cv.client_phone || cv.phone || '',
+                    visitorPhone: cv.client_phone || cv.phone || '',
+                    clientPhone: cv.client_phone || cv.phone || '',
+                    email: cv.client_email || '',
+                    clientEmail: cv.client_email || '',
                     propertyId: cv.property_id,
-                    propertyName: cv.property_name,
-                    property: cv.property_name,
-                    propertyAddress: cv.property_address,
-                    address: cv.property_address,
-                    date: cv.viewing_date || cv.date,  // v67.7: Fallback
-                    time: cv.viewing_time || cv.time,  // v67.7: Fallback
-                    status: cv.status,
-                    outcome: cv.outcome,
-                    agentId: cv.agent_id,
-                    notes: cv.notes,
-                    updatedAt: cv.updated_at
+                    propertyName: cv.property_name || '',
+                    property: cv.property_name || '',
+                    studioName: cv.property_name || '',
+                    propertyAddress: cv.property_address || '',
+                    address: cv.property_address || '',
+                    date: cv.viewing_date || cv.date || '',
+                    time: cv.viewing_time || cv.time || '',
+                    status: cv.status || 'scheduled',
+                    outcome: cv.outcome || null,
+                    agentId: cv.agent_id || null,
+                    agentName: cv.agent_name || '',
+                    agent: cv.agent_name || '',
+                    notes: cv.notes || '',
+                    updatedAt: cv.updated_at || ''
                 };
                 
                 if (!local) {
@@ -68816,11 +69626,11 @@ Write the email now:`;
         
         const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
         
-        // v69: Batch upsert instead of one-by-one
+        // v77: Batch upsert — unified field mapping with ALL variants
         const batch = viewings.map(v => {
-            let propName = v.propertyName || v.property || '';
+            let propName = v.propertyName || v.property || v.studioName || '';
             let propAddress = v.propertyAddress || v.address || '';
-            
+
             if ((!propName || propName === 'NULL') && v.propertyId) {
                 const prop = properties.find(p => p.id === parseInt(v.propertyId));
                 if (prop) {
@@ -68828,13 +69638,13 @@ Write the email now:`;
                     propAddress = propAddress || prop.address || '';
                 }
             }
-            
+
             return {
-                id: v.id,
+                id: String(v.id),
                 client_name: v.clientName || v.name || v.visitor || '',
-                client_phone: v.phone || v.clientPhone || '',
-                client_email: v.email || v.clientEmail || '',
-                property_id: v.propertyId || null,
+                client_phone: v.phone || v.visitorPhone || v.clientPhone || v.client_phone || '',
+                client_email: v.email || v.clientEmail || v.client_email || '',
+                property_id: v.propertyId ? String(v.propertyId) : null,
                 property_name: propName,
                 property_address: propAddress,
                 viewing_date: v.date || v.viewing_date || null,
@@ -68842,6 +69652,7 @@ Write the email now:`;
                 status: v.status || 'scheduled',
                 outcome: v.outcome || null,
                 agent_id: v.agentId || v.agent_id || null,
+                agent_name: v.agentName || v.agent || v.agent_name || null,
                 notes: v.notes || '',
                 updated_at: new Date().toISOString()
             };
@@ -71674,7 +72485,7 @@ setTimeout(function(){document.querySelectorAll('.cc-act-btn').forEach(function(
             if(typeof showToast==='function')showToast('Rescheduled','Viewing moved to '+newDate+' at '+newTime);
             var modal=document.querySelector('.modal[style*="display: flex"],.modal[style*="display:flex"],.modal.active');
             if(modal)modal.style.display='none';
-            if(window.supabase&&viewing.id)window.supabase.from('viewings').update({date:newDate,time:newTime}).eq('id',viewing.id);
+            if(window.supabase&&viewing.id)window.supabase.from('viewings').update({viewing_date:newDate,viewing_time:newTime,updated_at:new Date().toISOString()}).eq('id',String(viewing.id));
         }catch(e){console.error('[v74.4] Reschedule error:',e);if(_origConfirm)_origConfirm(id);}
     };
 })();
@@ -72832,28 +73643,28 @@ html[data-theme="light"] .helm-design-handle {
 </style>
 
 <style id="helm-v76-theme-unify">
-/* Unified theme tokens for overlays/surfaces/buttons */
+/* Unified theme tokens — now derived from v77 design system */
 html:not([data-theme="light"]) {
-    --hmx-overlay: rgba(2, 6, 23, 0.65);
-    --hmx-surface: rgba(10, 16, 24, 0.94);
-    --hmx-surface-soft: rgba(15, 23, 35, 0.86);
-    --hmx-border: rgba(148, 163, 184, 0.24);
-    --hmx-text: #e5e7eb;
-    --hmx-text-muted: #94a3b8;
-    --hmx-btn-bg: rgba(37, 99, 235, 0.28);
-    --hmx-btn-border: rgba(96, 165, 250, 0.45);
-    --hmx-btn-text: #eff6ff;
+    --hmx-overlay: var(--hds-modal-bg, rgba(2, 6, 23, 0.65));
+    --hmx-surface: var(--hds-bg-raised, rgba(10, 16, 24, 0.94));
+    --hmx-surface-soft: var(--hds-surface, rgba(15, 23, 35, 0.86));
+    --hmx-border: var(--hds-border-2, rgba(148, 163, 184, 0.24));
+    --hmx-text: var(--hds-text, #e5e7eb);
+    --hmx-text-muted: var(--hds-text-2, #94a3b8);
+    --hmx-btn-bg: var(--hds-surface-2, rgba(37, 99, 235, 0.28));
+    --hmx-btn-border: var(--hds-border-2, rgba(96, 165, 250, 0.45));
+    --hmx-btn-text: var(--hds-text, #eff6ff);
 }
 html[data-theme="light"] {
-    --hmx-overlay: rgba(15, 23, 42, 0.24);
-    --hmx-surface: rgba(248, 245, 239, 0.98);
-    --hmx-surface-soft: #eef2f7;
-    --hmx-border: rgba(30, 58, 95, 0.16);
-    --hmx-text: #1f2937;
-    --hmx-text-muted: #64748b;
-    --hmx-btn-bg: #dbeafe;
-    --hmx-btn-border: rgba(59, 130, 246, 0.3);
-    --hmx-btn-text: #1e3a5f;
+    --hmx-overlay: var(--hds-modal-bg, rgba(15, 23, 42, 0.24));
+    --hmx-surface: var(--hds-bg-raised, rgba(248, 245, 239, 0.98));
+    --hmx-surface-soft: var(--hds-surface-2, #eef2f7);
+    --hmx-border: var(--hds-border-2, rgba(30, 58, 95, 0.16));
+    --hmx-text: var(--hds-text, #1f2937);
+    --hmx-text-muted: var(--hds-text-2, #64748b);
+    --hmx-btn-bg: var(--hds-surface-2, #dbeafe);
+    --hmx-btn-border: var(--hds-border, rgba(59, 130, 246, 0.3));
+    --hmx-btn-text: var(--hds-text, #1e3a5f);
 }
 
 /* Overlays */
@@ -73119,6 +73930,178 @@ html:not([data-theme="light"]) .v24-card-btn.pipeline {
     border: none !important;
 }
 </style>
+
+<!-- ═══ v77: SETTINGS VIEW LOGIC ═══ -->
+<script>
+(function initSettingsView() {
+    'use strict';
+
+    // ── Load saved preferences ──
+    function getPrefs() {
+        try { return JSON.parse(localStorage.getItem('helmSettings') || '{}'); }
+        catch(e) { return {}; }
+    }
+    function savePrefs(p) { localStorage.setItem('helmSettings', JSON.stringify(p)); }
+
+    // ── Theme ──
+    window._settingsSetTheme = function(val) {
+        const p = getPrefs(); p.theme = val; savePrefs(p);
+        localStorage.setItem('helm-theme', val);
+        if (val === 'auto') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', val);
+        }
+        // Refresh charts
+        if(window._apexCharts){Object.values(window._apexCharts).forEach(function(c){if(c&&c.destroy)c.destroy();});window._apexCharts={};}
+        if(window.updateDashboardCharts)setTimeout(window.updateDashboardCharts,200);
+        if(typeof showHelmNotification==='function') showHelmNotification('Theme updated','success');
+    };
+
+    // ── Accent Color ──
+    const accentMap = {
+        teal:   { dark: '#5eead4', light: '#0d9488', darkBg: 'rgba(94,234,212,', lightBg: 'rgba(13,148,136,' },
+        blue:   { dark: '#60a5fa', light: '#2563eb', darkBg: 'rgba(96,165,250,', lightBg: 'rgba(37,99,235,' },
+        purple: { dark: '#a78bfa', light: '#7c3aed', darkBg: 'rgba(167,139,250,', lightBg: 'rgba(124,58,237,' },
+        amber:  { dark: '#fbbf24', light: '#d97706', darkBg: 'rgba(251,191,36,', lightBg: 'rgba(217,119,6,' },
+        rose:   { dark: '#fb7185', light: '#e11d48', darkBg: 'rgba(251,113,133,', lightBg: 'rgba(225,29,72,' }
+    };
+
+    window._settingsSetAccent = function(name) {
+        const p = getPrefs(); p.accent = name; savePrefs(p);
+        const a = accentMap[name];
+        if (!a) return;
+
+        // Update CSS custom properties
+        const r = document.documentElement;
+        const isLight = r.getAttribute('data-theme') === 'light';
+        const color = isLight ? a.light : a.dark;
+        const bgPrefix = isLight ? a.lightBg : a.darkBg;
+
+        r.style.setProperty('--hds-accent', color);
+        r.style.setProperty('--hds-accent-2', color);
+        r.style.setProperty('--hds-accent-bg', bgPrefix + '0.08)');
+        r.style.setProperty('--hds-accent-bg2', bgPrefix + '0.14)');
+        r.style.setProperty('--hds-accent-bg3', bgPrefix + '0.22)');
+
+        // Update swatch active state
+        document.querySelectorAll('#settings-accent-swatches .settings-swatch').forEach(s => {
+            s.classList.toggle('active', s.dataset.accent === name);
+        });
+
+        if(typeof showHelmNotification==='function') showHelmNotification('Accent color updated','success');
+    };
+
+    // ── Generic Toggle ──
+    window._settingsToggle = function(btn, key) {
+        btn.classList.toggle('on');
+        const p = getPrefs(); p[key] = btn.classList.contains('on'); savePrefs(p);
+    };
+
+    // ── Compact Mode ──
+    window._settingsToggleCompact = function() {
+        const btn = document.getElementById('settings-compact');
+        btn.classList.toggle('on');
+        const isCompact = btn.classList.contains('on');
+        const p = getPrefs(); p.compact = isCompact; savePrefs(p);
+        document.documentElement.style.setProperty('--hds-gap', isCompact ? '10px' : '16px');
+        document.documentElement.style.setProperty('--hds-gap-sm', isCompact ? '6px' : '10px');
+        document.documentElement.style.setProperty('--hds-gap-lg', isCompact ? '16px' : '24px');
+    };
+
+    // ── Save generic value ──
+    window._settingsSave = function(key, val) {
+        const p = getPrefs(); p[key] = val; savePrefs(p);
+    };
+
+    // ── Working Days Toggles ──
+    function initWorkingDays() {
+        const container = document.getElementById('settings-working-days');
+        if (!container) return;
+        const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const p = getPrefs();
+        const active = p.workingDays || [0,1,2,3,4]; // Mon-Fri default
+        container.innerHTML = days.map((d, i) => {
+            const isActive = active.includes(i);
+            return `<button onclick="window._settingsToggleDay(this,${i})" class="viewings-tab-btn${isActive?' active':''}" style="padding:6px 10px!important;font-size:11px!important;min-width:38px;">${d}</button>`;
+        }).join('');
+    }
+    window._settingsToggleDay = function(btn, idx) {
+        btn.classList.toggle('active');
+        const p = getPrefs();
+        const days = p.workingDays || [0,1,2,3,4];
+        if (days.includes(idx)) {
+            p.workingDays = days.filter(d => d !== idx);
+        } else {
+            p.workingDays = [...days, idx].sort();
+        }
+        savePrefs(p);
+    };
+
+    // ── Hydrate settings view on navigation ──
+    function hydrateSettings() {
+        const p = getPrefs();
+        // Theme
+        const themeSelect = document.getElementById('settings-theme');
+        if (themeSelect) themeSelect.value = p.theme || localStorage.getItem('helm-theme') || 'dark';
+        // Accent
+        const savedAccent = p.accent || 'teal';
+        document.querySelectorAll('#settings-accent-swatches .settings-swatch').forEach(s => {
+            s.classList.toggle('active', s.dataset.accent === savedAccent);
+        });
+        // Compact
+        const compactBtn = document.getElementById('settings-compact');
+        if (compactBtn) compactBtn.classList.toggle('on', !!p.compact);
+        // Toggles
+        const alertsBtn = document.getElementById('settings-prop-alerts');
+        if (alertsBtn) alertsBtn.classList.toggle('on', p.propertyAlerts !== false);
+        const viewingBtn = document.getElementById('settings-viewing-reminders');
+        if (viewingBtn) viewingBtn.classList.toggle('on', p.viewingReminders !== false);
+        const briefingBtn = document.getElementById('settings-daily-briefing');
+        if (briefingBtn) briefingBtn.classList.toggle('on', p.dailyBriefing !== false);
+        // Selects
+        const viewSelect = document.getElementById('settings-default-view');
+        if (viewSelect) viewSelect.value = p.defaultView || 'dashboard';
+        const ippSelect = document.getElementById('settings-items-per-page');
+        if (ippSelect) ippSelect.value = p.itemsPerPage || '25';
+        // Working days
+        initWorkingDays();
+    }
+
+    // ── Apply saved settings on load ──
+    function applyOnLoad() {
+        const p = getPrefs();
+        // Compact mode
+        if (p.compact) {
+            document.documentElement.style.setProperty('--hds-gap', '10px');
+            document.documentElement.style.setProperty('--hds-gap-sm', '6px');
+            document.documentElement.style.setProperty('--hds-gap-lg', '16px');
+        }
+        // Accent
+        if (p.accent && p.accent !== 'teal') {
+            window._settingsSetAccent(p.accent);
+        }
+    }
+
+    // ── Hook into helmSwitchView to hydrate settings when it opens ──
+    const _origSwitch = window.helmSwitchView;
+    window.helmSwitchView = function(viewName) {
+        // Call the full original chain — it already handles view switching
+        if (_origSwitch) _origSwitch(viewName);
+
+        // Hydrate settings controls when opening settings
+        if (viewName === 'settings') {
+            hydrateSettings();
+        }
+    };
+
+    // Apply on load
+    setTimeout(applyOnLoad, 500);
+
+    console.log('[HELM v77] Settings view initialized');
+})();
+</script>
 
 </body>
 </html>
