@@ -55165,7 +55165,9 @@ Harir Industries`;
             }
             try { pds = JSON.parse(localStorage.getItem('pipelineData') || '[]'); } catch(e) { pds = []; }
             var mergeKeys = new Set();
-            var src = pvs.concat(pds).filter(function(v) {
+            // v77.2: Only use viewings as source — pipelineData has clients without viewings
+            // which inflated the count (380 viewings + 188 pipeline → 488 after dedup)
+            var src = pvs.filter(function(v) {
                 var uid = (v.id || '') + '|' + (v.visitor || v.name || v.clientName || v.client_name || '') + '|' + (v.property || v.propertyName || v.property_name || '') + '|' + (v.date || v.viewing_date || '') + '|' + (v.time || '');
                 if (mergeKeys.has(uid)) return false;
                 mergeKeys.add(uid); return true;
@@ -64105,7 +64107,8 @@ Available now! Contact for viewing.`;
     window.updateNavBadges = function () {
         const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         // v83: Use canonical loadPipelineData() instead of stale getStorageArray('pipelineData')
-        const pipelineData = typeof loadPipelineData === 'function' ? loadPipelineData() : window.getStorageArray('pipelineData');
+        // v77.2: Use window.viewings (Supabase source of truth) for badge counts, not loadPipelineData which inflates
+        const pipelineData = window.viewings || (typeof loadPipelineData === 'function' ? loadPipelineData() : window.getStorageArray('pipelineData'));
         // v65.5: Ensure properties is array
         let properties = window.properties || [];
         if (!Array.isArray(properties)) properties = Object.values(properties);
