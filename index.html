@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 77                            ║
+    ║                        Version 76                            ║
     ║  v76 VISUAL OVERHAUL:                                        ║
     ║  • Complete design system rebuild — clean, minimal, warm     ║
     ║  • Removed ALL XP/rewards/leaderboard points                 ║
@@ -2550,17 +2550,30 @@
                 return {
                     id: v.id,
                     propertyId: v.property_id,
-                    propertyName: v.property_name || v.property || '',
-                    clientName: v.client_name || v.visitor || '',
-                    phone: v.phone || '',
-                    date: v.date || v.viewing_date,
-                    time: v.time || v.viewing_time,
-                    status: v.status || 'Pending',
-                    outcome: v.outcome,
+                    propertyName: v.property_name || '',
+                    property: v.property_name || '',
+                    studioName: v.property_name || '',
+                    propertyAddress: v.property_address || '',
+                    address: v.property_address || '',
+                    clientName: v.client_name || '',
+                    visitor: v.client_name || '',
+                    visitorName: v.client_name || '',
+                    name: v.client_name || '',
+                    phone: v.client_phone || '',
+                    visitorPhone: v.client_phone || '',
+                    clientPhone: v.client_phone || '',
+                    email: v.client_email || '',
+                    date: v.viewing_date || '',
+                    time: v.viewing_time || '',
+                    status: v.status || 'confirmed',
                     notes: v.notes || '',
                     agentId: v.agent_id,
                     agentName: v.agent_name || '',
-                    type: v.type || 'In-Person',
+                    agent: v.agent_name || '',
+                    viewingType: v.viewing_type || 'in-person',
+                    referralSource: v.referral_source || '',
+                    bookedBy: v.booked_by || null,
+                    bookedByName: v.booked_by_name || '',
                     createdAt: v.created_at,
                     updatedAt: v.updated_at
                 };
@@ -70185,23 +70198,31 @@ Write the email now:`;
                         name: cv.client_name,
                         clientName: cv.client_name,
                         visitor: cv.client_name,
+                        visitorName: cv.client_name,
                         phone: cv.client_phone,
                         clientPhone: cv.client_phone,
+                        visitorPhone: cv.client_phone,
                         email: cv.client_email,
                         propertyId: cv.property_id,
                         propertyName: cv.property_name,
                         property: cv.property_name,
+                        studioName: cv.property_name,
                         propertyAddress: cv.property_address,
                         address: cv.property_address,
-                        date: cv.viewing_date || cv.date,  // v67.7: Fallback
-                        time: cv.viewing_time || cv.time,  // v67.7: Fallback
+                        date: cv.viewing_date || '',
+                        time: cv.viewing_time || '',
                         status: cv.status,
-                        outcome: cv.outcome,
+                        // outcome column dropped from DB
                         outcomeNotes: cv.outcome_notes,
                         agentId: cv.agent_id,
-                        agentName: cv.agent_name, // v68.1: Get agent name from cloud
-                        agent: cv.agent_name, // v68.1: Alias for matching
+                        agentName: cv.agent_name,
+                        agent: cv.agent_name,
+                        viewingType: cv.viewing_type || 'in-person',
+                        referralSource: cv.referral_source || '',
+                        bookedBy: cv.booked_by || null,
+                        bookedByName: cv.booked_by_name || '',
                         notes: cv.notes,
+                        createdAt: cv.created_at,
                         updatedAt: cv.updated_at
                     };
                     
