@@ -2586,7 +2586,7 @@
                     phone: c.phone || '',
                     email: c.email || '',
                     stage: c.stage || 'New',
-                    status: c.stage || 'Pending',
+                    status: c.stage || 'confirmed',
                     propertyInterest: c.property_interest || '',
                     maxRent: c.max_rent,
                     borough: c.borough_preference || '',
@@ -2709,8 +2709,8 @@
                     client_email: viewing.email || viewing.clientEmail || '',
                     viewing_date: viewing.date,
                     viewing_time: viewing.time,
-                    status: viewing.status || 'Pending',
-                    // outcome column dropped from DB
+                    status: viewing.status || 'confirmed',
+                    // [v77.2] outcome column removed from DB
                     notes: viewing.notes || '',
                     agent_id: viewing.agentId ? String(viewing.agentId) : null,
                     agent_name: viewing.agentName || viewing.agent || '',
@@ -4011,7 +4011,7 @@
                             viewing_date: viewing.date,
                             viewing_time: viewing.time,
                             status: viewing.status || 'scheduled',
-                            // outcome column dropped from DB
+                            // [v77.2] outcome column removed from DB
                             agent_id: viewing.agentId || null,
                             agent_name: viewing.agentName || viewing.agent || null, // v68.1: Also store agent name
                             notes: viewing.notes,
@@ -4145,7 +4145,7 @@
                                 propertyId: v.property_id, propertyName: thePropName, property: thePropName, studioName: thePropName,
                                 propertyAddress: v.property_address || '', address: v.property_address || '',
                                 date: v.viewing_date || v.date || '', time: v.viewing_time || v.time || '',
-                                status: v.status || 'scheduled', outcome: v.outcome || null, notes: v.notes || '',
+                                status: (v.status || 'confirmed').toLowerCase(), outcome: v.outcome || null, notes: v.notes || '',
                                 agentId: v.agent_id || null,
                                 agentName: v.agent_name || '',
                                 agent: v.agent_name || '',
@@ -26489,7 +26489,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                             viewing_date: viewing.date || viewing.viewing_date || null,
                             viewing_time: viewing.time || viewing.viewing_time || null,
                             status: viewing.status || 'scheduled',
-                            // outcome column dropped from DB
+                            // [v77.2] outcome column removed from DB
                             agent_id: viewing.agentId || viewing.agent_id || null,
                             notes: viewing.notes || '',
                             updated_at: new Date().toISOString()
@@ -27603,8 +27603,8 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                                 property_address: v.propertyAddress || v.address || '',
                                 viewing_date: v.date || null,
                                 viewing_time: v.time || '',
-                                status: v.status || 'Pending',
-                                // outcome column dropped from DB
+                                status: (v.status || 'confirmed').toLowerCase(),
+                                // [v77.2] outcome column removed from DB
                                 notes: v.notes || '',
                                 viewing_type: v.viewingType || 'in-person',
                                 referral_source: v.referralSource || null,
@@ -27631,6 +27631,61 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                 }
                 
                 window.syncViewingsToSupabaseNow = syncViewingsToSupabaseNow;
+
+                // ═══════════════════════════════════════════════════════════
+                // v77.2: DIRECT single-viewing save — no debounce, no guards
+                // This is the ONE function all booking forms should call.
+                // ═══════════════════════════════════════════════════════════
+                window.saveViewingToSupabase = async function(viewing) {
+                    if (!window.supabase) { console.warn('[v77.2] No Supabase'); return { success: false }; }
+                    try {
+                        const session = await window.supabase.auth.getSession();
+                        if (!session?.data?.session) { console.warn('[v77.2] No auth session'); return { success: false }; }
+                    } catch(e) { console.warn('[v77.2] Auth check failed'); return { success: false }; }
+                    
+                    // Normalize status to match CHECK constraint
+                    const rawStatus = (viewing.status || 'confirmed').toLowerCase().trim();
+                    const allowed = ['confirmed','declined','cancelled','signed_up','no_show','ineligible','not_interested','viewed','pending'];
+                    const statusMap = { 'scheduled': 'confirmed', 'signed-up': 'signed_up', 'signed up': 'signed_up', 'no-show': 'no_show', 'no show': 'no_show', 'not interested': 'not_interested', 'not_interested': 'not_interested' };
+                    const status = statusMap[rawStatus] || (allowed.includes(rawStatus) ? rawStatus : 'confirmed');
+                    
+                    const payload = {
+                        id: String(viewing.id),
+                        client_name: viewing.name || viewing.visitor || viewing.clientName || viewing.visitorName || '',
+                        client_phone: viewing.phone || viewing.visitorPhone || viewing.clientPhone || '',
+                        client_email: viewing.email || viewing.clientEmail || '',
+                        property_id: viewing.propertyId ? parseInt(viewing.propertyId) : null,
+                        property_name: viewing.propertyName || viewing.property || viewing.studioName || '',
+                        property_address: viewing.propertyAddress || viewing.address || '',
+                        viewing_date: viewing.date || null,
+                        viewing_time: viewing.time || '',
+                        status: status,
+                        notes: viewing.notes || '',
+                        viewing_type: viewing.viewingType || 'in-person',
+                        referral_source: viewing.referralSource || null,
+                        booked_by: viewing.bookedBy || null,
+                        booked_by_name: viewing.bookedByName || null,
+                        agent_id: viewing.agentId ? parseInt(viewing.agentId) : null,
+                        agent_name: viewing.agentName || null,
+                        created_at: viewing.bookedAt || viewing.createdAt || new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    };
+                    
+                    try {
+                        const { error } = await window.supabase
+                            .from('viewings')
+                            .upsert(payload, { onConflict: 'id' });
+                        if (error) {
+                            console.error('[v77.2] ❌ Save failed:', error.message, payload);
+                            return { success: false, error: error.message };
+                        }
+                        console.log('[v77.2] ✅ Viewing saved to Supabase:', viewing.id, payload.client_name, payload.status);
+                        return { success: true };
+                    } catch(err) {
+                        console.error('[v77.2] ❌ Save error:', err);
+                        return { success: false, error: err.message };
+                    }
+                };
 
                 function updateViewingsCounts() {
                     const badge = document.getElementById('viewings-badge');
@@ -32755,6 +32810,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                         clientPhone: phone,
                         referralSource,
                         notes,
+                        status: 'confirmed',
                         // v64: Track who booked this viewing
                         bookedBy: HPMAuth.currentUser?.id || null,
                         bookedByName: HPMAuth.userProfile?.display_name || HPMAuth.userProfile?.full_name || 'Unknown',
@@ -32792,6 +32848,9 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                     }
 
                     viewings.push(newViewing);
+
+                    // v77.2: Direct save to Supabase
+                    if (window.saveViewingToSupabase) window.saveViewingToSupabase(newViewing);
 
                     // Add to property history with full details
                     addToPropertyHistory(propertyId, newViewing, 'scheduled');
@@ -37272,8 +37331,8 @@ Reply for viewing details.`;
                                         property_address: v.address || v.propertyName || '',
                                         viewing_date: v.date,
                                         viewing_time: v.time,
-                                        status: v.status || 'Pending',
-                                        // outcome column dropped from DB
+                                        status: v.status || 'confirmed',
+                                        // [v77.2] outcome column removed from DB
                                         notes: v.notes || '',
                                         agent_id: v.agentId || null,
                                         agent_name: v.agentName || v.agent || null,
@@ -38930,7 +38989,7 @@ GENERATED BY ${getCurrentAgentName()}'S PROPERTY MANAGEMENT
                         const pipelineEntry = pipelineData.find(p =>
                             p.date === todayStr && p.time === viewingTime
                         );
-                        const status = pipelineEntry ? pipelineEntry.status : (v.status || 'Pending');
+                        const status = pipelineEntry ? pipelineEntry.status : (v.status || 'confirmed');
 
                         // Get viewing type
                         const viewingType = v.viewingType || v.type || 'In-Person';
@@ -40028,7 +40087,7 @@ Total: ${referrals.length}
                         phone: v.phone || v.clientPhone || v.client_phone || '',
                         email: v.email || v.clientEmail || '',
                         type: v.viewingType === 'virtual' ? 'Virtual' : 'In-Person',
-                        status: v.status || v.outcome || 'Pending',
+                        status: v.status || v.outcome || 'confirmed',
                         notes: v.notes || '',
                         agentId: v.agentId || v.agent_id,
                         propertyId: v.propertyId || v.property_id
@@ -40227,7 +40286,7 @@ Total: ${referrals.length}
                         name: c.client_name,
                         phone: c.phone,
                         email: c.email,
-                        status: c.stage || 'Pending',
+                        status: c.stage || 'confirmed',
                         property: c.property_interest,
                         notes: c.notes
                     }));
@@ -41199,7 +41258,7 @@ Total: ${referrals.length}
                 time: viewingTime,
                 agentId: agentId ? parseInt(agentId) : null,
                 agentName: agent?.name || null,
-                status: 'scheduled',
+                status: 'confirmed',
                 viewingType: 'in-person',
                 notes: notes,
                 createdAt: new Date().toISOString(),
@@ -41211,7 +41270,8 @@ Total: ${referrals.length}
             viewings.push(viewing);
             localStorage.setItem('propertyViewings', JSON.stringify(viewings));
             window.viewings = viewings;
-            if (window.syncViewingsToSupabaseNow) syncViewingsToSupabaseNow(viewings);
+            // v77.2: Direct save — don't pass all 380 viewings through batch sync
+            if (window.saveViewingToSupabase) window.saveViewingToSupabase(viewing);
 
             // Close modal and refresh
             document.getElementById('quick-book-modal')?.remove();
@@ -41321,7 +41381,7 @@ Total: ${referrals.length}
                         visitor: visitorName,
                         phone: viewing.phone || viewing.visitorPhone || viewing.clientPhone || '',
                         type: viewing.viewingType === 'virtual' ? 'Virtual' : 'In-Person',
-                        status: viewing.status || 'Pending',
+                        status: viewing.status || 'confirmed',
                         notes: viewing.notes || ''
                     });
                     addedCount++;
@@ -41685,7 +41745,7 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
                 .upsert({
                     id: String(id),
                     status: newStatus,
-                    // outcome column dropped from DB
+                    // [v77.2] outcome column removed from DB
                     property_name: row.property || row.propertyName || '',
                     client_name: row.visitor || row.name || row.clientName || '',
                     client_phone: row.phone || row.clientPhone || '',
@@ -42567,7 +42627,7 @@ window.renderPipelineTable = function() {
                 lastProperty: propertyName,
                 lastDate: v.date || v.viewing_date,  // v67.8: Fallback to viewing_date
                 viewingCount: 0,
-                status: v.status || 'scheduled',
+                status: (v.status || 'confirmed').toLowerCase(),
                 history: []
             };
         }
@@ -47466,7 +47526,7 @@ Harir Industries`
                 if (row.phone && row.status !== 'Archived' && row.status !== 'Not Interested') {
                     const exists = helmBlastRecipients.some(r => r.phone.replace(/\D/g, '') === row.phone.replace(/\D/g, ''));
                     if (!exists) {
-                        helmBlastRecipients.push({ id: 'pipe-' + i, name: row.visitor || 'Unknown', phone: row.phone, source: 'pipeline', status: row.status || 'Pending' });
+                        helmBlastRecipients.push({ id: 'pipe-' + i, name: row.visitor || 'Unknown', phone: row.phone, source: 'pipeline', status: row.status || 'confirmed' });
                     }
                 }
             });
@@ -52420,9 +52480,9 @@ Harir Industries`;
             window.viewings.push(viewing);
             localStorage.setItem('propertyViewings', JSON.stringify(window.viewings));
             
-            // v68: SYNC TO SUPABASE IMMEDIATELY
-            if (window.supabase && typeof window.syncViewingsToSupabaseNow === 'function') {
-                window.syncViewingsToSupabaseNow([viewing]);
+            // v77.2: DIRECT save to Supabase — no debounce, no guards
+            if (window.saveViewingToSupabase) {
+                window.saveViewingToSupabase(viewing);
             }
 
             // Update tracker badge
@@ -55165,8 +55225,6 @@ Harir Industries`;
             }
             try { pds = JSON.parse(localStorage.getItem('pipelineData') || '[]'); } catch(e) { pds = []; }
             var mergeKeys = new Set();
-            // v77.2: Only use viewings as source — pipelineData has clients without viewings
-            // which inflated the count (380 viewings + 188 pipeline → 488 after dedup)
             var src = pvs.filter(function(v) {
                 var uid = (v.id || '') + '|' + (v.visitor || v.name || v.clientName || v.client_name || '') + '|' + (v.property || v.propertyName || v.property_name || '') + '|' + (v.date || v.viewing_date || '') + '|' + (v.time || '');
                 if (mergeKeys.has(uid)) return false;
@@ -55181,7 +55239,7 @@ Harir Industries`;
                 client: (v.client_name || v.visitor || v.visitorName || v.clientName || v.name || '').trim(),
                 property: (v.property_name || v.property || v.propertyName || '').trim(),
                 phone: v.client_phone || v.phone || v.visitorPhone || v.clientPhone || '',
-                status: v.status || v.outcome || 'Pending',
+                status: v.status || v.outcome || 'confirmed',
                 propertyId: v.property_id || v.propertyId || null,
                 notes: v.notes || '',
                 updatedAt: v.updated_at || v.updatedAt || ''
@@ -55523,7 +55581,7 @@ Harir Industries`;
                         await window.supabase.from('viewings').upsert({
                             id: String(id),
                             status: normNew,
-                            // outcome column dropped from DB
+                            // [v77.2] outcome column removed from DB
                             property_name: row.property || '',
                             client_name: row.client || '',
                             client_phone: row.phone || row.clientPhone || '',
@@ -55859,7 +55917,7 @@ Harir Industries`;
                     await window.supabase.from('viewings').upsert({
                         id: id,
                         status: 'Signed Up',
-                        // outcome column dropped from DB
+                        // [v77.2] outcome column removed from DB
                         property_name: propertyName,
                         client_name: clientName,
                         client_phone: phone,
@@ -60770,8 +60828,8 @@ Harir Industries`;
             try {
                 const { error } = await window.supabase.from('viewings').update({
                     status: viewing.status,
-                    // outcome column dropped from DB
-                    // outcome_notes column dropped from DB
+                    // [v77.2] outcome column removed from DB
+                    // [v77.2] outcome_notes - column may not exist
                     updated_at: viewing.updatedAt
                 }).eq('id', String(viewingId));
                 
@@ -62911,7 +62969,7 @@ Harir Industries`;
                 try {
                     const { error } = await window.supabase.from('viewings').update({
                         status: outcome,
-                        // outcome column dropped from DB
+                        // [v77.2] outcome column removed from DB
                         updated_at: new Date().toISOString()
                     }).eq('id', viewingId);
                     
@@ -62933,7 +62991,7 @@ Harir Industries`;
                         viewing_date: v.date,
                         viewing_time: v.time,
                         status: outcome,
-                        // outcome column dropped from DB
+                        // [v77.2] outcome column removed from DB
                         agent_id: v.agentId ? parseInt(v.agentId) : null,
                         notes: v.notes,
                         updated_at: new Date().toISOString()
@@ -64107,8 +64165,7 @@ Available now! Contact for viewing.`;
     window.updateNavBadges = function () {
         const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
         // v83: Use canonical loadPipelineData() instead of stale getStorageArray('pipelineData')
-        // v77.2: Use window.viewings (Supabase source of truth) for badge counts, not loadPipelineData which inflates
-        const pipelineData = window.viewings || (typeof loadPipelineData === 'function' ? loadPipelineData() : window.getStorageArray('pipelineData'));
+        const pipelineData = typeof loadPipelineData === 'function' ? loadPipelineData() : window.getStorageArray('pipelineData');
         // v65.5: Ensure properties is array
         let properties = window.properties || [];
         if (!Array.isArray(properties)) properties = Object.values(properties);
@@ -68028,7 +68085,7 @@ Write the email now:`;
             phone: v.phone || '',
             property: v.property || v.propertyName || 'Unknown Property',
             propertyName: v.property || v.propertyName || 'Unknown Property',
-            status: v.status || 'scheduled',
+            status: (v.status || 'confirmed').toLowerCase(),
             type: v.type || 'In-Person',
             notes: v.notes || ''
         }));
@@ -69025,7 +69082,7 @@ Write the email now:`;
                 propertyId: item.propertyId,
                 date: item.date || '',
                 time: item.time || '',
-                status: item.status || 'Pending',
+                status: item.status || 'confirmed',
                 type: item.type || 'In-Person',
                 notes: item.notes || '',
                 agentId: item.agentId,
@@ -69378,8 +69435,8 @@ Write the email now:`;
                     property_address: propAddress,
                     viewing_date: v.date || v.viewing_date || null,
                     viewing_time: v.time || v.viewing_time || null,
-                    status: v.status || 'scheduled',
-                    // outcome column dropped from DB
+                    status: (v.status || 'confirmed').toLowerCase(),
+                    // [v77.2] outcome column removed from DB
                     agent_id: v.agentId || v.agent_id || null,
                     agent_name: v.agentName || v.agent || v.agent_name || null,
                     notes: v.notes || '',
@@ -69484,8 +69541,8 @@ Write the email now:`;
                 address: v.property_address || '',
                 date: v.viewing_date || v.date || '',
                 time: v.viewing_time || v.time || '',
-                status: v.status || 'scheduled',
-                outcome: v.outcome || null,
+                status: (v.status || 'confirmed').toLowerCase(),
+                // [v77.2] outcome column removed from DB
                 agentId: v.agent_id || null,
                 agentName: v.agent_name || '',
                 agent: v.agent_name || '',
@@ -69591,7 +69648,7 @@ Write the email now:`;
                     date: cv.viewing_date || cv.date || '',
                     time: cv.viewing_time || cv.time || '',
                     status: cv.status || 'scheduled',
-                    outcome: cv.outcome || null,
+                    // [v77.2] outcome column removed from DB
                     agentId: cv.agent_id || null,
                     agentName: cv.agent_name || '',
                     agent: cv.agent_name || '',
@@ -69665,8 +69722,8 @@ Write the email now:`;
                 property_address: propAddress,
                 viewing_date: v.date || v.viewing_date || null,
                 viewing_time: v.time || v.viewing_time || null,
-                status: v.status || 'scheduled',
-                // outcome column dropped from DB
+                status: (v.status || 'confirmed').toLowerCase(),
+                // [v77.2] outcome column removed from DB
                 agent_id: v.agentId || v.agent_id || null,
                 agent_name: v.agentName || v.agent || v.agent_name || null,
                 notes: v.notes || '',
@@ -69724,7 +69781,7 @@ Write the email now:`;
             date: v.viewing_date || v.date,  // Fallback to date column
             time: v.viewing_time || v.time,  // Fallback to time column
             status: v.status,
-            outcome: v.outcome,
+            // [v77.2] outcome column removed from DB
             agentId: v.agent_id,
             notes: v.notes,
             updatedAt: v.updated_at
@@ -70201,31 +70258,23 @@ Write the email now:`;
                         name: cv.client_name,
                         clientName: cv.client_name,
                         visitor: cv.client_name,
-                        visitorName: cv.client_name,
                         phone: cv.client_phone,
                         clientPhone: cv.client_phone,
-                        visitorPhone: cv.client_phone,
                         email: cv.client_email,
                         propertyId: cv.property_id,
                         propertyName: cv.property_name,
                         property: cv.property_name,
-                        studioName: cv.property_name,
                         propertyAddress: cv.property_address,
                         address: cv.property_address,
-                        date: cv.viewing_date || '',
-                        time: cv.viewing_time || '',
+                        date: cv.viewing_date || cv.date,  // v67.7: Fallback
+                        time: cv.viewing_time || cv.time,  // v67.7: Fallback
                         status: cv.status,
-                        // outcome column dropped from DB
+                        // [v77.2] outcome column removed from DB
                         outcomeNotes: cv.outcome_notes,
                         agentId: cv.agent_id,
-                        agentName: cv.agent_name,
-                        agent: cv.agent_name,
-                        viewingType: cv.viewing_type || 'in-person',
-                        referralSource: cv.referral_source || '',
-                        bookedBy: cv.booked_by || null,
-                        bookedByName: cv.booked_by_name || '',
+                        agentName: cv.agent_name, // v68.1: Get agent name from cloud
+                        agent: cv.agent_name, // v68.1: Alias for matching
                         notes: cv.notes,
-                        createdAt: cv.created_at,
                         updatedAt: cv.updated_at
                     };
                     
@@ -70357,8 +70406,8 @@ Write the email now:`;
                     property_address: propAddress,
                     viewing_date: v.date,
                     viewing_time: v.time,
-                    status: v.status || 'scheduled',
-                    // outcome column dropped from DB
+                    status: (v.status || 'confirmed').toLowerCase(),
+                    // [v77.2] outcome column removed from DB
                     agent_id: v.agentId,
                     notes: v.notes,
                     updated_at: new Date().toISOString()
@@ -70620,7 +70669,7 @@ Write the email now:`;
                 var pvs = JSON.parse(localStorage.getItem('propertyViewings') || '[]');
                 var pds = JSON.parse(localStorage.getItem('pipelineData') || '[]');
                 var allSeen = new Set();
-                var viewings = pvs.concat(pds).filter(function(v) {
+                var viewings = pvs.filter(function(v) {
                     var uid = buildViewingKey(v);
                     if (allSeen.has(uid)) return false;
                     allSeen.add(uid); return true;
