@@ -19760,7 +19760,7 @@
            ══════════════════════════════════════════════════════════════════════════ */
         
         /* ─── GLOBAL FONT OVERRIDE ─── */
-        *, *::before, *::after {
+        *:not(#v75-header-logo):not(.logo-h):not(#v75-helm-logo):not(.v75-wm):not(.v75-login-wm), *::before, *::after {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
         code, pre, .hm-font-mono, [style*="monospace"] {
@@ -20666,7 +20666,7 @@ button, .btn, .tab-btn, .toolbar-btn, .sidebar-tab, .floating-menu-btn {
     letter-spacing: normal !important;
     text-transform: none !important;
 }
-.helm-header *, #helm-header * { font-family: var(--hds-font) !important; }
+.helm-header *:not(#v75-header-logo):not(.helm-subtitle), #helm-header *:not(#v75-header-logo):not(.helm-subtitle) { font-family: var(--hds-font) !important; }
 .helm-header .material-symbols-rounded,
 #helm-header .material-symbols-rounded {
     font-family: 'Material Symbols Rounded' !important;
@@ -20928,7 +20928,8 @@ html[data-theme="light"] select {
     backdrop-filter: none !important;
     box-shadow: var(--hds-sh-sm) !important;
 }
-.helm-header *:not(.material-symbols-rounded), #helm-header *:not(.material-symbols-rounded) { font-family: var(--hds-font) !important; }
+.helm-header *:not(.material-symbols-rounded):not(#v75-header-logo):not(.helm-subtitle), #helm-header *:not(.material-symbols-rounded):not(#v75-header-logo):not(.helm-subtitle) { font-family: var(--hds-font) !important; }
+#v75-header-logo { font-family: 'Big Shoulders Stencil', sans-serif !important; font-weight: 800 !important; letter-spacing: 10px !important; }
 #helm-header-search {
     background: var(--hds-surface-2) !important;
     border: 1px solid var(--hds-border) !important;
@@ -22231,8 +22232,9 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                             <span class="material-symbols-rounded"
                                 style="font-size: 16px; vertical-align: middle;">calendar_view_day</span> Timetable
                         </button>
+                        <!-- v84: Leaderboard tab hidden — agent rankings only for agents/admins -->
                         <button id="viewings-tab-leaderboard" onclick="switchViewingsTab('leaderboard')"
-                            class="bento-pill" style="padding: 10px 20px;">
+                            class="bento-pill" style="padding: 10px 20px; display:none !important;">
                             <span class="material-symbols-rounded"
                                 style="font-size: 16px; vertical-align: middle;">emoji_events</span> Leaderboard
                         </button>
@@ -22329,15 +22331,9 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                                 </select>
                             </div>
 
-                            <!-- TEAM LEADERBOARD - v64 XP System -->
-                            <div class="team-leaderboard-widget" style="margin-bottom: 20px;">
-                                <div class="team-lb-header">
-                                    <h3>🏆 Leaderboard</h3>
-                                    <!-- v74.4: LIVE label removed -->
-                                </div>
-                                <div class="team-lb-body" id="team-leaderboard-list">
-                                    <p style="text-align:center;color:rgba(255,255,255,0.5);padding:20px;">Loading team rankings...</p>
-                                </div>
+                            <!-- v84: Team XP leaderboard removed — only agent rankings kept -->
+                            <div class="team-leaderboard-widget" style="display:none !important;">
+                                <div class="team-lb-body" id="team-leaderboard-list"></div>
                             </div>
 
                             <!-- Toggle Pills - Agent Rankings only -->
@@ -66304,102 +66300,88 @@ Write the email now:`;
 
         function performSmartSearch(query) {
             const results = [];
-            const terms = query.split(/\s+/);
-
-            // Parse smart queries
-            const boroughMatch = terms.find(t => ['lewisham', 'brent', 'camden', 'ealing', 'harrow', 'lambeth', 'islington', 'haringey', 'enfield', 'barnet', 'waltham', 'redbridge', 'newham', 'tower', 'hackney', 'southwark', 'greenwich', 'croydon', 'bromley', 'kingston', 'hounslow', 'hillingdon', 'merton', 'sutton', 'richmond', 'wandsworth', 'westminster', 'kensington', 'chelsea'].some(b => t.toLowerCase().includes(b)));
+            const q = query.toLowerCase();
             const underMatch = query.match(/under\s*(\d+)/i);
-            const daysMatch = query.match(/(\d+)\s*days?/i);
-            const viewingsMatch = query.toLowerCase().includes('viewing');
-            const noContactMatch = query.toLowerCase().includes('not contacted') || query.toLowerCase().includes('no contact');
 
-            // Search properties
+            // v84: Universal search — always search everything
+
+            // 1. Search ALL properties by name, address, borough, postcode
             const properties = window.properties || [];
-            if (boroughMatch || underMatch) {
-                let filtered = properties;
-
-                if (boroughMatch) {
-                    filtered = filtered.filter(p =>
-                        (p.borough || '').toLowerCase().includes(boroughMatch.toLowerCase()) ||
-                        (p.address || '').toLowerCase().includes(boroughMatch.toLowerCase())
-                    );
-                }
-
-                if (underMatch) {
-                    const maxRent = parseInt(underMatch[1]);
-                    filtered = filtered.filter(p => (p.rent || 0) < maxRent);
-                }
-
-                filtered.slice(0, 5).forEach(p => {
-                    results.push({
-                        title: p.name || p.address,
-                        subtitle: `£${p.rent}/mo · ${p.borough || 'Unknown'}`,
-                        icon: 'apartment',
-                        iconClass: p.status === 'taken' ? 'red' : 'green',
-                        action: () => { window.closeCommandPalette(); window.zoomToProperty && window.zoomToProperty(p.id); helmSwitchView('map'); }
-                    });
-                });
+            let propFiltered = properties.filter(p =>
+                (p.name || '').toLowerCase().includes(q) ||
+                (p.address || '').toLowerCase().includes(q) ||
+                (p.borough || '').toLowerCase().includes(q) ||
+                (p.postcode || '').toLowerCase().includes(q) ||
+                (p.landlord || '').toLowerCase().includes(q)
+            );
+            if (underMatch) {
+                const maxRent = parseInt(underMatch[1]);
+                propFiltered = properties.filter(p => (p.rent || 0) < maxRent);
             }
+            propFiltered.slice(0, 5).forEach(p => {
+                results.push({
+                    title: p.name || p.address || 'Property',
+                    subtitle: `£${p.rent || 0}/mo · ${p.borough || 'Unknown'} · ${p.status || 'available'}`,
+                    icon: 'apartment',
+                    iconClass: p.status === 'taken' ? 'red' : 'green',
+                    action: () => { window.closeCommandPalette(); window.zoomToProperty && window.zoomToProperty(p.id); helmSwitchView('map'); }
+                });
+            });
 
-            // Search pipeline for follow-ups
+            // 2. Search ALL pipeline clients by name, phone, status
             const pipeline = window.loadPipelineData ? window.loadPipelineData() : [];
-            if (noContactMatch || daysMatch) {
-                const daysThreshold = daysMatch ? parseInt(daysMatch[1]) : 5;
-                const cutoff = new Date();
-                cutoff.setDate(cutoff.getDate() - daysThreshold);
-
-                pipeline.filter(p => {
-                    const lastContact = p.lastContact ? new Date(p.lastContact) : (p.dateAdded ? new Date(p.dateAdded) : null);
-                    return lastContact && lastContact < cutoff && p.status !== 'Signed Up' && p.status !== 'Closed';
-                }).slice(0, 5).forEach(p => {
-                    results.push({
-                        title: p.client || p.name || 'Unknown Client',
-                        subtitle: `No contact in ${daysThreshold}+ days · ${p.status || 'New'}`,
-                        icon: 'schedule',
-                        iconClass: 'amber',
-                        action: () => { window.closeCommandPalette(); helmSwitchView('pipeline'); }
-                    });
+            pipeline.filter(p =>
+                (p.client || p.name || '').toLowerCase().includes(q) ||
+                (p.phone || '').toLowerCase().includes(q) ||
+                (p.status || '').toLowerCase().includes(q) ||
+                (p.email || '').toLowerCase().includes(q) ||
+                (p.property || '').toLowerCase().includes(q)
+            ).slice(0, 5).forEach(p => {
+                results.push({
+                    title: p.client || p.name || 'Client',
+                    subtitle: `Pipeline · ${p.status || 'New'} · ${p.phone || p.email || 'No contact'}`,
+                    icon: 'person',
+                    iconClass: 'blue',
+                    action: () => { window.closeCommandPalette(); helmSwitchView('pipeline'); }
                 });
-            }
+            });
 
-            // Search viewings
+            // 3. Search ALL viewings (past + future) by visitor, property, agent, date
             const viewings = (window.HELMData ? window.HELMData.viewings : window.viewings) || [];
-            if (viewingsMatch || boroughMatch) {
+            viewings.filter(v =>
+                (v.visitor || '').toLowerCase().includes(q) ||
+                (v.propertyName || v.property || '').toLowerCase().includes(q) ||
+                (v.agentName || '').toLowerCase().includes(q) ||
+                (v.date || '').includes(q) ||
+                (v.outcome || v.status || '').toLowerCase().includes(q)
+            ).slice(0, 5).forEach(v => {
                 const today = new Date().toISOString().split('T')[0];
-                let filtered = viewings.filter(v => v.date >= today);
-
-                if (boroughMatch) {
-                    filtered = filtered.filter(v =>
-                        (v.propertyName || '').toLowerCase().includes(boroughMatch.toLowerCase()) ||
-                        (v.property || '').toLowerCase().includes(boroughMatch.toLowerCase())
-                    );
-                }
-
-                filtered.slice(0, 5).forEach(v => {
-                    results.push({
-                        title: `${v.visitor || 'Client'} @ ${(v.propertyName || v.property || '').split(',')[0]}`,
-                        subtitle: `${v.date} ${v.time}`,
-                        icon: 'visibility',
-                        iconClass: 'purple',
-                        action: () => { window.closeCommandPalette(); helmSwitchView('viewings'); }
-                    });
+                const isPast = v.date < today;
+                results.push({
+                    title: `${v.visitor || 'Client'} @ ${(v.propertyName || v.property || '').split(',')[0]}`,
+                    subtitle: `${v.date} ${v.time || ''}${isPast ? ' · Past' : ''} · ${v.outcome || v.status || 'Scheduled'}`,
+                    icon: isPast ? 'history' : 'visibility',
+                    iconClass: isPast ? 'slate' : 'purple',
+                    action: () => { window.closeCommandPalette(); helmSwitchView('viewings'); }
                 });
-            }
+            });
 
-            // Direct client search
-            if (query.length >= 2 && !boroughMatch && !underMatch && !noContactMatch) {
-                pipeline.filter(p =>
-                    (p.client || p.name || '').toLowerCase().includes(query)
-                ).slice(0, 3).forEach(p => {
-                    results.push({
-                        title: p.client || p.name,
-                        subtitle: `Pipeline · ${p.status || 'New'} · ${p.phone || 'No phone'}`,
-                        icon: 'person',
-                        iconClass: 'blue',
-                        action: () => { window.closeCommandPalette(); helmSwitchView('pipeline'); }
-                    });
+            // 4. Search agents by name
+            const agents = typeof loadAgents === 'function' ? loadAgents() : [];
+            agents.filter(a =>
+                (a.name || '').toLowerCase().includes(q) ||
+                (a.email || '').toLowerCase().includes(q) ||
+                (a.phone || '').toLowerCase().includes(q) ||
+                (a.role || '').toLowerCase().includes(q)
+            ).slice(0, 5).forEach(a => {
+                results.push({
+                    title: a.name || 'Agent',
+                    subtitle: `Agent · ${a.role || 'Team'} · ${a.phone || a.email || ''}`,
+                    icon: 'badge',
+                    iconClass: 'teal',
+                    action: () => { window.closeCommandPalette(); helmSwitchView('agents'); }
                 });
-            }
+            });
 
             return results;
         }
@@ -67189,8 +67171,7 @@ Write the email now:`;
             const wv = v.filter(x => x.date >= range.start && x.date <= range.end);
             const wSigned = p.filter(x => { const d = (x.date||x.dateAdded||'').split('T')[0]; return d >= range.start && d <= range.end && (x.status === 'Signed Up' || (x.status||'').toLowerCase().includes('sign')); });
             const wNo = p.filter(x => { const d = (x.date||x.dateAdded||'').split('T')[0]; return d >= range.start && d <= range.end && (x.status === 'No Show' || (x.status||'').toLowerCase().includes('no show')); });
-            const conducted = wSigned.length + wNo.length + wv.filter(x => (x.outcome||x.status||'').toLowerCase().includes('viewed')).length;
-            const rate = conducted > 0 ? Math.round((wSigned.length / conducted) * 100) : 0;
+            const rate = wv.length > 0 ? Math.round((wSigned.length / wv.length) * 100) : 0;
             const curRange = getPerfRange();
             const rangeOpts = [['today','Today'],['week','Week'],['month','Month'],['quarter','Quarter'],['year','Year'],['all','All']];
             return `
@@ -72990,6 +72971,41 @@ body{overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
     /* ── WELCOME SCREEN ── */
     .helm-welcome-overlay h1{font-size:28px!important}
     .helm-welcome-overlay p{font-size:12px!important}
+
+    /* ── v84: LOGIN SCREEN mobile ── */
+    #hpm-login-screen .login-card{
+        max-width:100%!important;
+        margin:0 12px!important;
+        padding:28px 20px!important;
+    }
+    #hpm-login-screen .logo-h{font-size:36px!important}
+    #hpm-login-screen .login-heading{font-size:16px!important}
+    #hpm-login-screen .form-group input{padding:12px 0!important;font-size:14px!important}
+    #hpm-login-screen .auth-btn{padding:12px!important;font-size:13px!important}
+
+    /* ── v84: COMMAND PALETTE mobile ── */
+    #hpm-command-palette .command-container{
+        width:95vw!important;
+        max-width:95vw!important;
+        max-height:80vh!important;
+        max-height:80dvh!important;
+        margin:10vh auto 0!important;
+        border-radius:16px!important;
+    }
+    #hpm-command-input{font-size:16px!important;padding:14px 16px!important}
+    .command-item{padding:10px 12px!important}
+    .command-item-title{font-size:13px!important}
+    .command-item-subtitle{font-size:11px!important}
+
+    /* ── v84: HEADER STATS compact on mobile ── */
+    .helm-header .header-stats{gap:6px!important}
+    .helm-header .header-stats .stat-value{font-size:12px!important}
+    .helm-header .header-stats .stat-label{font-size:7px!important}
+
+    /* ── v84: WELCOME OVERLAY mobile ── */
+    #v75-helm-logo{font-size:36px!important;letter-spacing:8px!important}
+    .helm-welcome-overlay [style*="font-size:10px"]{font-size:9px!important}
+    .helm-welcome-overlay [style*="font-size:24px"]{font-size:20px!important}
 }
 
 /* ═══════════════════════════════════════════════════════
