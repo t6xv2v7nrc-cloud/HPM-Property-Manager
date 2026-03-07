@@ -786,7 +786,7 @@
     html[data-theme="light"] #helm-ui-shell:not(.helm-map-active){background:#f5f2ed!important}
 
     /* ─── Welcome ─── */
-    html[data-theme="light"] .helm-welcome-overlay{background:#f5f2ed!important}
+    html[data-theme="light"] .helm-welcome-overlay{background:rgba(245,242,237,0.4)!important}
     html[data-theme="light"] .helm-welcome-overlay *{color:#1a1a1a!important}
     html[data-theme="light"] .helm-welcome-overlay small{color:#9a9084!important}
     html[data-theme="light"] .helm-welcome-overlay #v75-logo-underline{background:linear-gradient(90deg,transparent,rgba(26,26,26,0.12),transparent)!important}
@@ -1051,7 +1051,7 @@
     html[data-theme="light"] .tools-grid .tool-card,html[data-theme="light"] .write-card{background:rgba(255,255,255,0.45)!important;border:1px solid rgba(255,255,255,0.5)!important;border-radius:20px!important}
     html[data-theme="light"] #hpm-login-screen{background:#f0ede6!important}
     html[data-theme="light"] #hpm-login-screen .login-card *{color:#1a1e2e}
-    html[data-theme="light"] #hpm-login-screen .v75-login-wm{color:rgba(44,62,80,0.10)!important}
+    html[data-theme="light"] #hpm-login-screen .v75-login-wm{color:rgba(44,62,80,0.04)!important}
     html[data-theme="light"] #dash-recent-activity *{color:#3d3832!important}
     html[data-theme="light"] .team-leaderboard-widget{background:transparent!important}
     html[data-theme="light"] #dash-donut-ring{stroke:#1a1a1a!important}
@@ -14047,7 +14047,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(165deg, #080c18 0%, #0d1525 40%, #121d30 100%);
+            background: rgba(8,12,16,0.3);
             z-index: 60000;
             display: flex;
             align-items: center;
@@ -14068,7 +14068,7 @@
         .time-afternoon .helm-welcome-overlay,
         .time-evening .helm-welcome-overlay,
         .time-night .helm-welcome-overlay {
-            background: var(--ob-bg-base, #080c10) !important;
+            background: transparent !important;
         }
 
         .time-morning .welcome-orb:nth-child(1) {
@@ -20463,7 +20463,7 @@
     html[data-theme="light"] #hpm-login-screen .logo-h{color:#1a1a1a!important}
     html[data-theme="light"] #hpm-login-screen .logo-title{color:#8a8a8a!important}
     /* Chalk welcome */
-    html[data-theme="light"] .helm-welcome-overlay{background:linear-gradient(165deg,#ece9e1 0%,#e5e1d8 50%,#ddd9d0 100%)!important}
+    html[data-theme="light"] .helm-welcome-overlay{background:linear-gradient(165deg,rgba(236,233,225,0.4) 0%,rgba(229,225,216,0.35) 50%,rgba(221,217,208,0.3) 100%)!important}
     html[data-theme="light"] .helm-welcome-overlay *{color:#1a1a1a!important}
     html[data-theme="light"] .helm-welcome-overlay small{color:#8a8a8a!important}
     /* Chalk catch-all for inline dark-mode colors */
@@ -21129,7 +21129,7 @@ tbody tr:hover { background: var(--hds-accent-bg) !important; }
    LOGIN & WELCOME
    ══════════════════════════════════════════════════════════ */
 #hpm-login-screen { background: var(--hds-bg) !important; }
-.helm-welcome-overlay { background: var(--hds-bg) !important; }
+.helm-welcome-overlay { background: transparent !important; }
 html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !important; }
 
 /* ══════════════════════════════════════════════════════════
@@ -21301,6 +21301,8 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                 align-items: center;
                 justify-content: center;
                 font-family: var(--ob-font, 'DM Sans', system-ui, sans-serif);
+                position: relative;
+                overflow: hidden;
             }
             body.authenticated #hpm-login-screen { display: none !important; }
             
@@ -21398,7 +21400,26 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                 letter-spacing: 1px;
             }
         </style>
-        
+
+        <!-- HELM Login Background Video -->
+        <video
+            id="login-bg-video"
+            autoplay muted loop playsinline
+            style="
+                position: absolute;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                object-fit: cover;
+                z-index: 0;
+                opacity: 0.45;
+                filter: saturate(0.7) brightness(0.8);
+            "
+        >
+            <source src="https://gpfnxugnicgnrfoarkob.supabase.co/storage/v1/object/sign/login%20-%20helm/helm-login.gif.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9mMmIxNGY5MS03MmQyLTQ0ODgtYTI4YS1jYzY3NDY3OWZkZGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dpbiAtIGhlbG0vaGVsbS1sb2dpbi5naWYubXA0IiwiaWF0IjoxNzcyODQ1MDY2LCJleHAiOjE4MDQzODEwNjZ9.23HxCSSQCMBQAvGY_xEKSSa9XERZmWXZV55KKhm4tvg" type="video/mp4">
+        </video>
+        <!-- Dark overlay so login form stays readable -->
+        <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(8,12,16,0.3);z-index:1;pointer-events:none;"></div>
+
         <div class="login-card" style="position:relative;z-index:2;">
             <div class="login-logo">
                 <div class="logo-h" style="font-family:'Big Shoulders Stencil',sans-serif;font-weight:800;font-size:56px;letter-spacing:10px;">HELM</div>
@@ -21468,7 +21489,25 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.15;"></canvas>
 
         <!-- WELCOME SCREEN - Tap to Enter -->
-        <div id="helm-welcome-overlay" class="helm-welcome-overlay" onclick="enterHelmUI()" style="cursor:pointer;">
+        <div id="helm-welcome-overlay" class="helm-welcome-overlay" onclick="enterHelmUI()" style="cursor:pointer;position:relative;overflow:hidden;">
+            <!-- Welcome Background Video -->
+            <video
+                id="welcome-bg-video"
+                autoplay muted loop playsinline
+                style="
+                    position: absolute;
+                    top: 0; left: 0;
+                    width: 100%; height: 100%;
+                    object-fit: cover;
+                    z-index: 0;
+                    opacity: 0.35;
+                    filter: saturate(0.6) brightness(0.7);
+                    pointer-events: none;
+                "
+            >
+                <source src="https://gpfnxugnicgnrfoarkob.supabase.co/storage/v1/object/sign/login%20-%20helm/helm-login.gif.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9mMmIxNGY5MS03MmQyLTQ0ODgtYTI4YS1jYzY3NDY3OWZkZGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dpbiAtIGhlbG0vaGVsbS1sb2dpbi5naWYubXA0IiwiaWF0IjoxNzcyODQ1MDY2LCJleHAiOjE4MDQzODEwNjZ9.23HxCSSQCMBQAvGY_xEKSSa9XERZmWXZV55KKhm4tvg" type="video/mp4">
+            </video>
+            <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(8,12,16,0.25);z-index:1;pointer-events:none;"></div>
             <div style="position:relative;z-index:2;text-align:center;padding:0 24px;">
                 <div style="margin-bottom:32px;">
                     <div id="v75-helm-logo" style="font-size:52px;font-weight:800;letter-spacing:12px;color:rgba(255,255,255,0.9);margin:0 0 6px;font-family:'Big Shoulders Stencil',sans-serif;">HELM</div>
@@ -59953,6 +59992,7 @@ html[data-theme="light"] [style*="background: linear-gradient(135deg, rgba(18,28
     background-position: center !important;
     z-index: 0 !important;
     pointer-events: none !important;
+    opacity: 0.4 !important;
 }
 
 /* v75: Light mode login — warm aurora waves */
@@ -59968,7 +60008,7 @@ html[data-theme="light"] #hpm-login-screen::before {
     animation: auroraFlow 25s ease-in-out infinite alternate !important;
     filter: blur(50px) !important;
     background-image: none !important;
-    opacity: 1 !important;
+    opacity: 0.5 !important;
 }
 html[data-theme="light"] .aurora-layer-2 {
     background:
@@ -60003,14 +60043,14 @@ html[data-theme="light"] .aurora-layer-2 {
 /* Dark mode login watermarks */
 html:not([data-theme="light"]) .v75-login-wm { color: rgba(255,255,255,0.025); }
 /* Light mode login watermarks — v75.1: visible + constant, no fade */
-html[data-theme="light"] .v75-login-wm { 
-    color: rgba(44,62,80,0.10) !important;
+html[data-theme="light"] .v75-login-wm {
+    color: rgba(44,62,80,0.04) !important;
     animation: none !important;
     opacity: 1 !important;
 }
 /* v75.1: Welcome screen watermarks also constant in light mode */
 html[data-theme="light"] .v75-wm {
-    color: rgba(44,62,80,0.06) !important;
+    color: rgba(44,62,80,0.03) !important;
     animation: none !important;
     opacity: 1 !important;
 }
@@ -60035,9 +60075,9 @@ html[data-theme="light"] #v75-body-watermarks .v75-wm {
 
 /* Light mode login card */
 html[data-theme="light"] #hpm-login-screen .login-card {
-    background: rgba(245,242,235,0.85) !important;
-    border: 1px solid rgba(0,0,0,0.1) !important;
-    backdrop-filter: blur(40px) !important;
+    background: rgba(245,242,235,0.4) !important;
+    border: 1px solid rgba(0,0,0,0.06) !important;
+    backdrop-filter: blur(16px) !important;
 }
 html[data-theme="light"] #hpm-login-screen .login-card * { color: #1a1a1a; }
 html[data-theme="light"] #hpm-login-screen .logo-h { color: #2C3E50 !important; }
@@ -60046,13 +60086,13 @@ html[data-theme="light"] #hpm-login-screen .login-heading { color: #1a1a1a !impo
 html[data-theme="light"] #hpm-login-screen .login-sub { color: #8a8a8a !important; }
 html[data-theme="light"] #hpm-login-screen .form-group label { color: #4a4a4a !important; }
 html[data-theme="light"] #hpm-login-screen .form-group input {
-    background: rgba(0,0,0,0.03) !important;
-    border: 1px solid rgba(0,0,0,0.1) !important;
+    background: rgba(255,255,255,0.25) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
     color: #1a1a1a !important;
 }
 html[data-theme="light"] #hpm-login-screen .form-group input::placeholder { color: #b0a898 !important; }
 html[data-theme="light"] #hpm-login-screen .auth-btn {
-    background: #2C3E50 !important;
+    background: rgba(44,62,80,0.8) !important;
     color: white !important;
 }
 html[data-theme="light"] #hpm-login-screen .login-toggle { color: #8a8a8a !important; }
@@ -60107,7 +60147,7 @@ html[data-theme="light"] #hpm-login-screen input:-webkit-autofill:focus {
 
 /* Light mode welcome overlay */
 html[data-theme="light"] .helm-welcome-overlay {
-    background: linear-gradient(165deg, #f0ede6 0%, #e8e5de 40%, #ddd9d2 100%) !important;
+    background: linear-gradient(165deg, rgba(240,237,230,0.45) 0%, rgba(232,229,222,0.4) 40%, rgba(221,217,210,0.35) 100%) !important;
 }
 html[data-theme="light"] #v75-helm-logo {
     color: #2C3E50 !important;
@@ -60117,9 +60157,9 @@ html[data-theme="light"] #v75-logo-underline {
     background: linear-gradient(90deg, transparent, rgba(44,62,80,0.2), transparent) !important;
 }
 html[data-theme="light"] .v75-wm {
-    color: rgba(44,62,80,0.06) !important;
+    color: rgba(44,62,80,0.03) !important;
 }
-html[data-theme="light"] .v75-login-wm { color: rgba(44,62,80,0.10) !important; }
+html[data-theme="light"] .v75-login-wm { color: rgba(44,62,80,0.04) !important; }
 html[data-theme="light"] .helm-welcome-overlay [style*="color:rgba(255,255,255"] {
     color: #6a6a6a !important;
 }
