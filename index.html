@@ -19760,7 +19760,7 @@
            ══════════════════════════════════════════════════════════════════════════ */
         
         /* ─── GLOBAL FONT OVERRIDE ─── */
-        *:not(#v75-header-logo):not(.logo-h):not(#v75-helm-logo):not(.v75-wm):not(.v75-login-wm), *::before, *::after {
+        *, *::before, *::after {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
         code, pre, .hm-font-mono, [style*="monospace"] {
@@ -19768,6 +19768,15 @@
         }
         .material-symbols-rounded {
             font-family: 'Material Symbols Rounded' !important;
+        }
+        /* v84: Big Shoulders Stencil for HELM branding elements */
+        #v75-header-logo,
+        .logo-h,
+        #v75-helm-logo,
+        .v75-wm,
+        .v75-login-wm {
+            font-family: 'Big Shoulders Stencil', sans-serif !important;
+            font-weight: 800 !important;
         }
         
         body {
@@ -21416,7 +21425,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                 filter: saturate(0.7) brightness(0.8);
             "
         >
-            <source src="https://gpfnxugnicgnrfoarkob.supabase.co/storage/v1/object/sign/login%20-%20helm/helm-login.gif.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9mMmIxNGY5MS03MmQyLTQ0ODgtYTI4YS1jYzY3NDY3OWZkZGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dpbiAtIGhlbG0vaGVsbS1sb2dpbi5naWYubXA0IiwiaWF0IjoxNzcyODQ1MDY2LCJleHAiOjE4MDQzODEwNjZ9.23HxCSSQCMBQAvGY_xEKSSa9XERZmWXZV55KKhm4tvg" type="video/mp4">
+            <source src="https://gpfnxugnicgnrfoarkob.supabase.co/storage/v1/object/sign/login%20-%20helm/helm-login.gif1.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9mMmIxNGY5MS03MmQyLTQ0ODgtYTI4YS1jYzY3NDY3OWZkZGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dpbiAtIGhlbG0vaGVsbS1sb2dpbi5naWYxLm1wNCIsImlhdCI6MTc3MjkyMDQxNSwiZXhwIjoxNzczNTI1MjE1fQ.9qoQCE6-TaQi49SgrD404d3lE_zFB7EsELyxKGj7qXY" type="video/mp4">
         </video>
         <!-- Dark overlay so login form stays readable -->
         <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(8,12,16,0.3);z-index:1;pointer-events:none;"></div>
@@ -21506,7 +21515,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                     pointer-events: none;
                 "
             >
-                <source src="https://gpfnxugnicgnrfoarkob.supabase.co/storage/v1/object/sign/login%20-%20helm/helm-login.gif.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9mMmIxNGY5MS03MmQyLTQ0ODgtYTI4YS1jYzY3NDY3OWZkZGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dpbiAtIGhlbG0vaGVsbS1sb2dpbi5naWYubXA0IiwiaWF0IjoxNzcyODQ1MDY2LCJleHAiOjE4MDQzODEwNjZ9.23HxCSSQCMBQAvGY_xEKSSa9XERZmWXZV55KKhm4tvg" type="video/mp4">
+                <source src="https://gpfnxugnicgnrfoarkob.supabase.co/storage/v1/object/sign/login%20-%20helm/helm-login.gif1.mp4?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9mMmIxNGY5MS03MmQyLTQ0ODgtYTI4YS1jYzY3NDY3OWZkZGYiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dpbiAtIGhlbG0vaGVsbS1sb2dpbi5naWYxLm1wNCIsImlhdCI6MTc3MjkyMDQxNSwiZXhwIjoxNzczNTI1MjE1fQ.9qoQCE6-TaQi49SgrD404d3lE_zFB7EsELyxKGj7qXY" type="video/mp4">
             </video>
             <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(8,12,16,0.25);z-index:1;pointer-events:none;"></div>
             <div style="position:relative;z-index:2;text-align:center;padding:0 24px;">
@@ -21527,11 +21536,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                         <span id="welcome-viewings" style="font-size:24px;font-weight:600;color:var(--ob-accent,#5eead4);display:block;">0</span>
                         <small style="font-size:9px;color:rgba(255,255,255,0.20);text-transform:uppercase;letter-spacing:1px;">Today</small>
                     </div>
-                    <!-- v83: XP removed from welcome screen -->
-                    <div style="text-align:center;display:none!important;">
-                        <span id="welcome-xp" style="font-size:24px;font-weight:600;color:var(--ob-accent,#5eead4);display:block;">0</span>
-                        <small style="font-size:9px;color:rgba(255,255,255,0.20);text-transform:uppercase;letter-spacing:1px;">XP</small>
-                    </div>
+                    <!-- v84: XP fully removed -->
                 </div>
                 <div style="font-size:10px;color:rgba(255,255,255,0.12);letter-spacing:2px;text-transform:uppercase;">Tap to enter</div>
             </div>
@@ -21578,15 +21583,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                         <span class="helm-widget-label">TODAY</span>
                     </div>
                 </div>
-                <!-- v83: XP system removed -->
-                <div class="helm-widget" onclick="showXPStats()" style="display:none!important;">
-                    <span class="helm-widget-icon"><span class="material-symbols-rounded"
-                            style="font-size: 18px;">star</span></span>
-                    <div class="helm-widget-content">
-                        <span class="helm-widget-value" id="helm-xp-points">0</span>
-                        <span class="helm-widget-label">XP</span>
-                    </div>
-                </div>
+                <!-- v84: XP widget fully removed -->
             </div>
 
             <div class="helm-nav">
@@ -21618,7 +21615,6 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                         <div style="font-weight:600;color:white;font-size:14px;" id="menu-user-name">Loading...</div>
                         <div style="font-size:11px;color:rgba(255,255,255,0.5);" id="menu-user-email">-</div>
                         <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-                            <span style="font-size:12px;color:#fbbf24;font-weight:600;" id="menu-user-xp">0 XP</span>
                             <span id="user-role-badge" style="padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;display:none;">VIEWER</span>
                         </div>
                     </div>
@@ -23067,7 +23063,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                                 <span class="material-symbols-rounded" style="color:#60a5fa;font-size:20px;">checklist</span>
                                 Today's Action Items
                             </div>
-                            <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(245,158,11,0.15);color:#fbbf24;">+15 XP per task</span>
+                            <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(245,158,11,0.15);color:#fbbf24;">Automated</span>
                         </div>
                         <div id="smart-todo-list" style="display: flex; flex-direction: column; gap: 8px;">
                         </div>
@@ -24914,47 +24910,7 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
             <div class="toast-body" id="toast-message"></div>
         </div>
 
-        <!-- XP Notification -->
-        <div id="xp-notification" class="xp-notification">
-            <div class="xp-notification-header">
-                <div class="xp-icon" id="xp-icon">⭐</div>
-                <div class="xp-details">
-                    <div class="xp-title" id="xp-title">XP EARNED</div>
-                    <div class="xp-amount" id="xp-amount">+25 XP</div>
-                </div>
-            </div>
-            <div class="xp-progress-section">
-                <div class="xp-level-info">
-                    <span id="xp-level-text">Level 1</span>
-                    <span id="xp-progress-text">0 / 100 XP</span>
-                </div>
-                <div class="xp-progress-bar">
-                    <div class="xp-progress-fill" id="xp-progress-fill" style="width: 0%;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Level Up Notification (Simple) -->
-        <div id="levelup-notification" class="levelup-notification">
-            <div class="levelup-title">LEVEL UP!</div>
-            <div class="levelup-subtitle" id="levelup-subtitle">Level 2</div>
-        </div>
-
-        <!-- V62: Full Screen Level Up Celebration -->
-        <div id="level-up-overlay" class="level-up-overlay">
-            <div class="level-up-content">
-                <div class="level-up-badge">
-                    <span class="material-symbols-rounded">military_tech</span>
-                </div>
-                <div class="level-up-title">LEVEL UP!</div>
-                <div class="level-up-level" id="level-up-new-level">5</div>
-                <div class="level-up-message" id="level-up-message">You're making great progress!</div>
-                <div class="level-up-rewards" id="level-up-rewards">
-                    <div class="level-up-reward">+50 Bonus XP</div>
-                </div>
-                <button class="level-up-dismiss" onclick="dismissLevelUp()">Continue</button>
-            </div>
-        </div>
+        <!-- v84: XP notification, level up, and celebration all removed -->
 
         <!-- WhatsApp Blast Modal -->
         <div id="whatsapp-blast-modal"
@@ -32964,8 +32920,7 @@ Your viewing is booked:
 
 Please reply to confirm.
 
-See you there!
-Harir Industries`;
+See you there!`;
 
                     // Get formatted phone from viewing data
                     const clientPhone = formatPhoneForWhatsApp(viewing.phone || '');
@@ -41859,7 +41814,7 @@ window.updatePipelineRowStatus = async function(id, newStatus) {
             }
             awardedXP[viewingId] = { awardedAt: updatedAt, amount: 200, client: row.visitor || row.name };
             localStorage.setItem(awardedXPKey, JSON.stringify(awardedXP));
-            showHelmNotification('Deal Closed! +200 XP', 'success');
+            showHelmNotification('Deal Closed!', 'success');
         }
         
         // Mark property as taken
@@ -47910,13 +47865,12 @@ Harir Industries`
             // Close overlay
             document.getElementById('helm-outcome-overlay')?.remove();
 
-            // Show notification and award XP
             const messages = {
-                'signed': { msg: `🎉 SIGNED! ${agentName ? agentName + ' credited!' : ''} +50 XP`, xp: 50, type: 'success' },
-                'interested': { msg: '👍 Client interested! Follow up soon. +15 XP', xp: 15, type: 'info' },
-                'declined': { msg: '❌ Client declined. On to the next! +10 XP', xp: 10, type: 'warning' },
-                'noshow': { msg: '👻 No-show recorded. +5 XP', xp: 5, type: 'error' },
-                'shown': { msg: '✅ Viewing completed! +15 XP', xp: 15, type: 'success' }
+                'signed': { msg: `🎉 SIGNED! ${agentName ? agentName + ' credited!' : ''}`, type: 'success' },
+                'interested': { msg: '👍 Client interested! Follow up soon.', type: 'info' },
+                'declined': { msg: '❌ Client declined. On to the next!', type: 'warning' },
+                'noshow': { msg: '👻 No-show recorded.', type: 'error' },
+                'shown': { msg: '✅ Viewing completed!', type: 'success' }
             };
 
             const msgData = messages[outcome] || messages['shown'];
@@ -54280,7 +54234,7 @@ Harir Industries`;
                 '<div style="font-size: 14px; color: white; font-weight: 600;">' + viewing.time + '</div>' +
                 '</div>' +
                 '</div>' +
-                '<div style="margin-top: 16px; font-size: 18px; color: #fbbf24;">+15 XP</div>' +
+                '' +
                 '</div>';
 
             document.body.appendChild(overlay);
@@ -60753,13 +60707,13 @@ Harir Industries`;
         
         // Build buttons array to avoid template literal issues
         const buttons = [
-            { outcome: 'signed', emoji: '✅', label: 'SIGNED - Client accepted & signed!', xp: '+100 XP', color: '#22c55e' },
-            { outcome: 'interested', emoji: '👍', label: 'INTERESTED - Thinking about it', xp: '+15 XP', color: '#3b82f6' },
-            { outcome: 'declined', emoji: '❌', label: 'DECLINED - Not interested', xp: '+10 XP', color: '#f59e0b' },
-            { outcome: 'no-show', emoji: '👻', label: 'NO-SHOW - Client didnt attend', xp: '+5 XP', color: '#ef4444' },
-            { outcome: 'viewed', emoji: '👁️', label: 'VIEWED - Just completed viewing', xp: '+10 XP', color: '#2dd4bf' },
-            { outcome: 'rescheduled', emoji: '📅', label: 'RESCHEDULED - New date needed', xp: '0 XP', color: '#06b6d4' },
-            { outcome: 'cancelled', emoji: '🚫', label: 'CANCELLED - Viewing cancelled', xp: '-50 XP', color: '#991b1b' }
+            { outcome: 'signed', emoji: '✅', label: 'SIGNED - Client accepted & signed!', color: '#22c55e' },
+            { outcome: 'interested', emoji: '👍', label: 'INTERESTED - Thinking about it', color: '#3b82f6' },
+            { outcome: 'declined', emoji: '❌', label: 'DECLINED - Not interested', color: '#f59e0b' },
+            { outcome: 'no-show', emoji: '👻', label: 'NO-SHOW - Client didnt attend', color: '#ef4444' },
+            { outcome: 'viewed', emoji: '👁️', label: 'VIEWED - Just completed viewing', color: '#2dd4bf' },
+            { outcome: 'rescheduled', emoji: '📅', label: 'RESCHEDULED - New date needed', color: '#06b6d4' },
+            { outcome: 'cancelled', emoji: '🚫', label: 'CANCELLED - Viewing cancelled', color: '#991b1b' }
         ];
         
         const buttonsHTML = buttons.map(btn => {
@@ -60919,14 +60873,14 @@ Harir Industries`;
         
         // Show toast
         const outcomeLabels = {
-            'signed': '🎉 Client SIGNED! +100 XP',
-            'interested': '👍 Marked as interested +15 XP',
-            'declined': 'Marked as declined +10 XP',
-            'no-show': '👻 Marked as no-show +5 XP',
-            'viewed': '✅ Viewing completed +10 XP',
-            'completed': '✅ Viewing completed +10 XP',
+            'signed': '🎉 Client SIGNED!',
+            'interested': '👍 Marked as interested',
+            'declined': 'Marked as declined',
+            'no-show': '👻 Marked as no-show',
+            'viewed': '✅ Viewing completed',
+            'completed': '✅ Viewing completed',
             'rescheduled': '📅 Marked for rescheduling',
-            'cancelled': '🚫 Viewing cancelled -50 XP'
+            'cancelled': '🚫 Viewing cancelled'
         };
         showToast('Outcome Recorded', outcomeLabels[outcome] || 'Updated');
     };
@@ -62868,7 +62822,7 @@ Harir Industries`;
                     // XP removed;
                 } else if (typeof addXP === 'function') {
                     addXP(200);
-                    showHelmNotification('Deal Closed! +200 XP', 'success');
+                    showHelmNotification('Deal Closed!', 'success');
                 }
                 // Mark as awarded
                 awardedXP[viewingId] = { 
@@ -63051,7 +63005,7 @@ Harir Industries`;
             '<div style="font-size: 28px; font-weight: 800; color: #4ade80; margin-bottom: 10px; text-shadow: 0 0 20px rgba(74,222,128,0.5);">SIGNED UP!</div>' +
             '<div style="font-size: 18px; color: white; margin-bottom: 5px; font-weight: 600;">' + (clientName || 'Client') + '</div>' +
             '<div style="font-size: 14px; color: rgba(255,255,255,0.7);">' + (propertyName || 'Property') + '</div>' +
-            '<div style="margin-top: 20px; font-size: 24px; color: #fbbf24; font-weight: 700;">+200 XP</div>' +
+            '' +
             '</div>';
 
         document.body.appendChild(overlay);
@@ -65062,7 +65016,7 @@ Available now! Contact for viewing.`;
 
         // Award XP
         if (typeof addXP === 'function') addXP(25);
-        showToast('Report Generated', '+25 XP earned');
+        showToast('Report Generated', 'Done');
     };
 
     // Keep old function name for compatibility
@@ -65095,7 +65049,7 @@ Available now! Contact for viewing.`;
         window.location.href = mailtoLink;
 
         if (typeof addXP === 'function') addXP(15);
-        showToast('Email Opening', '+15 XP - Report ready to send');
+        showToast('Email Opening', 'Report ready to send');
     };
 
     // Open in Outlook (for Windows)
@@ -65407,7 +65361,7 @@ Available now! Contact for viewing.`;
             checkbox.parentElement.style.opacity = '0.5';
             checkbox.parentElement.style.textDecoration = 'line-through';
             if (typeof addXP === 'function') addXP(15);
-            showToast('Task Complete', '+15 XP earned');
+            showToast('Task Complete', 'Done');
         } else {
             checkbox.parentElement.style.opacity = '1';
             checkbox.parentElement.style.textDecoration = 'none';
