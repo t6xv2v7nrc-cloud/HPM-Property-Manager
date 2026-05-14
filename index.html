@@ -69557,36 +69557,6 @@ Write the email now:`;
             console.log(`[HPM Sync] Uploaded ${viewings.length} viewings`);
         }
         
-        // Upload properties in batch
-        if (properties.length > 0) {
-            // v77: Include ALL property fields to prevent data loss
-            const propBatch = properties.map(p => ({
-                id: p.id,
-                name: p.name || '',
-                address: p.address || '',
-                postcode: p.postcode || '',
-                borough: p.borough || '',
-                rent: p.rent || 0,
-                lha_rate: p.lhaRate || p.lha_rate || 0,
-                bedrooms: p.bedrooms || 0,
-                type: p.type || 'Studio',
-                status: p.status || 'available',
-                lat: p.lat || null,
-                lng: p.lng || null,
-                landlord: p.landlord || '',
-                notes: p.notes || '',
-                client_name: p.clientName || p.client_name || null,
-                taken_by: p.takenBy || p.taken_by || null,
-                taken_date: p.takenDate || p.taken_date || null,
-                taken: p.taken || false,
-                updated_at: p.updatedAt || new Date().toISOString()
-            }));
-            for (let i = 0; i < propBatch.length; i += CHUNK_SIZE) {
-                await window.supabase.from('properties').upsert(propBatch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
-            }
-            console.log(`[HPM Sync] Uploaded ${properties.length} properties`);
-        }
-        
         // Upload clients/pipeline in batch
         const pipelineData = JSON.parse(localStorage.getItem('pipelineData') || '[]');
         
@@ -70185,60 +70155,6 @@ Write the email now:`;
         window._hpmSyncingToCloud = false;
     }
     
-    // v65.7: Sync properties to Supabase
-    async function syncPropertiesToSupabase() {
-        if (!window.supabase) return;
-        if (localStorage.getItem('hpm_sync_action') === 'skip') return;
-        if (window._hpmSyncingToCloud) return; // v70: prevent re-entrance
-        
-        if (!await window.hpmHasAuth()) {
-            return;
-        }
-        
-        window._hpmSyncingToCloud = true;
-        
-        const properties = JSON.parse(localStorage.getItem('elevate_properties') || localStorage.getItem('propertySystemProperties') || '[]');
-        if (properties.length === 0) return;
-        
-        // v69: Batch upsert in chunks of 50
-        const CHUNK_SIZE = 50;
-        let successCount = 0;
-        let errorCount = 0;
-        
-        const batch = properties.map(p => ({
-            id: p.id,
-            name: p.name || '',
-            address: p.address || '',
-            postcode: p.postcode || '',
-            borough: p.borough || '',
-            rent: p.rent || 0,
-            lha_rate: p.lhaRate || p.lha_rate || 0,
-            bedrooms: p.bedrooms || 0,
-            status: p.status || 'available',
-            lat: p.lat || null,
-            lng: p.lng || null,
-            landlord: p.landlord || '',
-            notes: p.notes || '',
-            client_name: p.clientName || p.client_name || '',
-            taken_by: p.takenBy || p.taken_by || '',
-            taken_date: p.takenDate || p.taken_date || null,
-            updated_at: new Date().toISOString()
-        }));
-        
-        for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
-            const chunk = batch.slice(i, i + CHUNK_SIZE);
-            const { error } = await window.supabase.from('properties').upsert(chunk, { onConflict: 'id' });
-            if (error) {
-                errorCount += chunk.length;
-                if (errorCount <= chunk.length) console.error('[HPM Sync] Property batch error:', error.message);
-            } else {
-                successCount += chunk.length;
-            }
-        }
-        console.log(`[HPM Sync] Synced ${successCount}/${properties.length} properties` + (errorCount > 0 ? ` (${errorCount} errors)` : ''));
-        window._hpmSyncingToCloud = false;
-    }
-    
     // ═══════════════════════════════════════════════════════════
     // v65.7: AUTO-SYNC ON PAGE LOAD - Critical for multi-device use
     // ═══════════════════════════════════════════════════════════
@@ -70527,34 +70443,6 @@ Write the email now:`;
             console.log(`[HPM Sync] ✅ Uploaded ${localOnly.length} local-only viewings`);
         }
         
-        // Check for local properties not in cloud
-        const { data: cloudProps } = await window.supabase.from('properties').select('id');
-        const cloudPropIds = new Set((cloudProps || []).map(p => p.id));
-        
-        const localOnlyProps = localProps.filter(p => !cloudPropIds.has(p.id));
-        
-        if (localOnlyProps.length > 0) {
-            console.log(`[HPM Sync] ⬆️ Uploading ${localOnlyProps.length} local-only properties...`);
-            const batch = localOnlyProps.map(p => ({
-                id: p.id,
-                name: p.name,
-                address: p.address,
-                postcode: p.postcode,
-                borough: p.borough,
-                rent: p.rent,
-                lha_rate: p.lhaRate,
-                bedrooms: p.bedrooms || 0,
-                status: p.status || 'available',
-                lat: p.lat,
-                lng: p.lng,
-                landlord: p.landlord,
-                notes: p.notes
-            }));
-            for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
-                await window.supabase.from('properties').upsert(batch.slice(i, i + CHUNK_SIZE), { onConflict: 'id' });
-            }
-            console.log(`[HPM Sync] ✅ Uploaded ${localOnlyProps.length} local-only properties`);
-        }
     }
     
     // ═══════════════════════════════════════════════════════════
@@ -70596,7 +70484,6 @@ Write the email now:`;
         download: downloadAllCloudData,
         merge: smartMergeData,
         sync: syncViewingsToSupabase,
-        syncProperties: syncPropertiesToSupabase,
         load: loadViewingsFromSupabase,
         autoSync: autoSyncOnLoad,
         uploadLocalOnly: uploadLocalOnlyData,
