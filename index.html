@@ -2,7 +2,7 @@
 <!--
     ╔═══════════════════════════════════════════════════════════════╗
     ║                    HELM - Property Manager                    ║
-    ║                        Version 76                            ║
+    ║                        Version 85                            ║
     ║  v76 VISUAL OVERHAUL:                                        ║
     ║  • Complete design system rebuild — clean, minimal, warm     ║
     ║  • Removed ALL XP/rewards/leaderboard points                 ║
@@ -22663,14 +22663,26 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                     <!-- TAB: Add New Property -->
                     <div id="prop-content-add" class="prop-tab-content" style="display: none;">
                         <div style="display: grid; gap: 20px;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
                                 <div>
                                     <label class="helm-form-label"><span class="material-symbols-rounded">apartment</span> Building Name *</label>
                                     <input type="text" id="helm-prop-name" placeholder="e.g., 34 Playgreen Way" class="helm-filter-input" style="flex:none;width:100%;">
                                 </div>
                                 <div>
-                                    <label class="helm-form-label"><span class="material-symbols-rounded">location_on</span> Full Address *</label>
-                                    <input type="text" id="helm-prop-address" placeholder="Full address with postcode" class="helm-filter-input" style="flex:none;width:100%;">
+                                    <label class="helm-form-label"><span class="material-symbols-rounded">location_on</span> Full Address</label>
+                                    <input type="text" id="helm-prop-address" placeholder="Street, town / city" class="helm-filter-input" style="flex:none;width:100%;">
+                                </div>
+                                <div>
+                                    <label class="helm-form-label"><span class="material-symbols-rounded">pin_drop</span> Postcode *</label>
+                                    <div style="display:flex;gap:6px;">
+                                        <input type="text" id="helm-prop-postcode" placeholder="e.g. SE1 7PB"
+                                               class="helm-filter-input" style="flex:1;min-width:0;text-transform:uppercase;"
+                                               onblur="if(this.value.trim().length>=5)lookupPropertyPostcode()"
+                                               onkeydown="if(event.key==='Enter'){event.preventDefault();lookupPropertyPostcode();}">
+                                        <button type="button" onclick="lookupPropertyPostcode()"
+                                                style="padding:0 10px;background:rgba(94,234,212,0.15);border:1px solid rgba(94,234,212,0.3);border-radius:8px;color:#5eead4;cursor:pointer;font-size:13px;white-space:nowrap;"
+                                                title="Look up council from postcode">&#128269;</button>
+                                    </div>
                                 </div>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
@@ -22692,46 +22704,12 @@ html[data-theme="light"] .helm-welcome-overlay * { color: var(--hds-text) !impor
                             </div>
                             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
                                 <div>
-                                    <label class="helm-form-label"><span class="material-symbols-rounded">location_on</span> Borough *</label>
-                                    <select id="helm-prop-borough" class="helm-filter-select" style="width:100%;">
-                                        <option value="">Select...</option>
-                                        <option value="Barking and Dagenham">Barking and Dagenham</option>
-                                        <option value="Barnet">Barnet</option>
-                                        <option value="Bexley">Bexley</option>
-                                        <option value="Brent">Brent</option>
-                                        <option value="Bromley">Bromley</option>
-                                        <option value="Camden">Camden</option>
-                                        <option value="City of London">City of London</option>
-                                        <option value="Croydon">Croydon</option>
-                                        <option value="Ealing">Ealing</option>
-                                        <option value="Enfield">Enfield</option>
-                                        <option value="Greenwich">Greenwich</option>
-                                        <option value="Hackney">Hackney</option>
-                                        <option value="Hammersmith and Fulham">Hammersmith and Fulham</option>
-                                        <option value="Haringey">Haringey</option>
-                                        <option value="Harrow">Harrow</option>
-                                        <option value="Havering">Havering</option>
-                                        <option value="Hertfordshire">Hertfordshire</option>
-                                        <option value="Hertsmere">Hertsmere</option>
-                                        <option value="Hillingdon">Hillingdon</option>
-                                        <option value="Hounslow">Hounslow</option>
-                                        <option value="Islington">Islington</option>
-                                        <option value="Kensington and Chelsea">Kensington and Chelsea</option>
-                                        <option value="Kingston upon Thames">Kingston upon Thames</option>
-                                        <option value="Lambeth">Lambeth</option>
-                                        <option value="Lewisham">Lewisham</option>
-                                        <option value="Merton">Merton</option>
-                                        <option value="Newham">Newham</option>
-                                        <option value="Redbridge">Redbridge</option>
-                                        <option value="Richmond upon Thames">Richmond upon Thames</option>
-                                        <option value="Southwark">Southwark</option>
-                                        <option value="Sutton">Sutton</option>
-                                        <option value="Thurrock">Thurrock</option>
-                                        <option value="Tower Hamlets">Tower Hamlets</option>
-                                        <option value="Waltham Forest">Waltham Forest</option>
-                                        <option value="Wandsworth">Wandsworth</option>
-                                        <option value="Westminster">Westminster</option>
-                                    </select>
+                                    <label class="helm-form-label"><span class="material-symbols-rounded">account_balance</span> Council / Borough *</label>
+                                    <div style="position:relative;">
+                                        <input type="text" id="helm-prop-borough" class="helm-filter-input" style="flex:none;width:100%;padding-right:80px;"
+                                               placeholder="Auto-detected from postcode">
+                                        <span id="helm-prop-borough-status" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:rgba(94,234,212,0.7);pointer-events:none;"></span>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="helm-form-label"><span class="material-symbols-rounded">person</span> Gender</label>
@@ -40741,6 +40719,11 @@ Total: ${referrals.length}
                 setTimeout(() => window.updateMarkers(), 100);
             }
 
+            // Enrich newly imported properties with lat/lng + council from postcode (background)
+            if (imported > 0) {
+                setTimeout(() => window.enrichPropertiesFromPostcodes(), 200);
+            }
+
             console.log('[Import] Imported', imported, 'properties. Total now:', existing.length);
             return imported;
         };
@@ -40750,10 +40733,11 @@ Total: ${referrals.length}
                 id: item.id || Date.now() + idx,
                 name: item.name || item.buildingname || item.building_name || item.address?.split(',')[0] || 'Property ' + idx,
                 address: item.address || '',
+                postcode: (item.postcode || item.post_code || '').trim().toUpperCase(),
                 borough: item.borough || '',
                 rent: parseFloat(item.rent) || 0,
-                lat: parseFloat(item.lat || item.latitude) || 51.5,
-                lng: parseFloat(item.lng || item.lon || item.longitude) || -0.1,
+                lat: parseFloat(item.lat || item.latitude) || null,
+                lng: parseFloat(item.lng || item.lon || item.longitude) || null,
                 status: item.status || 'available',
                 type: item.type || 'Studio',
                 bedrooms: parseInt(item.bedrooms || item.beds) || 0,
@@ -51092,6 +51076,7 @@ Harir Industries`;
         window.helmAddProperty = async function () {
             const name = document.getElementById('helm-prop-name').value.trim();
             const address = document.getElementById('helm-prop-address').value.trim();
+            const postcode = (document.getElementById('helm-prop-postcode')?.value || '').trim().toUpperCase();
             const studios = parseInt(document.getElementById('helm-prop-studios').value);
             const rent = parseFloat(document.getElementById('helm-prop-rent').value);
             const borough = document.getElementById('helm-prop-borough').value;
@@ -51099,19 +51084,23 @@ Harir Industries`;
             const gender = document.getElementById('helm-prop-gender').value;
             const link = document.getElementById('helm-prop-link').value.trim();
 
-            if (!name || !address || !studios || !rent || !borough) {
-                showHelmNotification('❌ Please fill in all required fields', 'error');
+            if (!name || !studios || !rent || !borough || !postcode) {
+                showHelmNotification('❌ Please fill in all required fields (including postcode)', 'error');
                 return;
             }
 
             try {
-                const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+                // Geocode via postcode for accuracy; fall back to full address string
+                const geocodeQuery = postcode || address;
+                const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(geocodeQuery)}&countrycodes=gb`;
                 const response = await fetch(geocodeUrl);
                 const data = await response.json();
 
                 if (data && data.length > 0) {
                     const lat = parseFloat(data[0].lat);
                     const lon = parseFloat(data[0].lon);
+                    // Build full address: use typed address or fall back to postcode display
+                    const fullAddress = address ? `${address}${postcode ? ', ' + postcode : ''}` : postcode;
                     const dateAdded = new Date().toISOString();
                     const maxId = Math.max(...(window.properties || []).map(p => parseInt(p.id) || 0), 0);
 
@@ -51124,7 +51113,8 @@ Harir Industries`;
                             id: maxId + i,
                             name: studioName,
                             buildingName: name,
-                            address: address,
+                            address: fullAddress,
+                            postcode: postcode,
                             beds: 0,
                             bedrooms: 0,
                             type: 'Studio',
@@ -51173,9 +51163,12 @@ Harir Industries`;
 
                     document.getElementById('helm-prop-name').value = '';
                     document.getElementById('helm-prop-address').value = '';
+                    document.getElementById('helm-prop-postcode').value = '';
                     document.getElementById('helm-prop-studios').value = '1';
                     document.getElementById('helm-prop-rent').value = '';
                     document.getElementById('helm-prop-borough').value = '';
+                    const bStatus = document.getElementById('helm-prop-borough-status');
+                    if (bStatus) bStatus.textContent = '';
                     document.getElementById('helm-prop-lift').value = 'false';
                     document.getElementById('helm-prop-gender').value = 'any';
                     document.getElementById('helm-prop-link').value = '';
@@ -51186,6 +51179,139 @@ Harir Industries`;
             } catch (error) {
                 console.error('Geocoding error:', error);
                 showHelmNotification('❌ Error adding property. Please try again.', 'error');
+            }
+        };
+
+        // ========================================
+        // UK POSTCODE → COUNCIL LOOKUP
+        // ========================================
+        window.lookupPropertyPostcode = async function () {
+            const postcodeEl = document.getElementById('helm-prop-postcode');
+            const boroughEl = document.getElementById('helm-prop-borough');
+            const statusEl = document.getElementById('helm-prop-borough-status');
+            if (!postcodeEl || !boroughEl) return;
+
+            const raw = postcodeEl.value.trim();
+            if (!raw) return;
+
+            const postcode = raw.toUpperCase().replace(/\s+/g, ' ');
+            postcodeEl.value = postcode;
+
+            if (statusEl) statusEl.textContent = '⏳';
+            boroughEl.placeholder = 'Looking up council…';
+
+            try {
+                const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+                const json = await res.json();
+
+                if (json.status === 200 && json.result) {
+                    const council = json.result.admin_district || '';
+                    boroughEl.value = council;
+                    boroughEl.placeholder = council ? '' : 'Enter council manually';
+                    if (statusEl) {
+                        statusEl.textContent = council ? '✓ auto-detected' : '⚠ not found';
+                        statusEl.style.color = council ? 'rgba(94,234,212,0.8)' : 'rgba(251,191,36,0.8)';
+                        setTimeout(() => { statusEl.textContent = council ? '✓' : ''; }, 3000);
+                    }
+                } else {
+                    boroughEl.value = '';
+                    boroughEl.placeholder = 'Postcode not found — enter manually';
+                    if (statusEl) {
+                        statusEl.textContent = '⚠ not found';
+                        statusEl.style.color = 'rgba(251,191,36,0.8)';
+                    }
+                }
+            } catch (err) {
+                console.warn('[PostcodeLookup] Network error:', err);
+                boroughEl.placeholder = 'Lookup failed — enter manually';
+                if (statusEl) statusEl.textContent = '';
+            }
+        };
+
+        // ========================================
+        // UK POSTCODE BULK ENRICHMENT (CSV import)
+        // ========================================
+        // Scans all stored properties that are missing lat/lng or council,
+        // looks them up via postcodes.io (free, no key, UK-wide), and saves.
+        window.enrichPropertiesFromPostcodes = async function () {
+            const PC_RE = /\b([A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2})\b/i;
+
+            let stored = JSON.parse(localStorage.getItem('propertySystemProperties') || '[]');
+
+            // Identify properties that need enrichment
+            const needsWork = stored.filter(p =>
+                (!p.lat || !p.lng || !p.borough) &&
+                (p.postcode || PC_RE.test(p.address || ''))
+            );
+            if (needsWork.length === 0) return;
+
+            // Extract the best postcode for each
+            const pcList = needsWork.map(p => {
+                if (p.postcode) return p.postcode.toUpperCase().replace(/\s+/g, ' ');
+                const m = (p.address || '').match(PC_RE);
+                return m ? m[1].toUpperCase().replace(/\s+/g, ' ') : null;
+            });
+
+            // Bulk lookup via postcodes.io — max 100 per request
+            const lookupMap = {};
+            for (let i = 0; i < pcList.length; i += 100) {
+                const batch = pcList.slice(i, i + 100).filter(Boolean);
+                if (!batch.length) continue;
+                try {
+                    const res = await fetch('https://api.postcodes.io/postcodes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ postcodes: batch })
+                    });
+                    const json = await res.json();
+                    if (json.status === 200 && Array.isArray(json.result)) {
+                        json.result.forEach(r => {
+                            if (r.result) lookupMap[r.query] = r.result;
+                        });
+                    }
+                } catch (e) {
+                    console.warn('[PostcodeEnrich] Batch lookup error:', e);
+                }
+            }
+
+            // Apply results back to stored properties
+            let enriched = 0;
+            stored = stored.map(prop => {
+                const pc = prop.postcode
+                    ? prop.postcode.toUpperCase().replace(/\s+/g, ' ')
+                    : (() => { const m = (prop.address || '').match(PC_RE); return m ? m[1].toUpperCase().replace(/\s+/g, ' ') : null; })();
+
+                const result = pc ? lookupMap[pc] : null;
+                if (!result) return prop;
+
+                let changed = false;
+                if (!prop.borough && result.admin_district) {
+                    prop.borough = result.admin_district;
+                    changed = true;
+                }
+                if ((!prop.lat || !prop.lng) && result.latitude) {
+                    prop.lat = result.latitude;
+                    prop.lng = result.longitude;
+                    changed = true;
+                }
+                if (!prop.postcode && result.postcode) {
+                    prop.postcode = result.postcode;
+                    changed = true;
+                }
+                if (changed) enriched++;
+                return prop;
+            });
+
+            if (enriched > 0) {
+                localStorage.setItem('propertySystemProperties', JSON.stringify(stored));
+                localStorage.setItem('properties', JSON.stringify(stored));
+                window.properties = stored;
+                console.log('[PostcodeEnrich] Enriched', enriched, 'properties');
+                if (typeof window.updateMarkers === 'function') window.updateMarkers();
+                if (typeof window.helmRenderPropertiesList === 'function') window.helmRenderPropertiesList();
+                if (typeof showHelmNotification === 'function') {
+                    showHelmNotification(`✅ Auto-detected council & coordinates for ${enriched} propert${enriched === 1 ? 'y' : 'ies'}`, 'success');
+                }
             }
         };
 
@@ -68986,10 +69112,11 @@ Write the email now:`;
                 id: item.id || Date.now() + idx,
                 name: item.name || item.buildingname || item.address?.split(',')[0] || 'Property ' + idx,
                 address: item.address || '',
+                postcode: (item.postcode || item.post_code || '').trim().toUpperCase(),
                 borough: item.borough || '',
                 rent: parseFloat(item.rent) || 0,
-                lat: parseFloat(item.lat || item.latitude) || 51.5,
-                lng: parseFloat(item.lng || item.longitude || item.lon) || -0.1,
+                lat: parseFloat(item.lat || item.latitude) || null,
+                lng: parseFloat(item.lng || item.longitude || item.lon) || null,
                 status: item.status || 'available',
                 gender: item.gender || 'any',
                 floor: item.floor || 'GF',
@@ -69008,6 +69135,12 @@ Write the email now:`;
         localStorage.setItem('propertySystemProperties', JSON.stringify(existing));
         localStorage.setItem('properties', JSON.stringify(existing));
         window.properties = existing;
+
+        // Enrich newly imported properties with lat/lng + council from postcode (background)
+        if (imported > 0) {
+            setTimeout(() => window.enrichPropertiesFromPostcodes(), 200);
+        }
+
         return imported;
     }
 
